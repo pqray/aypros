@@ -1,7 +1,206 @@
 @import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+/* Scan UI package sources for Tailwind classes */
+@source "../../../../packages/ui/src";
+
+/* Dark theme is class-based (next-themes sets .dark on <html>) */
+@custom-variant dark (&:is(.dark *));
 
 /*
- * Design tokens (Soft Lavender palette, light/dark themes) arrive in Phase 02.
- * This is the ONLY place where raw color values will be allowed
- * (see specs/03-design-system.md).
+ * ============================================================
+ * DESIGN TOKENS — Soft Lavender (specs/03-design-system.md)
+ * This file is the ONLY place in the codebase where raw color
+ * values are allowed. Components must use semantic classes.
+ *
+ * Palette:
+ *   Space Indigo #22223B · Dusty Grape #4A4E69 · Lilac Ash #9A8C98
+ *   Almond Silk #C9ADA7 · Seashell #F2E9E4
+ * ============================================================
  */
+
+:root {
+  --background: #f7f4f2;
+  --foreground: #22223b;
+
+  --card: #ffffff;
+  --card-foreground: #22223b;
+  --popover: #ffffff;
+  --popover-foreground: #22223b;
+
+  --primary: #4a4e69;
+  --primary-foreground: #f2e9e4;
+  --secondary: #ece6e2;
+  --secondary-foreground: #4a4e69;
+  --muted: #efeae7;
+  --muted-foreground: #6e687e;
+  --accent: #e9e1dd;
+  --accent-foreground: #22223b;
+  --highlight: #c9ada7;
+
+  --destructive: #a83a42;
+  --destructive-foreground: #fbf7f5;
+  --success: #2f7d54;
+  --success-foreground: #f3faf6;
+  --warning: #9a6b1f;
+  --warning-foreground: #fff9ef;
+  --info: #3e5f8a;
+  --info-foreground: #f2f6fb;
+
+  --opportunity-low: #7a7386;
+  --opportunity-medium: #9a6b1f;
+  --opportunity-high: #2f7d54;
+  --opportunity-very-high: #1e6b45;
+
+  --border: #e3dcd8;
+  --input: #e3dcd8;
+  --ring: #4a4e69;
+
+  --sidebar: #fbf9f7;
+  --sidebar-foreground: #22223b;
+  --sidebar-border: #e9e2de;
+  --sidebar-accent: #efe9e5;
+  --sidebar-accent-foreground: #22223b;
+  --sidebar-primary: #4a4e69;
+  --sidebar-primary-foreground: #f2e9e4;
+
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: #12121c;
+  --foreground: #f2e9e4;
+
+  --card: #22223b;
+  --card-foreground: #f2e9e4;
+  --popover: #1e1e33;
+  --popover-foreground: #f2e9e4;
+
+  --primary: #9a8c98;
+  --primary-foreground: #12121c;
+  --secondary: #2c2c48;
+  --secondary-foreground: #f2e9e4;
+  --muted: #28283f;
+  --muted-foreground: #a79fb0;
+  --accent: #34344f;
+  --accent-foreground: #f2e9e4;
+  --highlight: #c9ada7;
+
+  --destructive: #e07078;
+  --destructive-foreground: #1a1414;
+  --success: #57b98b;
+  --success-foreground: #0f231a;
+  --warning: #d9a45b;
+  --warning-foreground: #241a0c;
+  --info: #7fa3d1;
+  --info-foreground: #0f1826;
+
+  --opportunity-low: #938ca0;
+  --opportunity-medium: #d9a45b;
+  --opportunity-high: #57b98b;
+  --opportunity-very-high: #6fd3a0;
+
+  --border: #2e2e4a;
+  --input: #2e2e4a;
+  --ring: #9a8c98;
+
+  --sidebar: #181827;
+  --sidebar-foreground: #f2e9e4;
+  --sidebar-border: #26263d;
+  --sidebar-accent: #26263d;
+  --sidebar-accent-foreground: #f2e9e4;
+  --sidebar-primary: #9a8c98;
+  --sidebar-primary-foreground: #12121c;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-highlight: var(--highlight);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-opportunity-low: var(--opportunity-low);
+  --color-opportunity-medium: var(--opportunity-medium);
+  --color-opportunity-high: var(--opportunity-high);
+  --color-opportunity-very-high: var(--opportunity-very-high);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+    outline-color: color-mix(in srgb, var(--color-ring) 50%, transparent);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+}
+
+/* Respect reduced motion globally (specs/03, seção Animações) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

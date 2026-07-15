@@ -8,4 +8,8 @@ const compat = new FlatCompat({ baseDirectory: import.meta.dirname });
  * Base comes last so the typescript-eslint parser wins for .ts/.tsx files
  * (eslint-config-next's parser doesn't track type-only usages).
  */
-export default [...compat.extends("next/core-web-vitals"), ...base];
+export default [
+  { ignores: ["next-env.d.ts"] },
+  ...compat.extends("next/core-web-vitals"),
+  ...base,
+];

@@ -191,6 +191,16 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
   }
+  /* Tailwind v4 preflight leaves buttons with cursor: default;
+     web-app convention is pointer on enabled interactive elements */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  button:disabled,
+  [role="button"]:disabled {
+    cursor: not-allowed;
+  }
 }
 
 /* Respect reduced motion globally (specs/03, seção Animações) */

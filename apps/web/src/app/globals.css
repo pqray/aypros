@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@plugin "tailwindcss-animate";
+@import "tw-animate-css";
 
 /* Scan UI package sources for Tailwind classes */
 @source "../../../../packages/ui/src";
@@ -185,6 +185,11 @@
   * {
     border-color: var(--color-border);
     outline-color: color-mix(in srgb, var(--color-ring) 50%, transparent);
+  }
+  /* Reserve scrollbar space so Radix scroll-lock (dialogs, dropdowns)
+     doesn't shift the page when the scrollbar disappears */
+  html {
+    scrollbar-gutter: stable;
   }
   body {
     background-color: var(--color-background);

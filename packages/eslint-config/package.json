@@ -1,0 +1,20 @@
+{
+  "name": "@aypros/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./base": "./base.js",
+    "./next": "./next.js"
+  },
+  "dependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@eslint/js": "^9.17.0",
+    "eslint-config-next": "^15.5.0",
+    "eslint-config-prettier": "^10.0.1",
+    "typescript-eslint": "^8.19.0"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0"
+  }
+}

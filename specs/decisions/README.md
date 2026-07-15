@@ -39,4 +39,4 @@ Efeitos positivos e negativos, migrações necessárias, o que fica mais difíci
 | 2 | Fonte tipográfica (Inter vs Geist) | 2 |
 | 3 | Biblioteca de drag and drop do Kanban | 9 |
 | 4 | Mecanismo de convite para organizações no MVP (adicionar por e-mail vs link de convite) | 3 |
-| 5 | Plataforma de deploy (Vercel presumido — confirmar limites serverless) | 1 |
+| 5 | Plataforma de deploy — **proposta**: Vercel ([ADR 002](002-deploy-platform.md)), confirmar plano/limites até a Fase 6 | 1 |

@@ -1,0 +1,4 @@
+{
+  "extends": "@aypros/config/tsconfig/react-library.json",
+  "include": ["src"]
+}

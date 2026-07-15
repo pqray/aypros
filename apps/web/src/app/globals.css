@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens (Soft Lavender palette, light/dark themes) arrive in Phase 02.
+ * This is the ONLY place where raw color values will be allowed
+ * (see specs/03-design-system.md).
+ */

@@ -85,7 +85,11 @@ export function DesignShowcase() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="mx-auto max-w-5xl space-y-10 px-6 py-10">
+      {/* Inner scroll container: the body never scrolls, so Radix scroll-lock
+          has nothing to hide — no scrollbar blink, no layout shift.
+          The real app shell (Phase 4) scrolls content the same way. */}
+      <div className="h-svh overflow-y-auto">
+        <div className="mx-auto max-w-5xl space-y-10 px-6 py-10">
         <PageHeader
           title="Design System"
           description="Showcase interno — paleta Soft Lavender, light e dark."
@@ -316,6 +320,7 @@ export function DesignShowcase() {
             <SiWhatsapp aria-label="WhatsApp" />
           </div>
         </Section>
+        </div>
       </div>
     </TooltipProvider>
   );

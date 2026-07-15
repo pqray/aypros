@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Env — NUNCA commitar valores reais
+.env
+.env.*
+!.env.example
+
+# Next.js / build
+.next/
+out/
+dist/
+.turbo/
+
+# Testing
+coverage/
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
+
+# Misc
+.DS_Store
+*.log
+.vercel/

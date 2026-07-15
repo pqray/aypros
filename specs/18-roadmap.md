@@ -1,0 +1,28 @@
+# 18 — Roadmap Pós-MVP
+
+Nada daqui entra no MVP. Ordem indicativa, não compromisso. Cada item, ao ser iniciado, ganha spec própria + ADR.
+
+## Análise avançada de sites
+
+- **Playwright + Chromium**: renderização real, resolvendo o limite de SPAs da auditoria HTTP (`09`).
+- **Screenshots**: captura desktop/mobile armazenada no Supabase Storage; exibida na página da empresa.
+- **IA visual**: avaliação de design/UX a partir do screenshot; enriquece score e abordagens.
+
+## Infraestrutura de processamento
+
+- **Worker dedicado + BullMQ + Redis**: extrair pesquisa/auditoria/IA para filas quando o volume estourar os limites serverless. Estados no banco permanecem os mesmos (`02-architecture.md`) — migração transparente para a UI. Rate limiting migra do banco para Redis.
+
+## Comercial e produto
+
+- **Billing / planos pagos**: Stripe; limites por plano (pesquisas, auditorias, IA) substituindo os limites fixos atuais.
+- **Outbound**: envio real de e-mails (provider transacional) e integração WhatsApp; sequências simples de follow-up.
+- **Relatórios PDF**: relatório de diagnóstico da empresa para anexar em propostas.
+- **White label**: relatórios/domínio com marca da agência.
+- **Monitoramento contínuo + alertas**: reauditar sites periodicamente; alertar mudanças (site caiu, concorrente lançou site).
+- **Extensão de navegador**: capturar empresa/lead navegando no Google Maps.
+- **Geração de mockups**: prévia de site proposto para usar na abordagem.
+- **CRM avançado**: estágios customizáveis, automações, campos personalizados, múltiplos pipelines.
+
+## Critério para promover item do roadmap
+
+Demanda real de usuários + capacidade de manter o MVP estável. Nunca iniciar item do roadmap no meio de uma fase do MVP.

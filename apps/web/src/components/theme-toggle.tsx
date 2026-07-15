@@ -14,7 +14,7 @@ import { useTheme } from "next-themes";
 import { PiDesktop, PiMoon, PiSun } from "react-icons/pi";
 
 export function ThemeToggle() {
-  const { setTheme, resolvedTheme } = useTheme();
+  const { setTheme } = useTheme();
 
   return (
     <DropdownMenu>
@@ -22,7 +22,9 @@ export function ThemeToggle() {
         <TooltipTrigger asChild>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" aria-label="Alterar tema">
-              {resolvedTheme === "dark" ? <PiMoon aria-hidden /> : <PiSun aria-hidden />}
+              {/* CSS-only swap: identical SSR/client markup avoids hydration mismatch */}
+              <PiSun aria-hidden className="dark:hidden" />
+              <PiMoon aria-hidden className="hidden dark:block" />
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>

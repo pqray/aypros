@@ -54,7 +54,15 @@ Tokens mal projetados obrigam retrabalho em todas as fases de UI — validar sho
 
 ## Checklist de conclusão
 
-- [ ] Critérios de aceite verificados
-- [ ] ADR da fonte criado
-- [ ] Showcase aprovado visualmente pelo usuário
-- [ ] Aprovação antes da Fase 03
+- [x] Critérios de aceite verificados
+- [x] ADR da fonte criado (`specs/decisions/003-typography.md`)
+- [x] Showcase aprovado visualmente pelo usuário
+- [x] Aprovação antes da Fase 03
+
+## Histórico de fechamento
+
+- Claude deixou a base de design system implementada em `packages/ui`, com tokens/temas em `apps/web/src/app/globals.css`.
+- Componentes base presentes: Button, Input, Label, Select, Dialog, Sheet, DropdownMenu, Tabs, Tooltip, Badge, Card, Skeleton, Avatar, Accordion, EmptyState, PageHeader, StatCard, ScoreBadge, ConfirmDialog, Sonner e Command.
+- Showcase interno criado em `apps/web/src/app/design`.
+- Tipografia resolvida por ADR 003: Geist + Geist Mono via `next/font`.
+- Próxima fase liberada: Fase 03 - Supabase + Auth + Onboarding.

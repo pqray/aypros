@@ -1,24 +1,24 @@
-# 002 — Plataforma de deploy: Vercel
+# 002 - Plataforma de deploy
 
 - **Data**: 2026-07-15
-- **Status**: proposta (aguardando confirmação do usuário)
+- **Status**: proposta, escopo revisado apos ADR 005
 
 ## Contexto
 
-A arquitetura do MVP (`specs/02-architecture.md`) processa pesquisas e auditorias dentro de invocações serverless, sem filas. Os limites de timeout da plataforma definem o tamanho dos lotes.
+A arquitetura original do MVP processava pesquisas e auditorias dentro de invocacoes serverless do Next, sem filas. A ADR 005 separou o backend em `apps/api` (Node/Fastify), entao deploy passa a ter dois alvos: web e API.
 
-## Decisão
+## Decisao
 
-Presumir **Vercel** (plano Hobby/Pro) como alvo de deploy: melhor integração com Next.js App Router, Server Actions e ISR.
+Presumir **Vercel** como alvo inicial do `apps/web`. O deploy do `apps/api` deve ser decidido separadamente, com preferencia por plataforma que rode container Docker ou Node server persistente.
 
 ## Alternativas consideradas
 
-- **Netlify** — suporte a Next.js inferior via adapter.
-- **Railway/Render (Node server)** — remove limites de timeout, mas adiciona gestão de infra que o MVP não precisa.
-- **Self-host (Docker)** — fora do perfil do projeto neste estágio.
+- **Netlify** - suporte a Next.js inferior via adapter.
+- **Railway/Render/Fly (Node server/container)** - candidatos naturais para `apps/api`; revisar antes de producao.
+- **Self-host (Docker)** - viavel para API, mas adiciona gestao de infra.
 
-## Consequências
+## Consequencias
 
-- Route Handlers com timeout de 10s (Hobby) a 60s+ (Pro/fluid compute) — os lotes de descoberta/auditoria devem caber nisso; confirmar plano antes da Fase 06.
-- Variáveis de ambiente gerenciadas no painel da Vercel; `DATABASE_URL` deve usar o transaction pooler (porta 6543), já configurado.
-- Se o usuário optar por outra plataforma, revisar apenas tamanhos de lote — a arquitetura por estados no banco não muda.
+- `apps/web` pode continuar em Vercel pela integracao com Next.
+- `apps/api` precisa de runtime Node/container, variaveis server-side e CORS configurado para a origem do web.
+- Discovery/auditoria devem considerar limites da plataforma escolhida para a API, nao mais apenas limites dos Route Handlers do Next.

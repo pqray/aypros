@@ -10,6 +10,8 @@ Autenticação/proteção de rota, perfil, organização, dados iniciais de pág
 
 Para tudo que é interativo: pesquisas e progresso, resultados paginados, favoritos, pipeline, notas, atividades, auditorias, gerações de IA e todas as mutações.
 
+Dados de produto devem ser buscados em `apps/api` via `NEXT_PUBLIC_API_URL`. Nao criar endpoints de produto em `apps/web/src/app/api`; essa pasta fica reservada para necessidades especificas do Next.
+
 ### Query keys (padrão hierárquico, escopadas por org)
 
 ```

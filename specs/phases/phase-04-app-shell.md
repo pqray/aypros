@@ -56,3 +56,16 @@ Shell mal estruturado degrada todas as páginas; acessibilidade do drawer/palett
 
 - [ ] Critérios verificados
 - [ ] Aprovação antes da Fase 05
+
+## Progresso atual
+
+- Zustand instalado e usado apenas para estado de UI: sidebar colapsada/drawer mobile e command palette.
+- Shell protegido implementado em `apps/web/src/components/shell`: sidebar desktop colapsável, drawer mobile, topbar, breadcrumbs, user menu, org ativa, theme toggle e command palette.
+- Rotas da spec `06-app-shell-navigation.md` criadas com placeholders honestos para features futuras.
+- `loading.tsx`, `error.tsx` e `not-found.tsx` adicionados no grupo `(app)`.
+- Command palette abre com `Ctrl/Cmd+K`, navega entre páginas e alterna tema.
+- Testes adicionados no app web para sidebar e command palette.
+- Contexto do shell (`user`, `profile`, `organization`) carregado pela API Node separada `apps/api` em `GET /v1/app-context`, usando RPC `get_app_context()` e consumido no frontend com TanStack Query (`staleTime` de 30s), tirando chamadas remotas do Supabase do caminho de render RSC das rotas protegidas.
+- API local dockerizada com `apps/api/Dockerfile` e `docker-compose.api.yml`; fluxo recomendado: `pnpm docker:api:up` + `pnpm dev`.
+- Índice `organization_members_user_created_idx` criado e aplicado no Supabase para acelerar busca de organização ativa por usuário.
+- Validação executada: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.

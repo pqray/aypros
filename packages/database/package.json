@@ -7,13 +7,21 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "db:generate": "drizzle-kit generate",
     "lint": "eslint .",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@aypros/config": "workspace:*",
     "@aypros/eslint-config": "workspace:*",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9.17.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.9"
   }
 }

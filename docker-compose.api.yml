@@ -1,0 +1,21 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: aypros-api
+    env_file:
+      - .env.local
+    environment:
+      API_HOST: 0.0.0.0
+      API_PORT: 4000
+      API_LOG_LEVEL: info
+      WEB_ORIGINS: http://localhost:3000
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 10s

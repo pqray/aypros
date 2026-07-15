@@ -7,7 +7,14 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "pnpm dev:web",
+    "dev:web": "pnpm --dir apps/web dev",
+    "dev:api": "pnpm --dir apps/api dev",
+    "dev:all": "turbo run dev",
+    "docker:api:build": "docker compose -f docker-compose.api.yml build api",
+    "docker:api:up": "docker compose -f docker-compose.api.yml up -d api",
+    "docker:api:down": "docker compose -f docker-compose.api.yml down",
+    "docker:api:logs": "docker compose -f docker-compose.api.yml logs -f api",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",

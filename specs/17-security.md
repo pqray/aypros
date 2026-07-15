@@ -6,6 +6,8 @@
 2. **Server Actions / Route Handlers**: toda operação valida sessão + membership na organização alvo + papel quando exigido (`owner` gerencia org/membros; `admin`+ deleta dados; `member` usa o produto). Nunca confiar em `organization_id` vindo do cliente sem verificar membership.
 3. **RLS (Supabase)**: rede de segurança final.
 
+Com a API Node separada, a camada principal para endpoints de produto e `apps/api`. Toda rota em `apps/api` deve validar sessao, membership e papel antes de acessar dados de organizacao, mesmo quando a consulta tambem estiver protegida por RLS.
+
 ## RLS
 
 - Habilitado em todas as tabelas do schema público.
@@ -50,3 +52,4 @@ Excedeu → erro claro na UI com tempo restante. Limites de payload nas rotas (b
 
 - Server-side estruturado; nunca logar secrets, tokens, cookies ou conteúdo integral de dados pessoais.
 - Erros de provider registrados com código e contexto mínimo.
+- `apps/api` deve redigir cookies e `set-cookie` nos logs; CORS usa allow-list por `WEB_ORIGINS`, nunca `*` com credenciais.

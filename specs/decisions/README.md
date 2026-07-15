@@ -38,5 +38,6 @@ Efeitos positivos e negativos, migrações necessárias, o que fica mais difíci
 | 1 | ~~Provider real de descoberta~~ — **resolvida**: Google Places API ([ADR 001](001-discovery-provider.md)) | 6 |
 | 2 | Fonte tipográfica (Inter vs Geist) | 2 |
 | 3 | Biblioteca de drag and drop do Kanban | 9 |
-| 4 | Mecanismo de convite para organizações no MVP (adicionar por e-mail vs link de convite) | 3 |
-| 5 | Plataforma de deploy — **proposta**: Vercel ([ADR 002](002-deploy-platform.md)), confirmar plano/limites até a Fase 6 | 1 |
+| 4 | ~~Mecanismo de convite para organizações no MVP~~ — **resolvida**: adicionar por e-mail usuario ja cadastrado ([ADR 004](004-organization-invites-mvp.md)) | 3 |
+| 5 | Plataforma de deploy — **proposta revisada**: Vercel para web; API container/Node a decidir ([ADR 002](002-deploy-platform.md)) | 1 |
+| 6 | ~~Backend Node separado~~ - **resolvida**: Fastify em `apps/api` com Docker local ([ADR 005](005-node-api-docker.md)) | 4 |

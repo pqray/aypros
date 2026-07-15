@@ -37,6 +37,7 @@ Exemplo — Fase 5 (Dashboard) lê: `00`, `phases/phase-05-dashboard.md`, `03`, 
 | [16-testing.md](16-testing.md) | Prioridades de teste, regras, comandos |
 | [17-security.md](17-security.md) | RLS, autorização, SSRF, secrets, rate limiting |
 | [18-roadmap.md](18-roadmap.md) | Evolução pós-MVP |
+| [19-backend-api.md](19-backend-api.md) | Backend Node separado, Docker, endpoints e contratos |
 
 ## Índice — fases (`/specs/phases/`)
 

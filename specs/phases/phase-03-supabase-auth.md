@@ -60,3 +60,19 @@ Políticas RLS incorretas = vazamento entre orgs (testar cedo com 2 usuários); 
 - [ ] ADR #4 registrado
 - [ ] `.env.example` atualizado
 - [ ] Aprovação antes da Fase 04
+
+## Progresso atual
+
+- Dependências da fase instaladas no workspace: Supabase SSR/JS, Drizzle, Zod, React Hook Form, resolvers e TanStack Query.
+- `.env.example` atualizado com Google OAuth temporário e `.env.local` preenchido para uso local.
+- Migration inicial criada e aplicada no Supabase em 2026-07-15: tabelas, enums, índices, triggers de profile e policies RLS base.
+- RLS verificado no Supabase com 2 contas reais de teste criadas por service role: usuário A viu 1 search da própria org, 0 da org B, e insert cross-org em `searches` foi bloqueado por policy.
+- Auth inicial implementado em `apps/web`: login, cadastro, reset, Google OAuth callback, logout, middleware de sessão, rota protegida e onboarding.
+- Formulários principais usam RHF + Zod no cliente e os mesmos schemas nas Server Actions.
+- `settings/profile` e `settings/organization` básicos implementados.
+- ADR #4 registrado: no MVP, owner/admin adiciona membro por e-mail de usuário já cadastrado; link de convite fica pós-MVP.
+
+## Pendente conhecido
+
+- Configurar o provider Google no dashboard do Supabase com as credenciais registradas e redirect para `/auth/callback`.
+- Testar manualmente o fluxo Google no navegador após ativar o provider no Supabase.

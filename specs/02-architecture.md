@@ -37,6 +37,21 @@ UI (Server/Client Components)
       → Providers externos (descoberta, HTTP audit, Groq)
 ```
 
+## Backend Node separado
+
+Decisao atual: endpoints de produto vivem em `apps/api` (Fastify), iniciado localmente por Docker Compose. O web chama a API por `NEXT_PUBLIC_API_URL`.
+
+Fluxo alvo para dados de produto:
+
+```txt
+apps/web -> apps/api -> Supabase/Postgres
+                 -> providers externos
+```
+
+`apps/web/src/app/api` fica reservado para necessidades especificas do Next, como callback de auth. Novas features de dados (dashboard, discovery, businesses, pipeline, IA, auditorias) devem criar endpoints versionados em `apps/api` (`/v1/*`) e consumir esses endpoints pelo frontend com TanStack Query.
+
+Detalhes em `19-backend-api.md`; decisao em `decisions/005-node-api-docker.md`.
+
 ## Divisão Server / Client
 
 | Responsabilidade | Onde |

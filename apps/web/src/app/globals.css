@@ -191,6 +191,13 @@
   html {
     scrollbar-gutter: stable;
   }
+  /* react-remove-scroll (used by Radix) adds its own margin/padding gap
+     compensation on scroll lock; with scrollbar-gutter that would double
+     the offset and shift the page. Doubled attribute beats its !important. */
+  body[data-scroll-locked][data-scroll-locked] {
+    margin-right: 0 !important;
+    padding-right: 0 !important;
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);

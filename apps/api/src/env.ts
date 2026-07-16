@@ -10,7 +10,9 @@ for (const file of [resolve(process.cwd(), "../../.env.local"), resolve(process.
 }
 
 const envSchema = z.object({
-  API_HOST: z.string().default("0.0.0.0"),
+  // "::" escuta IPv6 e IPv4 (dual-stack): localhost resolve para ::1 primeiro e,
+  // sem listener IPv6, cada request paga ~200ms de fallback ate o 0.0.0.0
+  API_HOST: z.string().default("::"),
   API_PORT: z.coerce.number().int().positive().default(4000),
   API_LOG_LEVEL: z.string().default("info"),
   WEB_ORIGINS: z

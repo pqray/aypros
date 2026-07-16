@@ -12,14 +12,17 @@ export function buildApp() {
     },
   });
 
+  const localhostOrigin = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
   void app.register(cors, {
     origin(origin, callback) {
-      if (!origin || env.WEB_ORIGINS.includes(origin)) {
-        callback(null, true);
-        return;
-      }
+      const allowed =
+        !origin ||
+        env.WEB_ORIGINS.includes(origin) ||
+        (process.env.NODE_ENV !== "production" && localhostOrigin.test(origin));
 
-      callback(new Error("Origin not allowed"), false);
+      // callback(null, false) responde sem headers CORS em vez de derrubar a request com 500
+      callback(null, allowed);
     },
     credentials: true,
   });

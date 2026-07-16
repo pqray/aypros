@@ -1,6 +1,5 @@
 "use client";
 
-import { cn } from "@aypros/ui";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { CommandPalette } from "./command-palette";
@@ -41,14 +40,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [context, router]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="flex min-h-screen bg-background text-foreground">
       <Sidebar user={user} organization={organization} />
-      <div
-        className={cn(
-          "flex min-h-screen flex-col transition-[padding] duration-200",
-          "lg:pl-16",
-        )}
-      >
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <Topbar user={user} organization={organization} />
         <main className="flex-1 px-4 py-4 sm:px-6 lg:px-8">{children}</main>
       </div>

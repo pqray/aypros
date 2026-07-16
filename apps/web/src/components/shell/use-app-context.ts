@@ -5,6 +5,12 @@ import type { LoadedAppContext } from "@aypros/types";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
+export class AppContextError extends Error {
+  constructor(public readonly status: number) {
+    super("APP_CONTEXT_ERROR");
+  }
+}
+
 async function fetchAppContext() {
   const response = await fetch(`${apiUrl}/v1/app-context`, {
     credentials: "include",
@@ -12,7 +18,7 @@ async function fetchAppContext() {
   });
 
   if (!response.ok) {
-    throw new Error("APP_CONTEXT_UNAUTHORIZED");
+    throw new AppContextError(response.status);
   }
 
   return (await response.json()) as LoadedAppContext;

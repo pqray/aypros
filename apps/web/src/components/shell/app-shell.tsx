@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { CommandPalette } from "./command-palette";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
-import { useAppContext } from "./use-app-context";
+import { AppContextError, useAppContext } from "./use-app-context";
 
 export type ShellUser = {
   email: string;
@@ -29,7 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     : null;
 
   useEffect(() => {
-    if (error) {
+    if (error instanceof AppContextError && error.status === 401) {
       router.replace("/login");
     }
   }, [error, router]);

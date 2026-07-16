@@ -20,7 +20,7 @@ COPY packages/config packages/config
 COPY packages/eslint-config packages/eslint-config
 COPY packages/types packages/types
 RUN pnpm --filter api build
-RUN pnpm --filter api deploy --prod /prod/api
+RUN pnpm --filter api deploy --prod --legacy /prod/api
 
 FROM node:22-alpine AS runner
 WORKDIR /app

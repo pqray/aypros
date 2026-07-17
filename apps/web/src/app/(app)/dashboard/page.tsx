@@ -5,6 +5,7 @@ import { MetricCards } from "@/features/dashboard/components/metric-cards";
 import { OpportunitiesBlock } from "@/features/dashboard/components/opportunities-block";
 import { QuickSearchForm } from "@/features/dashboard/components/quick-search-form";
 import { RecentSearchesBlock } from "@/features/dashboard/components/recent-searches-block";
+import { TodayBlock } from "@/features/dashboard/components/today-block";
 import { WelcomeHero } from "@/features/dashboard/components/welcome-hero";
 import { getDashboardData } from "@/features/dashboard/queries";
 import { createClient } from "@/lib/supabase/server";
@@ -33,6 +34,7 @@ export default async function DashboardPage() {
       />
       {isNewOrganization ? <WelcomeHero organizationName={context.organization.name} /> : null}
       <MetricCards metrics={data.metrics} />
+      <TodayBlock leads={data.todayLeads} />
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <OpportunitiesBlock opportunities={data.opportunities} />

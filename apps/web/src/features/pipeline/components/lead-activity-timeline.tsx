@@ -5,6 +5,20 @@ import { activityIcons, activityLabels } from "@/lib/activity";
 import { formatRelativeTime } from "@/lib/format";
 
 function activityDetail(activity: LeadActivity): string | null {
+  if (activity.type === "lead_contacted") {
+    const channel = activity.payload.channel;
+    const note = activity.payload.note;
+    const channelLabel =
+      channel === "whatsapp"
+        ? "WhatsApp"
+        : channel === "email"
+          ? "E-mail"
+          : channel === "phone"
+            ? "Telefone"
+            : "Outro";
+    return typeof note === "string" && note ? `${channelLabel} - ${note}` : channelLabel;
+  }
+
   if (activity.type === "lead_stage_changed") {
     const fromLabel = activity.payload.from_label;
     const toLabel = activity.payload.to_label;
@@ -12,13 +26,19 @@ function activityDetail(activity: LeadActivity): string | null {
       return `${fromLabel} → ${toLabel}`;
     }
   }
+
+  if (activity.type === "lead_assigned") {
+    const toName = activity.payload.to_name;
+    return typeof toName === "string" && toName ? `Atribuido a ${toName}` : "Responsavel removido";
+  }
+
   return null;
 }
 
 export function LeadActivityTimeline({ activities }: { activities: LeadActivity[] }) {
   if (activities.length === 0) {
     return (
-      <EmptyState icon={<PiPulse />} title="Nenhuma atividade ainda" description="O histórico deste lead aparece aqui." />
+      <EmptyState icon={<PiPulse />} title="Nenhuma atividade ainda" description="O historico deste lead aparece aqui." />
     );
   }
 

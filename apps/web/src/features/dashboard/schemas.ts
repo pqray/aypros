@@ -6,7 +6,9 @@ export const activityTypes = [
   "search_created",
   "business_favorited",
   "audit_completed",
+  "data_refresh_requested",
   "lead_created",
+  "lead_contacted",
   "lead_stage_changed",
   "note_created",
   "ai_generated",
@@ -124,6 +126,35 @@ export type DashboardActivity = {
   payload: Record<string, unknown>;
   createdAt: string;
 };
+
+const todayLeadRowSchema = z.object({
+  id: z.string().min(1),
+  business_id: z.string().min(1),
+  business_name: z.string().min(1),
+  next_action: z.string().nullable(),
+  next_action_at: z.string(),
+});
+
+export type DashboardTodayLead = {
+  id: string;
+  businessId: string;
+  businessName: string;
+  nextAction: string | null;
+  nextActionAt: string;
+};
+
+export function parseDashboardTodayLeads(input: unknown): DashboardTodayLead[] {
+  return z
+    .array(todayLeadRowSchema)
+    .parse(input)
+    .map((row) => ({
+      id: row.id,
+      businessId: row.business_id,
+      businessName: row.business_name,
+      nextAction: row.next_action,
+      nextActionAt: row.next_action_at,
+    }));
+}
 
 export function parseDashboardActivities(input: unknown): DashboardActivity[] {
   return z

@@ -16,6 +16,10 @@ vi.mock("../queries", () => ({
   useGenerateAi: () => ({ mutate, isPending: false, variables: undefined }),
 }));
 
+vi.mock("@/features/pipeline/queries", () => ({
+  useCreateLeadContact: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
 function makeGeneration(overrides: Partial<AiGenerationSummary> = {}): AiGenerationSummary {
   return {
     id: "g1",

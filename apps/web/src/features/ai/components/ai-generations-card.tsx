@@ -18,10 +18,12 @@ import {
 } from "@aypros/ui";
 import type { AiGenerationSummary, AiKind, AiOutput } from "@aypros/types";
 import { useEffect, useState } from "react";
-import { PiCopy, PiSparkle } from "react-icons/pi";
+import { PiCheckCircle, PiCopy, PiSparkle, PiWhatsappLogo } from "react-icons/pi";
 import { useAppContext } from "@/components/shell/use-app-context";
+import { useCreateLeadContact } from "@/features/pipeline/queries";
 import { formatRelativeTime } from "@/lib/format";
 import { ApiError } from "../api";
+import { buildWhatsappUrl } from "../outreach";
 import { useAiGenerations, useGenerateAi } from "../queries";
 
 const AI_KINDS = ["commercial_summary", "whatsapp_message", "email_message"] as const;
@@ -66,11 +68,20 @@ function outputToDraft(kind: AiKind, generation: AiGenerationSummary): Draft {
   return { sourceId: generation.id, subject: "", text: "" };
 }
 
-export function AiGenerationsCard({ businessId }: { businessId: string }) {
+export function AiGenerationsCard({
+  businessId,
+  leadId,
+  phone,
+}: {
+  businessId: string;
+  leadId?: string | null;
+  phone?: string | null;
+}) {
   const { data: context } = useAppContext();
   const orgId = context?.organization?.id;
   const generations = useAiGenerations(orgId, businessId);
   const generate = useGenerateAi(orgId, businessId);
+  const createContact = useCreateLeadContact(orgId, leadId ?? undefined);
 
   const [drafts, setDrafts] = useState<Partial<Record<AiKind, Draft>>>({});
 
@@ -136,6 +147,25 @@ export function AiGenerationsCard({ businessId }: { businessId: string }) {
     });
   }
 
+  function contactChannelForKind(kind: AiKind) {
+    if (kind === "whatsapp_message") return "whatsapp" as const;
+    if (kind === "email_message") return "email" as const;
+    return null;
+  }
+
+  function handleMarkSent(kind: AiKind) {
+    const channel = contactChannelForKind(kind);
+    if (!channel || !leadId) return;
+
+    createContact.mutate(
+      { channel, note: channel === "whatsapp" ? "Rascunho de WhatsApp marcado como enviado." : "Rascunho de e-mail marcado como enviado." },
+      {
+        onSuccess: () => toast.success("Contato registrado."),
+        onError: () => toast.error("Nao foi possivel registrar o contato."),
+      },
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -160,6 +190,9 @@ export function AiGenerationsCard({ businessId }: { businessId: string }) {
               const draft = drafts[kind];
               const latest = latestByKind[kind];
               const isGenerating = generate.isPending && generate.variables === kind;
+              const contactChannel = contactChannelForKind(kind);
+              const whatsappUrl =
+                kind === "whatsapp_message" && draft ? buildWhatsappUrl(phone, draft.text) : null;
               return (
                 <TabsContent key={kind} value={kind} className="space-y-3">
                   {draft ? (
@@ -203,6 +236,24 @@ export function AiGenerationsCard({ businessId }: { businessId: string }) {
                       <Button variant="outline" onClick={() => handleCopy(kind)}>
                         <PiCopy aria-hidden />
                         Copiar
+                      </Button>
+                    ) : null}
+                    {whatsappUrl ? (
+                      <Button asChild variant="outline">
+                        <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+                          <PiWhatsappLogo aria-hidden />
+                          Abrir no WhatsApp
+                        </a>
+                      </Button>
+                    ) : null}
+                    {draft && contactChannel && leadId ? (
+                      <Button
+                        variant="outline"
+                        onClick={() => handleMarkSent(kind)}
+                        loading={createContact.isPending}
+                      >
+                        <PiCheckCircle aria-hidden />
+                        Marcar como enviada
                       </Button>
                     ) : null}
                     {latest ? (

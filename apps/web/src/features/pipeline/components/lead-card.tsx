@@ -1,6 +1,9 @@
 "use client";
 
 import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
   Card,
   CardContent,
   DropdownMenu,
@@ -15,9 +18,12 @@ import {
 import type { LeadStage, LeadSummary } from "@aypros/types";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import Link from "next/link";
-import { PiClockCountdown, PiDotsSixVertical, PiDotsThreeVertical } from "react-icons/pi";
+import { PiClockCountdown, PiDotsSixVertical, PiDotsThreeVertical, PiPhoneCall } from "react-icons/pi";
+import { formatRelativeTime } from "@/lib/format";
 import { LEAD_STAGES, isOverdue, leadStageLabels } from "../board";
+import { LeadDetailLink } from "./lead-detail-link";
+
+const COOLING_LEAD_DAYS = 7;
 
 function formatCurrency(value: number | null): string | null {
   if (value === null) return null;
@@ -28,6 +34,33 @@ function formatDueDate(nextActionAt: string): string {
   const date = new Date(nextActionAt);
   if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
+
+function isCoolingLead(lastContactAt: string | null): boolean {
+  if (!lastContactAt) return true;
+  const date = new Date(lastContactAt);
+  if (Number.isNaN(date.getTime())) return true;
+  return Date.now() - date.getTime() > COOLING_LEAD_DAYS * 24 * 60 * 60 * 1000;
+}
+
+function initials(name: string | null): string {
+  if (!name) return "--";
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function LeadAssigneeAvatar({ lead }: { lead: LeadSummary }) {
+  const label = lead.assignedToName ? `Responsavel: ${lead.assignedToName}` : "Sem responsavel";
+  return (
+    <Avatar className="size-6 border bg-muted text-[10px]" title={label}>
+      {lead.assignedToAvatarUrl ? <AvatarImage src={lead.assignedToAvatarUrl} alt="" /> : null}
+      <AvatarFallback>{initials(lead.assignedToName)}</AvatarFallback>
+    </Avatar>
+  );
 }
 
 export function MoveLeadMenu({
@@ -64,18 +97,26 @@ export function MoveLeadMenu({
   );
 }
 
-function LeadCardBody({ lead }: { lead: LeadSummary }) {
+function LeadCardBody({
+  lead,
+  onPrefetchDetail,
+}: {
+  lead: LeadSummary;
+  onPrefetchDetail?: (leadId: string) => void;
+}) {
   const overdue = isOverdue(lead.nextActionAt);
+  const cooling = isCoolingLead(lead.lastContactAt);
   const value = formatCurrency(lead.potentialValue);
 
   return (
     <div className="min-w-0 flex-1 space-y-2">
-      <Link
-        href={`/pipeline/${lead.id}`}
+      <LeadDetailLink
+        leadId={lead.id}
+        onPrefetch={onPrefetchDetail}
         className="line-clamp-2 text-sm font-medium text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {lead.businessName}
-      </Link>
+      </LeadDetailLink>
       {lead.city ? (
         <p className="truncate text-xs text-muted-foreground">
           {lead.city}
@@ -87,6 +128,7 @@ function LeadCardBody({ lead }: { lead: LeadSummary }) {
           <ScoreBadge level={lead.scoreLevel} score={lead.score} />
         ) : null}
         {value ? <span className="text-xs font-medium text-foreground">{value}</span> : null}
+        <LeadAssigneeAvatar lead={lead} />
       </div>
       {lead.nextActionAt ? (
         <p
@@ -100,6 +142,15 @@ function LeadCardBody({ lead }: { lead: LeadSummary }) {
           {formatDueDate(lead.nextActionAt)}
         </p>
       ) : null}
+      <p
+        className={cn(
+          "flex items-center gap-1 text-xs",
+          cooling ? "font-medium text-warning" : "text-muted-foreground",
+        )}
+      >
+        <PiPhoneCall aria-hidden />
+        {lead.lastContactAt ? `Ultimo contato ${formatRelativeTime(lead.lastContactAt)}` : "Sem contato registrado"}
+      </p>
     </div>
   );
 }
@@ -108,10 +159,12 @@ export function SortableLeadCard({
   lead,
   onMove,
   movePending,
+  onPrefetchDetail,
 }: {
   lead: LeadSummary;
   onMove: (leadId: string, stage: LeadStage) => void;
   movePending: boolean;
+  onPrefetchDetail?: (leadId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: lead.id,
@@ -143,7 +196,7 @@ export function SortableLeadCard({
           >
             <PiDotsSixVertical aria-hidden />
           </button>
-          <LeadCardBody lead={lead} />
+          <LeadCardBody lead={lead} onPrefetchDetail={onPrefetchDetail} />
           <MoveLeadMenu lead={lead} onMove={onMove} disabled={movePending} />
         </CardContent>
       </Card>
@@ -152,11 +205,17 @@ export function SortableLeadCard({
 }
 
 /** Static rendering used by DragOverlay (no sortable wiring — it's a floating copy). */
-export function LeadCardPreview({ lead }: { lead: LeadSummary }) {
+export function LeadCardPreview({
+  lead,
+  onPrefetchDetail,
+}: {
+  lead: LeadSummary;
+  onPrefetchDetail?: (leadId: string) => void;
+}) {
   return (
     <Card className="shadow-lg ring-2 ring-ring">
       <CardContent className="flex items-start gap-2 p-3">
-        <LeadCardBody lead={lead} />
+        <LeadCardBody lead={lead} onPrefetchDetail={onPrefetchDetail} />
       </CardContent>
     </Card>
   );

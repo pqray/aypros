@@ -15,9 +15,13 @@ function makeLead(overrides: Partial<LeadSummary> = {}): LeadSummary {
     potentialValue: null,
     nextAction: null,
     nextActionAt: null,
+    lastContactAt: null,
     position: 0,
     score: null,
     scoreLevel: null,
+    assignedTo: null,
+    assignedToName: null,
+    assignedToAvatarUrl: null,
     createdAt: "2026-07-16T12:00:00Z",
     ...overrides,
   };

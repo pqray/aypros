@@ -19,9 +19,13 @@ function makeLead(overrides: Partial<LeadSummary> = {}): LeadSummary {
     potentialValue: 1200,
     nextAction: "Ligar",
     nextActionAt: null,
+    lastContactAt: null,
     position: 0,
     score: 62,
     scoreLevel: "high",
+    assignedTo: "u1",
+    assignedToName: "Rayssa Alves",
+    assignedToAvatarUrl: null,
     createdAt: "2026-07-16T12:00:00Z",
     ...overrides,
   };
@@ -48,6 +52,7 @@ describe("SortableLeadCard", () => {
     );
     expect(screen.getByLabelText(/oportunidade alta.*score 62/i)).toBeInTheDocument();
     expect(screen.getByText(/R\$\s*1\.200/)).toBeInTheDocument();
+    expect(screen.getByText("RA")).toBeInTheDocument();
   });
 
   it("highlights an overdue next action", () => {

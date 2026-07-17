@@ -1,10 +1,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Input, Label } from "@aypros/ui";
+import { Input, Label, toast } from "@aypros/ui";
 import { loginSchema, type LoginInput } from "@aypros/validation";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { GoogleAuthButton, LastUsedHint, rememberAuthMethod } from "@/components/auth/auth-method";
 import { SubmitButton } from "@/components/auth/submit-button";
@@ -15,6 +15,12 @@ export function LoginForm() {
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
   });
+
+  useEffect(() => {
+    if (state.error) {
+      toast.error(state.error);
+    }
+  }, [state.error]);
 
   return (
     <div className="space-y-4">
@@ -49,7 +55,6 @@ export function LoginForm() {
             <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>
           ) : null}
         </div>
-        {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
         <LastUsedHint method="email" />
         <SubmitButton className="w-full" loadingText="Entrando...">
           Entrar

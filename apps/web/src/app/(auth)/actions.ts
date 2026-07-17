@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export type AuthActionState = {
   error?: string;
+  success?: string;
 };
 
 const genericAuthError = "Nao foi possivel concluir. Confira os dados e tente novamente.";
@@ -95,7 +96,7 @@ export async function resetPasswordAction(
     return { error: genericAuthError };
   }
 
-  return { error: "Se o e-mail estiver cadastrado, voce recebera as instrucoes." };
+  return { success: "Se o e-mail estiver cadastrado, voce recebera as instrucoes." };
 }
 
 export async function googleSignInAction(): Promise<void> {

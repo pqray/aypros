@@ -1,9 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Input, Label } from "@aypros/ui";
+import { Input, Label, toast } from "@aypros/ui";
 import { onboardingSchema, type OnboardingInput } from "@aypros/validation";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { completeOnboardingAction } from "./actions";
@@ -16,6 +16,12 @@ export function OnboardingForm({ defaultName }: { defaultName?: string }) {
       fullName: defaultName ?? "",
     },
   });
+
+  useEffect(() => {
+    if (state.error) {
+      toast.error(state.error);
+    }
+  }, [state.error]);
 
   return (
     <form
@@ -57,7 +63,6 @@ export function OnboardingForm({ defaultName }: { defaultName?: string }) {
           <p className="text-sm text-destructive">{form.formState.errors.professionalRole.message}</p>
         ) : null}
       </div>
-      {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
       <SubmitButton className="w-full" loadingText="Finalizando...">
         Continuar
       </SubmitButton>

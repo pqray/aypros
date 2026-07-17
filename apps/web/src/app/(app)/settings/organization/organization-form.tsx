@@ -1,9 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Input, Label } from "@aypros/ui";
+import { Input, Label, toast } from "@aypros/ui";
 import { organizationSchema, type OrganizationInput } from "@aypros/validation";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { updateOrganizationAction } from "../actions";
@@ -23,6 +23,15 @@ export function OrganizationForm({
     },
   });
 
+  useEffect(() => {
+    if (state.error) {
+      toast.error(state.error);
+    }
+    if (state.success) {
+      toast.success(state.success);
+    }
+  }, [state.error, state.success]);
+
   return (
     <form
       action={formAction}
@@ -41,8 +50,6 @@ export function OrganizationForm({
           <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
         ) : null}
       </div>
-      {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
-      {state.success ? <p className="text-sm text-muted-foreground">{state.success}</p> : null}
       <SubmitButton loadingText="Salvando...">Salvar organizacao</SubmitButton>
     </form>
   );

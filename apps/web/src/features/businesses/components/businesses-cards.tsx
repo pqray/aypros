@@ -97,6 +97,8 @@ export function BusinessesCards({
               <WebsiteBadge {...item} />
               <SegmentAuditBadges
                 segment={item.segment}
+                instagramDetected={item.instagramDetected}
+                socialLinks={item.socialLinks}
                 linkInBio={item.linkInBio}
                 deliveryPlatform={item.deliveryPlatform}
                 menuOnline={item.menuOnline}

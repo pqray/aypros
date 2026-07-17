@@ -31,6 +31,7 @@ describe("mergeBusinessRefresh", () => {
         phone: null,
         websiteUrl: null,
         socialOnly: false,
+        socialPlatform: null,
         rating: null,
         reviewCount: null,
         categories: [],

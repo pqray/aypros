@@ -37,13 +37,38 @@ describe("calculateOpportunityScore", () => {
 
   it("scores social-only presence below no-site", () => {
     const result = calculateOpportunityScore(
-      { ...activeBusiness, raw: { socialOnly: true } },
+      { ...activeBusiness, raw: { socialOnly: true, socialPlatform: "instagram.com" } },
       null,
     );
 
     expect(result.score).toBe(55);
     expect(result.level).toBe("medium");
-    expect(result.reasons.map((reason) => reason.code)).toContain("social_only");
+    expect(result.reasons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "social_only", label: "Presença depende do Instagram" }),
+      ]),
+    );
+  });
+
+  it("recognizes Instagram connected to an owned website as a positive social signal", () => {
+    const result = calculateOpportunityScore(activeBusiness, {
+      status: "completed",
+      isHttps: true,
+      detections: {
+        siteDown: "not_detected",
+        sslError: "not_detected",
+        hasViewport: "detected",
+        hasTitle: "detected",
+        hasDescription: "detected",
+        instagram: "detected",
+      },
+    });
+
+    expect(result.reasons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "instagram_connected", impact: -5 }),
+      ]),
+    );
   });
 
   it("scores broken websites as very high opportunity", () => {

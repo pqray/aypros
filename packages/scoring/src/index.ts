@@ -10,6 +10,7 @@ export type ScoreBusinessInput = {
   reviewCount: number | null;
   raw?: {
     socialOnly?: boolean;
+    socialPlatform?: string | null;
     segment?: BusinessSegment;
   };
 };
@@ -26,6 +27,8 @@ export type ScoreAuditInput = {
     hasDescription?: DetectionState;
     outdated?: DetectionState;
     basicBuilder?: DetectionState;
+    socialLinks?: DetectionState;
+    instagram?: DetectionState;
     linkInBio?: DetectionState;
     deliveryPlatform?: DetectionState;
     menuOnline?: DetectionState;
@@ -56,6 +59,7 @@ const SERVICES_BY_REASON: Record<string, string[]> = {
   outdated: ["Reformulação"],
   weak_metadata: ["SEO local"],
   basic_builder: ["Reformulação"],
+  instagram_connected: ["Instagram", "Presença digital própria"],
   link_in_bio_only: ["Criação de site", "Presença digital própria"],
   delivery_dependency: ["Criação de site", "Cardápio online"],
   no_menu_online: ["Cardápio online", "SEO local"],
@@ -100,6 +104,7 @@ export function calculateOpportunityScore(
 ): OpportunityScoreResult {
   const reasons: ScoreReason[] = [];
   const socialOnly = business.raw?.socialOnly === true;
+  const socialPlatform = business.raw?.socialPlatform ?? null;
   const segment = business.raw?.segment ?? "other";
   const foodSegment = segment === "restaurant" || segment === "food_service";
   const hasWebsite = Boolean(business.websiteUrl?.trim());
@@ -107,7 +112,14 @@ export function calculateOpportunityScore(
   if (!hasWebsite && !socialOnly) {
     addReason(reasons, "no_site", "Não possui site próprio", 40);
   } else if (socialOnly) {
-    addReason(reasons, "social_only", "Site e apenas rede social", 35);
+    addReason(
+      reasons,
+      "social_only",
+      socialPlatform?.includes("instagram")
+        ? "Presença depende do Instagram"
+        : "Presença depende de rede social",
+      35,
+    );
   }
 
   if (audit?.status === "completed") {
@@ -131,6 +143,9 @@ export function calculateOpportunityScore(
     }
     if (isDetected(audit.detections.basicBuilder)) {
       addReason(reasons, "basic_builder", "Builder básico detectado", 6);
+    }
+    if (hasWebsite && isDetected(audit.detections.instagram)) {
+      addReason(reasons, "instagram_connected", "Site conectado ao Instagram", -5);
     }
     if (isDetected(audit.detections.linkInBio)) {
       addReason(reasons, "link_in_bio_only", "Atende só por link-in-bio", 25);

@@ -38,6 +38,7 @@ describe("normalizeWebsite", () => {
     expect(normalizeWebsite("padariacentral.com.br")).toEqual({
       websiteUrl: "https://padariacentral.com.br/",
       socialOnly: false,
+      socialPlatform: null,
     });
   });
 
@@ -56,7 +57,7 @@ describe("normalizeWebsite", () => {
       "https://linktr.ee/padaria",
       "https://wa.me/5585987654321",
     ]) {
-      expect(normalizeWebsite(url)).toEqual({ websiteUrl: null, socialOnly: true });
+      expect(normalizeWebsite(url)).toMatchObject({ websiteUrl: null, socialOnly: true });
     }
   });
 
@@ -67,9 +68,9 @@ describe("normalizeWebsite", () => {
   });
 
   it("rejects non-http protocols and invalid urls", () => {
-    expect(normalizeWebsite("ftp://arquivo.com")).toEqual({ websiteUrl: null, socialOnly: false });
-    expect(normalizeWebsite("http://")).toEqual({ websiteUrl: null, socialOnly: false });
-    expect(normalizeWebsite("")).toEqual({ websiteUrl: null, socialOnly: false });
-    expect(normalizeWebsite(null)).toEqual({ websiteUrl: null, socialOnly: false });
+    expect(normalizeWebsite("ftp://arquivo.com")).toEqual({ websiteUrl: null, socialOnly: false, socialPlatform: null });
+    expect(normalizeWebsite("http://")).toEqual({ websiteUrl: null, socialOnly: false, socialPlatform: null });
+    expect(normalizeWebsite("")).toEqual({ websiteUrl: null, socialOnly: false, socialPlatform: null });
+    expect(normalizeWebsite(null)).toEqual({ websiteUrl: null, socialOnly: false, socialPlatform: null });
   });
 });

@@ -111,6 +111,8 @@ function toBusinessInput(row: BusinessAuditRow): ScoreBusinessInput {
     reviewCount: row.review_count,
     raw: {
       socialOnly: row.raw?.social_only === true || row.raw?.socialOnly === true,
+      socialPlatform:
+        ((row.raw?.social_platform ?? row.raw?.socialPlatform) as string | null | undefined) ?? null,
       segment:
         ((row.raw?.segment ?? row.raw?.business_segment) as BusinessSegment | undefined) ??
         mapCategoriesToSegment(row.categories ?? []),
@@ -133,6 +135,9 @@ function toBusinessDetail(row: BusinessAuditRow): BusinessAuditSummaryResponse["
     segment:
       ((row.raw?.segment ?? row.raw?.business_segment) as BusinessSegment | undefined) ??
       mapCategoriesToSegment((row as BusinessAuditRow & { categories?: string[] }).categories ?? []),
+    socialOnly: row.raw?.social_only === true || row.raw?.socialOnly === true,
+    socialPlatform:
+      ((row.raw?.social_platform ?? row.raw?.socialPlatform) as string | null | undefined) ?? null,
   };
 }
 
@@ -154,6 +159,8 @@ function toScoreAuditInput(audit: AuditResult | null): ScoreAuditInput {
       hasDescription: detectionState(audit.detections, "hasDescription"),
       outdated: detectionState(audit.detections, "outdated"),
       basicBuilder: detectionState(audit.detections, "basicBuilder"),
+      socialLinks: detectionState(audit.detections, "socialLinks"),
+      instagram: detectionState(audit.detections, "instagram"),
       linkInBio: detectionState(audit.detections, "linkInBio"),
       deliveryPlatform: detectionState(audit.detections, "deliveryPlatform"),
       menuOnline: detectionState(audit.detections, "menuOnline"),

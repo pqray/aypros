@@ -16,6 +16,7 @@ export type AuditDetections = {
   hasViewport: AuditDetection;
   platform: AuditDetection;
   socialLinks: AuditDetection;
+  instagram: AuditDetection;
   whatsapp: AuditDetection;
   outdated: AuditDetection;
   basicBuilder: AuditDetection;

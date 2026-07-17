@@ -13,6 +13,8 @@ const input: AiInput = {
     hasWebsite: false,
     websiteUrl: null,
     phone: null,
+    socialOnly: false,
+    socialPlatform: null,
     segment: "other",
   },
   audit: null,

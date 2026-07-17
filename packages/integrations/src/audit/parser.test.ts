@@ -30,6 +30,7 @@ describe("parseHtmlAudit", () => {
     expect(result.detections.hasViewport.state).toBe("detected");
     expect(result.detections.platform.evidence).toEqual({ platform: "wordpress" });
     expect(result.detections.socialLinks.state).toBe("detected");
+    expect(result.detections.instagram.state).toBe("detected");
     expect(result.detections.whatsapp.state).toBe("detected");
   });
 

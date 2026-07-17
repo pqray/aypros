@@ -67,6 +67,7 @@ describe("createGooglePlacesProvider", () => {
       providerPlaceId: "ChIJdef456",
       websiteUrl: null,
       socialOnly: true,
+      socialPlatform: "instagram.com",
       phone: null,
       city: null,
       state: null,

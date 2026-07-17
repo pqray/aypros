@@ -50,6 +50,8 @@ vi.mock("../queries", () => ({
         reviewCount: 120,
         categories: [],
         segment: "food_service",
+        socialOnly: false,
+        socialPlatform: null,
       },
       latestAudit: {
         id: "a1",
@@ -66,6 +68,8 @@ vi.mock("../queries", () => ({
           outdated: { state: "not_detected" },
           siteDown: { state: "not_detected" },
           basicBuilder: { state: "not_detected" },
+          instagram: { state: "detected", evidence: { links: ["https://instagram.com/padaria"] } },
+          socialLinks: { state: "detected", evidence: { links: ["https://instagram.com/padaria"] } },
           linkInBio: { state: "not_detected" },
           deliveryPlatform: { state: "detected", evidence: { id: "ifood" } },
           menuOnline: { state: "not_detected" },

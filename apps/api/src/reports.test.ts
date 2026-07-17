@@ -131,6 +131,67 @@ describe("buildReportModel", () => {
     expect(titles).not.toContain("Presença concentrada em link-in-bio");
   });
 
+  it("includes detected Instagram and social-only context", () => {
+    const model = buildReportModel({
+      business: {
+        id: "b1",
+        name: "Studio Fit",
+        address: null,
+        city: "MacaÃ©",
+        state: "RJ",
+        phone: null,
+        website_url: null,
+        rating: null,
+        review_count: null,
+        categories: ["gym"],
+        raw: { socialOnly: true, socialPlatform: "instagram.com" },
+      },
+      audit: null,
+      score: null,
+      organizationName: "Agencia",
+      senderName: null,
+      generatedAt: "2026-07-17T12:00:00Z",
+    });
+
+    expect(model.findings[0]).toMatchObject({
+      status: "problem",
+      title: "Presença depende do Instagram",
+    });
+    expect(model.maturity.find((axis) => axis.label === "Presença social")?.value).toBe(70);
+  });
+
+  it("reports Instagram connected to a website when audited", () => {
+    const model = buildReportModel({
+      business: {
+        id: "b1",
+        name: "Studio Fit",
+        address: null,
+        city: "MacaÃ©",
+        state: "RJ",
+        phone: null,
+        website_url: "https://studiofit.example",
+        rating: null,
+        review_count: null,
+        categories: ["gym"],
+        raw: {},
+      },
+      audit: {
+        ...baseAudit,
+        detections: {
+          instagram: { state: "detected", evidence: { links: ["https://instagram.com/studiofit"] } },
+          socialLinks: { state: "detected", evidence: { links: ["https://instagram.com/studiofit"] } },
+        },
+      },
+      score: null,
+      organizationName: "Agencia",
+      senderName: null,
+      generatedAt: "2026-07-17T12:00:00Z",
+    });
+
+    expect(model.findings.map((finding) => finding.title)).toContain("Instagram conectado ao site");
+    expect(model.maturity.find((axis) => axis.label === "Presença social")?.value).toBe(85);
+  });
+
   it("prioritizes problems as alta and suggestions as média", () => {
     const model = buildReportModel({
       business: {
@@ -231,7 +292,7 @@ describe("bot-blocked sites (HTTP 401/403/429)", () => {
 describe("buildMaturityAxes", () => {
   it("marks unaudited axes as null (não verificado) instead of low score", () => {
     const axes = buildMaturityAxes({
-      business: { website_url: "https://example.com" },
+      business: { website_url: "https://example.com", raw: {} },
       audit: null,
     });
 
@@ -242,7 +303,7 @@ describe("buildMaturityAxes", () => {
 
   it("scores axes from audit evidence", () => {
     const axes = buildMaturityAxes({
-      business: { website_url: "https://example.com" },
+      business: { website_url: "https://example.com", raw: {} },
       audit: {
         ...baseAudit,
         response_time_ms: 2500,
@@ -262,7 +323,7 @@ describe("buildMaturityAxes", () => {
   });
 
   it("gives every axis a floor value when there is no website at all", () => {
-    const axes = buildMaturityAxes({ business: { website_url: null }, audit: null });
+    const axes = buildMaturityAxes({ business: { website_url: null, raw: {} }, audit: null });
 
     for (const axis of axes.filter((entry) => entry.value !== null)) {
       expect(axis.value).toBeLessThanOrEqual(10);

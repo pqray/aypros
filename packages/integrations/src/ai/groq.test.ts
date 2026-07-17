@@ -18,6 +18,8 @@ const input: AiInput = {
     hasWebsite: false,
     websiteUrl: null,
     phone: "+5585999990000",
+    socialOnly: false,
+    socialPlatform: null,
     segment: "food_service",
   },
   audit: null,

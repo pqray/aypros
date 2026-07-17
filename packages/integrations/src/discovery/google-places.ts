@@ -108,12 +108,19 @@ export function mapPlaceToBusiness(place: Place): DiscoveredBusiness {
     phone: normalizePhone(place.internationalPhoneNumber ?? place.nationalPhoneNumber),
     websiteUrl: website.websiteUrl,
     socialOnly: website.socialOnly,
+    socialPlatform: website.socialPlatform,
     rating: place.rating ?? null,
     reviewCount: place.userRatingCount ?? null,
     categories: place.types,
     lat: place.location?.latitude ?? null,
     lng: place.location?.longitude ?? null,
-    raw: place as unknown as Record<string, unknown>,
+    raw: {
+      ...(place as unknown as Record<string, unknown>),
+      socialOnly: website.socialOnly,
+      social_only: website.socialOnly,
+      socialPlatform: website.socialPlatform,
+      social_platform: website.socialPlatform,
+    },
   };
 }
 

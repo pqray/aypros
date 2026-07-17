@@ -424,6 +424,8 @@ export function BusinessesTable({
           <div className="flex flex-wrap gap-1">
             <SegmentAuditBadges
               segment={row.original.segment}
+              instagramDetected={row.original.instagramDetected}
+              socialLinks={row.original.socialLinks}
               linkInBio={row.original.linkInBio}
               deliveryPlatform={row.original.deliveryPlatform}
               menuOnline={row.original.menuOnline}

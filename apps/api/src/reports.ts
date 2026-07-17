@@ -92,6 +92,27 @@ function detectionState(
   return audit?.detections?.[code]?.state;
 }
 
+function socialPlatform(business: Pick<BusinessReportRow, "raw">): string | null {
+  return ((business.raw?.socialPlatform ?? business.raw?.social_platform) as string | null | undefined) ?? null;
+}
+
+function socialOnly(business: Pick<BusinessReportRow, "raw">): boolean {
+  return business.raw?.socialOnly === true || business.raw?.social_only === true;
+}
+
+function instagramDetected(params: {
+  business: Pick<BusinessReportRow, "raw">;
+  audit: AuditReportRow | null;
+}): boolean {
+  return (
+    socialPlatform(params.business)?.includes("instagram") === true ||
+    detectionState(params.audit, "instagram") === "detected" ||
+    JSON.stringify(params.audit?.detections?.socialLinks?.evidence ?? {})
+      .toLowerCase()
+      .includes("instagram.com")
+  );
+}
+
 export function translateDetection(params: {
   code: string;
   state: DetectionState | undefined;
@@ -221,6 +242,24 @@ export function translateDetection(params: {
 
   // Sinais sociais/segmento (fase 15) — só entram no relatório quando detectados;
   // ausência de sinal não vira afirmação (fase 17).
+  if (code === "instagram" && state === "detected") {
+    return {
+      title: "Instagram conectado ao site",
+      body: "Encontramos link para Instagram a partir da presença digital analisada.",
+      impact: "Esse canal ajuda na prova social, mas não substitui uma página própria bem estruturada para conversão.",
+      status: "ok",
+    };
+  }
+
+  if (code === "socialLinks" && state === "detected") {
+    return {
+      title: "Redes sociais conectadas",
+      body: "Encontramos links para redes sociais no site analisado.",
+      impact: "Isso facilita continuidade do relacionamento, desde que o site também apresente oferta e contato com clareza.",
+      status: "ok",
+    };
+  }
+
   if (code === "linkInBio" && state === "detected") {
     return {
       title: "Presença concentrada em link-in-bio",
@@ -262,7 +301,7 @@ export type MaturityAxis = {
  * eixo sem evidência vira "não verificado" em vez de nota baixa.
  */
 export function buildMaturityAxes(params: {
-  business: Pick<BusinessReportRow, "website_url">;
+  business: Pick<BusinessReportRow, "website_url" | "raw">;
   audit: AuditReportRow | null;
 }): MaturityAxis[] {
   const { business, audit } = params;
@@ -289,8 +328,15 @@ export function buildMaturityAxes(params: {
   else if (audit?.is_https === false) trust = 25;
   if (detectionState(audit, "sslError") === "detected") trust = 15;
 
+  let socialPresence: number | null = null;
+  if (socialOnly(business)) socialPresence = 70;
+  else if (instagramDetected({ business, audit })) socialPresence = 85;
+  else if (detectionState(audit, "socialLinks") === "detected") socialPresence = 75;
+  else if (audit?.status === "completed") socialPresence = 25;
+
   return [
     { label: "Site próprio", value: hasSite ? 90 : 10 },
+    { label: "Presença social", value: socialPresence },
     { label: "Adaptação para celular", value: hasSite ? fromDetection("hasViewport") : 10 },
     {
       label: "SEO básico",
@@ -315,12 +361,19 @@ function businessSummary(business: BusinessReportRow): string {
 }
 
 function noSiteFindings(business: BusinessReportRow): ReportFinding[] {
-  const socialOnly = business.raw?.socialOnly === true || business.raw?.social_only === true;
+  const dependsOnSocial = socialOnly(business);
+  const platform = socialPlatform(business);
   return [
     {
-      title: socialOnly ? "Presença depende de rede social" : "Empresa sem site próprio",
-      body: socialOnly
-        ? "O endereço encontrado aponta para uma rede social, não para um site próprio."
+      title: dependsOnSocial
+        ? platform?.includes("instagram")
+          ? "Presença depende do Instagram"
+          : "Presença depende de rede social"
+        : "Empresa sem site próprio",
+      body: dependsOnSocial
+        ? platform?.includes("instagram")
+          ? "O endereço encontrado aponta para Instagram, não para um site próprio."
+          : "O endereço encontrado aponta para uma rede social, não para um site próprio."
         : "Não encontramos site próprio vinculado ao perfil público desta empresa.",
       impact:
         "Um site próprio ajuda a apresentar serviços, diferenciais, localização e formas de contato em um lugar controlado pela empresa.",
@@ -383,6 +436,14 @@ export function buildReportModel(params: {
         translateDetection({ code: "hasDescription", state: detectionState(params.audit, "hasDescription"), audit: params.audit }),
         translateDetection({ code: "outdated", state: detectionState(params.audit, "outdated"), audit: params.audit }),
         translateDetection({ code: "basicBuilder", state: detectionState(params.audit, "basicBuilder"), audit: params.audit }),
+        translateDetection({
+          code: "instagram",
+          state: instagramDetected({ business: params.business, audit: params.audit })
+            ? "detected"
+            : detectionState(params.audit, "instagram"),
+          audit: params.audit,
+        }),
+        translateDetection({ code: "socialLinks", state: detectionState(params.audit, "socialLinks"), audit: params.audit }),
         translateDetection({ code: "linkInBio", state: detectionState(params.audit, "linkInBio"), audit: params.audit }),
         translateDetection({ code: "deliveryPlatform", state: detectionState(params.audit, "deliveryPlatform"), audit: params.audit }),
         translateDetection({ code: "menuOnline", state: detectionState(params.audit, "menuOnline"), audit: params.audit }),

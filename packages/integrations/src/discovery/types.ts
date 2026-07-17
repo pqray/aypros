@@ -20,6 +20,8 @@ export type DiscoveredBusiness = {
   websiteUrl: string | null;
   /** True when the provider website points to a social profile (Instagram, Linktree, ...). */
   socialOnly: boolean;
+  /** Host family when `socialOnly` is true, e.g. instagram.com. */
+  socialPlatform: string | null;
   rating: number | null;
   reviewCount: number | null;
   categories: string[];

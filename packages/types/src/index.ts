@@ -94,6 +94,8 @@ export type BusinessDetail = {
   reviewCount: number | null;
   categories: string[];
   segment: BusinessSegment;
+  socialOnly: boolean;
+  socialPlatform: string | null;
 };
 
 export type WebsiteAuditSummary = {
@@ -155,6 +157,8 @@ export type BusinessListItem = {
   reviewCount: number | null;
   categories: string[];
   segment: BusinessSegment;
+  instagramDetected: boolean;
+  socialLinks: boolean;
   linkInBio: boolean;
   deliveryPlatform: boolean;
   menuOnline: boolean;

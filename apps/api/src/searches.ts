@@ -84,7 +84,13 @@ function toBusinessRow(business: DiscoveredBusiness, nowIso: string) {
     categories: business.categories,
     lat: business.lat,
     lng: business.lng,
-    raw: business.raw,
+    raw: {
+      ...business.raw,
+      socialOnly: business.socialOnly,
+      social_only: business.socialOnly,
+      socialPlatform: business.socialPlatform,
+      social_platform: business.socialPlatform,
+    },
     updated_at: nowIso,
   };
 }

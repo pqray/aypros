@@ -63,6 +63,7 @@ export function parseHtmlAudit(input: {
   const socialLinks = links.filter((href) =>
     SOCIAL_PATTERNS.some((pattern) => href.toLowerCase().includes(pattern)),
   );
+  const instagramLinks = links.filter((href) => href.toLowerCase().includes("instagram.com"));
   const whatsappLinks = links.filter((href) => /wa\.me|whatsapp\.com/i.test(href));
   const segmentPlatforms = detectSegmentPlatforms({ $, html: input.html, finalUrl: input.finalUrl, links });
   const years = Array.from(input.html.matchAll(/\b(19\d{2}|20\d{2})\b/g), (match) =>
@@ -88,6 +89,10 @@ export function parseHtmlAudit(input: {
     platform: platform ? detected({ platform }) : notDetected(),
     socialLinks:
       socialLinks.length > 0 ? detected({ links: socialLinks.slice(0, 5) }) : contentMissing,
+    instagram:
+      instagramLinks.length > 0
+        ? detected({ links: instagramLinks.slice(0, 5) })
+        : contentMissing,
     whatsapp:
       whatsappLinks.length > 0 ? detected({ links: whatsappLinks.slice(0, 5) }) : notDetected(),
     outdated: oldYears.length > 0 ? detected({ years: oldYears.slice(0, 5) }) : contentMissing,

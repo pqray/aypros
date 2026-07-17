@@ -77,6 +77,8 @@ export function mergeBusinessRefresh(existing: BusinessRow, details: DiscoveredB
       ...details.raw,
       socialOnly: details.socialOnly,
       social_only: details.socialOnly,
+      socialPlatform: details.socialPlatform,
+      social_platform: details.socialPlatform,
       refreshedFrom: "place_details",
     },
     provider_status: "active",

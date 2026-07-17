@@ -40,6 +40,7 @@ import {
   PiPhone,
   PiWarningCircle,
 } from "react-icons/pi";
+import { SiInstagram } from "react-icons/si";
 import { useAppContext } from "@/components/shell/use-app-context";
 import { AiGenerationsCard } from "@/features/ai/components/ai-generations-card";
 import { useCreateLead } from "@/features/pipeline/queries";
@@ -167,6 +168,11 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
     summary.data;
   const location = business.address ?? [business.city, business.state].filter(Boolean).join("/");
   const freshnessLabel = refreshedAt ? formatRelativeTime(refreshedAt) : "Nunca atualizado";
+  const socialLabel = business.socialOnly
+    ? business.socialPlatform?.includes("instagram")
+      ? "Instagram"
+      : "Rede social"
+    : null;
 
   return (
     <div className="space-y-4">
@@ -302,6 +308,13 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
                   {business.websiteUrl}
                 </a>
               }
+            />
+          ) : null}
+          {socialLabel ? (
+            <BusinessMetaItem
+              icon={<SiInstagram className="size-4" aria-hidden />}
+              label="Canal social"
+              value={`${socialLabel} detectado como presença principal`}
             />
           ) : null}
         </div>

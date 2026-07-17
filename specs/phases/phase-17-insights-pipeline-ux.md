@@ -165,6 +165,14 @@ Separar três níveis:
 2. **Inferido com cautela**: empresa sem site próprio mas com sinais de canal terceiro; a IA pode tratar como dependência provável, não fato absoluto.
 3. **Métrica externa**: seguidores, frequência de posts, engajamento. Só entra com provider externo pago e spec própria; sem scraping direto.
 
+Implementado no app:
+
+- `socialOnly/socialPlatform` preservados desde discovery/refresh para distinguir Instagram/rede social de site próprio.
+- Auditoria HTML gera detecção explícita `instagram`, além de `socialLinks`.
+- Empresas/listagem exibem badges `Instagram`/`Redes sociais`; detalhe da empresa mostra canal social principal quando aplicável.
+- Score, IA e PDF recebem os sinais sociais estruturados; Instagram só é citado com evidência salva.
+- Maturidade digital inclui eixo `Presença social`.
+
 ## Arquivos esperados
 
 - `apps/api/src/app.ts`: CORS com métodos corretos.
@@ -189,6 +197,7 @@ Separar três níveis:
 - [x] E-mail v4 fica mais consultivo, contextual e validado por parágrafos.
 - [x] PDF v2 inclui resumo executivo, métricas visuais e recomendações priorizadas.
 - [x] "Ações da empresa" removido ou substituído por agrupamento visual discreto.
+- [x] Instagram/presença social aparecem como sinal explícito na UX, score, IA e PDF sem inventar métricas externas.
 
 ## Testes necessários
 

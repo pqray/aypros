@@ -65,7 +65,7 @@ type GenerationRow = {
 };
 
 const VALID_STATES = new Set(["detected", "not_detected", "inconclusive"]);
-const PLATFORM_CODES = new Set(["linkInBio", "deliveryPlatform", "menuOnline"]);
+const PLATFORM_CODES = new Set(["instagram", "socialLinks", "linkInBio", "deliveryPlatform", "menuOnline"]);
 
 function toDetectionState(value: string | undefined): AiDetectionState {
   return (VALID_STATES.has(value ?? "") ? value : "inconclusive") as AiDetectionState;
@@ -92,6 +92,10 @@ export function toAiInput(params: {
       hasWebsite: Boolean(business.website_url?.trim()),
       websiteUrl: business.website_url,
       phone: business.phone,
+      socialOnly: business.raw?.socialOnly === true || business.raw?.social_only === true,
+      socialPlatform:
+        ((business.raw?.socialPlatform ?? business.raw?.social_platform) as string | null | undefined) ??
+        null,
       segment:
         ((business.raw?.segment ?? business.raw?.business_segment) as BusinessSegment | undefined) ??
         mapCategoriesToSegment(business.categories ?? []),

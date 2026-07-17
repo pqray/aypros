@@ -49,6 +49,8 @@ describe("toAiInput", () => {
       hasWebsite: true,
       websiteUrl: "https://padariacentral.com.br",
       phone: "+5585999990000",
+      socialOnly: false,
+      socialPlatform: null,
       segment: "food_service",
     });
     expect(input.audit).toEqual({

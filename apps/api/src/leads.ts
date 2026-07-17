@@ -603,6 +603,10 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
         segment:
           ((business.raw?.segment ?? business.raw?.business_segment) as BusinessSegment | undefined) ??
           mapCategoriesToSegment(business.categories),
+        socialOnly: business.raw?.socialOnly === true || business.raw?.social_only === true,
+        socialPlatform:
+          ((business.raw?.socialPlatform ?? business.raw?.social_platform) as string | null | undefined) ??
+          null,
       },
       notes,
       activities,

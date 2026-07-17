@@ -19,12 +19,16 @@ function isFoodSegment(segment: BusinessSegment): boolean {
 
 export function SegmentAuditBadges({
   segment,
+  instagramDetected,
+  socialLinks,
   linkInBio,
   deliveryPlatform,
   menuOnline,
   compact = false,
 }: {
   segment: BusinessSegment;
+  instagramDetected?: boolean;
+  socialLinks?: boolean;
   linkInBio: boolean;
   deliveryPlatform: boolean;
   menuOnline: boolean;
@@ -33,6 +37,8 @@ export function SegmentAuditBadges({
   return (
     <>
       {!compact ? <Badge variant="muted">{segmentLabels[segment]}</Badge> : null}
+      {instagramDetected ? <Badge variant="info">Instagram</Badge> : null}
+      {!instagramDetected && socialLinks ? <Badge variant="secondary">Redes sociais</Badge> : null}
       {linkInBio ? <Badge variant="warning">Link-in-bio</Badge> : null}
       {deliveryPlatform ? <Badge variant="info">Delivery</Badge> : null}
       {isFoodSegment(segment) && menuOnline ? <Badge variant="success">Cardápio</Badge> : null}
@@ -50,10 +56,16 @@ export function SegmentAuditDetailBadges({
   const linkInBio = detections.linkInBio?.state === "detected";
   const deliveryPlatform = detections.deliveryPlatform?.state === "detected";
   const menuOnline = detections.menuOnline?.state;
+  const socialLinks = detections.socialLinks?.state === "detected";
+  const instagram =
+    detections.instagram?.state === "detected" ||
+    JSON.stringify(detections.socialLinks?.evidence ?? {}).toLowerCase().includes("instagram.com");
 
   return (
     <div className="flex flex-wrap gap-2">
       <Badge variant="muted">{segmentLabels[segment]}</Badge>
+      {instagram ? <Badge variant="info">Instagram detectado</Badge> : null}
+      {!instagram && socialLinks ? <Badge variant="secondary">Redes sociais detectadas</Badge> : null}
       {linkInBio ? <Badge variant="warning">Atende por link-in-bio</Badge> : null}
       {deliveryPlatform ? <Badge variant="info">Plataforma de delivery</Badge> : null}
       {isFoodSegment(segment) && menuOnline === "detected" ? (

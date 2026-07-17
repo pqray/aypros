@@ -19,6 +19,8 @@ export type AiInput = {
     hasWebsite: boolean;
     websiteUrl: string | null;
     phone: string | null;
+    socialOnly: boolean;
+    socialPlatform: string | null;
     segment: AiBusinessSegment;
   };
   audit: {

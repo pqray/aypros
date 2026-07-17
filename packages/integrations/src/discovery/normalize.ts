@@ -61,11 +61,13 @@ export type NormalizedWebsite = {
   websiteUrl: string | null;
   /** True when the URL points to a social profile instead of an own website. */
   socialOnly: boolean;
+  /** Host family when the URL points to a social profile. */
+  socialPlatform: string | null;
 };
 
-function isSocialHost(hostname: string): boolean {
+function socialPlatform(hostname: string): string | null {
   const host = hostname.toLowerCase().replace(/^www\./, "");
-  return SOCIAL_HOSTS.some((social) => host === social || host.endsWith(`.${social}`));
+  return SOCIAL_HOSTS.find((social) => host === social || host.endsWith(`.${social}`)) ?? null;
 }
 
 /**
@@ -74,7 +76,7 @@ function isSocialHost(hostname: string): boolean {
  */
 export function normalizeWebsite(input: string | null | undefined): NormalizedWebsite {
   if (!input || input.trim().length === 0) {
-    return { websiteUrl: null, socialOnly: false };
+    return { websiteUrl: null, socialOnly: false, socialPlatform: null };
   }
 
   const candidate = input.trim();
@@ -84,15 +86,16 @@ export function normalizeWebsite(input: string | null | undefined): NormalizedWe
   try {
     url = new URL(withScheme);
   } catch {
-    return { websiteUrl: null, socialOnly: false };
+    return { websiteUrl: null, socialOnly: false, socialPlatform: null };
   }
 
   if (url.protocol !== "http:" && url.protocol !== "https:") {
-    return { websiteUrl: null, socialOnly: false };
+    return { websiteUrl: null, socialOnly: false, socialPlatform: null };
   }
 
-  if (isSocialHost(url.hostname)) {
-    return { websiteUrl: null, socialOnly: true };
+  const platform = socialPlatform(url.hostname);
+  if (platform) {
+    return { websiteUrl: null, socialOnly: true, socialPlatform: platform };
   }
 
   for (const key of [...url.searchParams.keys()]) {
@@ -102,5 +105,5 @@ export function normalizeWebsite(input: string | null | undefined): NormalizedWe
   }
   url.hash = "";
 
-  return { websiteUrl: url.toString(), socialOnly: false };
+  return { websiteUrl: url.toString(), socialOnly: false, socialPlatform: null };
 }

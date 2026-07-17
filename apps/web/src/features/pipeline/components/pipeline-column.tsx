@@ -13,9 +13,11 @@ function formatCurrency(value: number): string {
 export function PipelineColumn({
   column,
   onPrefetchDetail,
+  onRemoveLead,
 }: {
   column: PipelineColumnData;
   onPrefetchDetail?: (leadId: string) => void;
+  onRemoveLead?: (lead: PipelineColumnData["leads"][number]) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.stage });
 
@@ -42,7 +44,12 @@ export function PipelineColumn({
       >
         <SortableContext items={column.leads.map((lead) => lead.id)} strategy={verticalListSortingStrategy}>
           {column.leads.map((lead) => (
-            <SortableLeadCard key={lead.id} lead={lead} onPrefetchDetail={onPrefetchDetail} />
+            <SortableLeadCard
+              key={lead.id}
+              lead={lead}
+              onPrefetchDetail={onPrefetchDetail}
+              onRemove={onRemoveLead}
+            />
           ))}
         </SortableContext>
         {column.leads.length === 0 ? (

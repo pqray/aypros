@@ -9,11 +9,13 @@ export function LeadDetailLink({
   leadId,
   children,
   className,
+  "aria-label": ariaLabel,
   onPrefetch,
 }: {
   leadId: string;
   children: ReactNode;
   className?: string;
+  "aria-label"?: string;
   onPrefetch?: (leadId: string) => void;
 }) {
   const href = `/pipeline/${leadId}`;
@@ -28,6 +30,7 @@ export function LeadDetailLink({
       href={href}
       prefetch
       aria-busy={navigating}
+      aria-label={ariaLabel}
       className={cn(
         "inline-flex min-w-0 items-center gap-1.5 rounded-sm transition-colors",
         navigating && "text-primary",

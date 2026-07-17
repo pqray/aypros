@@ -4,15 +4,19 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
+  Button,
   Card,
   CardContent,
   ScoreBadge,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
   cn,
 } from "@aypros/ui";
 import type { LeadSummary } from "@aypros/types";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { PiClockCountdown, PiDotsSixVertical, PiPhoneCall } from "react-icons/pi";
+import { PiArrowSquareOut, PiClockCountdown, PiDotsSixVertical, PiPhoneCall, PiTrash } from "react-icons/pi";
 import { formatRelativeTime } from "@/lib/format";
 import { isOverdue } from "../board";
 import { LeadDetailLink } from "./lead-detail-link";
@@ -118,9 +122,11 @@ function LeadCardBody({
 export function SortableLeadCard({
   lead,
   onPrefetchDetail,
+  onRemove,
 }: {
   lead: LeadSummary;
   onPrefetchDetail?: (leadId: string) => void;
+  onRemove?: (lead: LeadSummary) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: lead.id,
@@ -142,22 +148,53 @@ export function SortableLeadCard({
           isDragging && "border-dashed opacity-40",
         )}
       >
-        <CardContent className="flex items-start gap-1 p-3">
-          {/*
-            A dedicated drag handle — not the whole card — so links and buttons
-            inside the card keep working, and keyboard users get an explicit,
-            focusable grab point (KeyboardSensor).
-          */}
-          <button
-            type="button"
-            aria-label={`Arrastar ${lead.businessName}`}
-            className="mt-0.5 shrink-0 cursor-grab touch-none rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
-            {...attributes}
-            {...listeners}
-          >
-            <PiDotsSixVertical aria-hidden />
-          </button>
+        <CardContent className="flex items-start gap-2 p-3">
           <LeadCardBody lead={lead} onPrefetchDetail={onPrefetchDetail} />
+          <div className="flex shrink-0 items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`Arrastar ${lead.businessName}`}
+                  className="grid size-7 cursor-grab touch-none place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+                  {...attributes}
+                  {...listeners}
+                >
+                  <PiDotsSixVertical aria-hidden />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Arrastar</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button asChild type="button" variant="ghost" size="icon" className="size-7">
+                  <LeadDetailLink
+                    leadId={lead.id}
+                    onPrefetch={onPrefetchDetail}
+                    aria-label={`Abrir ${lead.businessName}`}
+                  >
+                    <PiArrowSquareOut aria-hidden />
+                  </LeadDetailLink>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Abrir lead</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 text-muted-foreground hover:text-destructive"
+                  aria-label={`Remover ${lead.businessName} do pipeline`}
+                  onClick={() => onRemove?.(lead)}
+                >
+                  <PiTrash aria-hidden />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Remover do pipeline</TooltipContent>
+            </Tooltip>
+          </div>
         </CardContent>
       </Card>
     </div>

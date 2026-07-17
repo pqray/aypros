@@ -26,17 +26,27 @@ type PendingMove = {
   businessName: string;
 };
 
+type PendingRemoval = {
+  leadId: string;
+  businessName: string;
+};
+
 export function PipelineBoard({
   leads,
   onMove,
+  onRemoveLead,
+  removeLoading = false,
   onPrefetchDetail,
 }: {
   leads: LeadSummary[];
   onMove: (leadId: string, stage: LeadStage, position: number) => void;
+  onRemoveLead?: (leadId: string) => void;
+  removeLoading?: boolean;
   onPrefetchDetail?: (leadId: string) => void;
 }) {
   const [activeLead, setActiveLead] = useState<LeadSummary | null>(null);
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -102,6 +112,16 @@ export function PipelineBoard({
     setPendingMove(null);
   }
 
+  function requestRemove(lead: LeadSummary) {
+    setPendingRemoval({ leadId: lead.id, businessName: lead.businessName });
+  }
+
+  function confirmPendingRemoval() {
+    if (!pendingRemoval) return;
+    onRemoveLead?.(pendingRemoval.leadId);
+    setPendingRemoval(null);
+  }
+
   return (
     <>
       <DndContext
@@ -113,7 +133,12 @@ export function PipelineBoard({
       >
         <div className="flex gap-3 overflow-x-auto pb-2">
           {columns.map((column) => (
-            <PipelineColumn key={column.stage} column={column} onPrefetchDetail={onPrefetchDetail} />
+            <PipelineColumn
+              key={column.stage}
+              column={column}
+              onPrefetchDetail={onPrefetchDetail}
+              onRemoveLead={onRemoveLead ? requestRemove : undefined}
+            />
           ))}
         </div>
         <DragOverlay dropAnimation={dropAnimation}>
@@ -132,6 +157,21 @@ export function PipelineBoard({
         }
         confirmLabel="Confirmar"
         onConfirm={confirmPendingMove}
+      />
+
+      <ConfirmDialog
+        open={pendingRemoval !== null}
+        onOpenChange={(open) => !open && setPendingRemoval(null)}
+        title="Remover do pipeline?"
+        description={
+          pendingRemoval
+            ? `"${pendingRemoval.businessName}" sai do pipeline, mas a empresa continua salva na sua base. Notas deste lead serao removidas.`
+            : undefined
+        }
+        confirmLabel="Remover"
+        destructive
+        loading={removeLoading}
+        onConfirm={confirmPendingRemoval}
       />
     </>
   );

@@ -1,5 +1,7 @@
+import { TooltipProvider } from "@aypros/ui";
 import type { LeadSummary } from "@aypros/types";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { PipelineBoard } from "./pipeline-board";
 
@@ -28,9 +30,22 @@ function makeLead(overrides: Partial<LeadSummary> = {}): LeadSummary {
   };
 }
 
+function renderBoard(props: Partial<ComponentProps<typeof PipelineBoard>> = {}) {
+  const defaultProps: ComponentProps<typeof PipelineBoard> = {
+    leads: [makeLead()],
+    onMove: vi.fn(),
+  };
+
+  return render(
+    <TooltipProvider>
+      <PipelineBoard {...defaultProps} {...props} />
+    </TooltipProvider>,
+  );
+}
+
 describe("PipelineBoard", () => {
   it("renders every fixed stage as a column", () => {
-    render(<PipelineBoard leads={[makeLead()]} onMove={vi.fn()} />);
+    renderBoard();
 
     expect(screen.getByText("Novo")).toBeInTheDocument();
     expect(screen.getByText("Contactado")).toBeInTheDocument();
@@ -40,13 +55,23 @@ describe("PipelineBoard", () => {
     expect(screen.getByText("Perdido")).toBeInTheDocument();
   });
 
-  it("has a keyboard-focusable drag handle and no three-dots move menu on the card", () => {
-    render(<PipelineBoard leads={[makeLead()]} onMove={vi.fn()} />);
+  it("has visible card actions and no three-dots move menu on the card", () => {
+    renderBoard();
 
     expect(screen.getByLabelText("Arrastar Padaria Central")).toBeInTheDocument();
-    // The stage-move dropdown was removed in Phase 17 — drag (pointer or
-    // keyboard via the handle) and the detail page are the ways to move.
+    expect(screen.getByLabelText("Abrir Padaria Central")).toHaveAttribute("href", "/pipeline/l1");
+    expect(screen.getByLabelText("Remover Padaria Central do pipeline")).toBeInTheDocument();
     expect(screen.queryByLabelText("Mover Padaria Central")).not.toBeInTheDocument();
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("confirms removal from the card", () => {
+    const onRemoveLead = vi.fn();
+    renderBoard({ onRemoveLead });
+
+    fireEvent.click(screen.getByLabelText("Remover Padaria Central do pipeline"));
+    fireEvent.click(screen.getByRole("button", { name: "Remover" }));
+
+    expect(onRemoveLead).toHaveBeenCalledWith("l1");
   });
 });

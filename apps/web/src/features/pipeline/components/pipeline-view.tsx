@@ -7,7 +7,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PiKanban } from "react-icons/pi";
 import { useAppContext } from "@/components/shell/use-app-context";
 import type { PipelineOwnerFilter } from "../api";
-import { usePipeline, usePrefetchLead, useUpdateLead } from "../queries";
+import { useDeleteLead, usePipeline, usePrefetchLead, useUpdateLead } from "../queries";
 import { PipelineBoard } from "./pipeline-board";
 
 export function PipelineView() {
@@ -19,6 +19,7 @@ export function PipelineView() {
   const ownerFilter: PipelineOwnerFilter = searchParams.get("owner") === "mine" ? "mine" : "all";
   const pipeline = usePipeline(orgId, ownerFilter);
   const updateLead = useUpdateLead(orgId);
+  const deleteLead = useDeleteLead(orgId);
   const prefetchLead = usePrefetchLead(orgId);
 
   function handleMove(leadId: string, stage: LeadStage, position: number) {
@@ -26,6 +27,13 @@ export function PipelineView() {
       { leadId, input: { stage, position } },
       { onError: () => toast.error("Não foi possível mover o lead.") },
     );
+  }
+
+  function handleRemoveLead(leadId: string) {
+    deleteLead.mutate(leadId, {
+      onSuccess: () => toast.success("Lead removido do pipeline. A empresa continua salva."),
+      onError: () => toast.error("Nao foi possivel remover o lead do pipeline."),
+    });
   }
 
   function setOwnerFilter(value: PipelineOwnerFilter) {
@@ -87,7 +95,13 @@ export function PipelineView() {
           }
         />
       ) : (
-        <PipelineBoard leads={leads} onMove={handleMove} onPrefetchDetail={prefetchLead} />
+        <PipelineBoard
+          leads={leads}
+          onMove={handleMove}
+          onRemoveLead={handleRemoveLead}
+          removeLoading={deleteLead.isPending}
+          onPrefetchDetail={prefetchLead}
+        />
       )}
     </div>
   );

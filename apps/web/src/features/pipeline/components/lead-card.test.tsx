@@ -1,7 +1,8 @@
+import { TooltipProvider } from "@aypros/ui";
 import type { LeadSummary } from "@aypros/types";
-import { render, screen } from "@testing-library/react";
 import { DndContext } from "@dnd-kit/core";
 import { SortableContext } from "@dnd-kit/sortable";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { SortableLeadCard } from "./lead-card";
 
@@ -32,11 +33,13 @@ function makeLead(overrides: Partial<LeadSummary> = {}): LeadSummary {
 
 function renderCard(lead: LeadSummary) {
   render(
-    <DndContext onDragEnd={vi.fn()}>
-      <SortableContext items={[lead.id]}>
-        <SortableLeadCard lead={lead} />
-      </SortableContext>
-    </DndContext>,
+    <TooltipProvider>
+      <DndContext onDragEnd={vi.fn()}>
+        <SortableContext items={[lead.id]}>
+          <SortableLeadCard lead={lead} />
+        </SortableContext>
+      </DndContext>
+    </TooltipProvider>,
   );
 }
 
@@ -60,10 +63,12 @@ describe("SortableLeadCard", () => {
     expect(dueText.className).toContain("text-destructive");
   });
 
-  it("exposes only the drag handle as a card action (no stage menu)", () => {
+  it("exposes drag, open and remove actions without the old stage menu", () => {
     renderCard(makeLead());
 
     expect(screen.getByLabelText("Arrastar Padaria Central")).toBeInTheDocument();
+    expect(screen.getByLabelText("Abrir Padaria Central")).toHaveAttribute("href", "/pipeline/l1");
+    expect(screen.getByLabelText("Remover Padaria Central do pipeline")).toBeInTheDocument();
     expect(screen.queryByLabelText("Mover Padaria Central")).not.toBeInTheDocument();
   });
 });

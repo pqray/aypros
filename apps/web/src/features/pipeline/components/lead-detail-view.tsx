@@ -94,29 +94,74 @@ function StageStepper({
   onSelect: (stage: LeadStage) => void;
   disabled?: boolean;
 }) {
+  const currentIndex = LEAD_STAGES.indexOf(current);
+
   return (
     <div
       role="group"
-      aria-label="Estágio do lead"
-      className="flex flex-wrap gap-1 rounded-lg border bg-card p-1"
+      aria-label="Etapas da pipeline"
+      className="rounded-lg border bg-card p-3"
     >
-      {LEAD_STAGES.map((stage) => {
-        const active = stage === current;
-        return (
-          <Button
-            key={stage}
-            type="button"
-            size="sm"
-            variant={active ? "secondary" : "ghost"}
-            aria-pressed={active}
-            disabled={disabled}
-            className={cn("h-8", active && "font-semibold")}
-            onClick={() => (active ? undefined : onSelect(stage))}
-          >
-            {leadStageLabels[stage]}
-          </Button>
-        );
-      })}
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase text-muted-foreground">Pipeline</p>
+          <p className="text-sm font-semibold text-foreground">Etapas do lead</p>
+        </div>
+        <Badge variant="muted">
+          {currentIndex + 1}/{LEAD_STAGES.length}
+        </Badge>
+      </div>
+
+      <div className="grid gap-2 md:grid-cols-6">
+        {LEAD_STAGES.map((stage, index) => {
+          const active = stage === current;
+          const completed = index < currentIndex;
+          const reached = completed || active;
+          return (
+            <button
+              key={stage}
+              type="button"
+              aria-pressed={active}
+              disabled={disabled}
+              className={cn(
+                "group relative flex min-h-16 items-center gap-2 rounded-md border px-3 py-2 text-left transition-colors",
+                "disabled:pointer-events-none disabled:opacity-60",
+                active
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-transparent bg-muted/45 text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+              onClick={() => (active ? undefined : onSelect(stage))}
+            >
+              <span
+                className={cn(
+                  "flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
+                  reached
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background text-muted-foreground",
+                )}
+                aria-hidden
+              >
+                {index + 1}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[11px] font-medium uppercase leading-none text-muted-foreground">
+                  Etapa {index + 1}
+                </span>
+                <span className="mt-1 block truncate text-sm font-semibold">{leadStageLabels[stage]}</span>
+              </span>
+              {index < LEAD_STAGES.length - 1 ? (
+                <span
+                  className={cn(
+                    "pointer-events-none absolute left-[calc(100%+1px)] top-1/2 z-10 hidden h-px w-2 -translate-y-1/2 md:block",
+                    index < currentIndex ? "bg-primary" : "bg-border",
+                  )}
+                  aria-hidden
+                />
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

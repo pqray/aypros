@@ -42,6 +42,7 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, loading = false, children, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
+    const iconOnlyLoading = loading && size === "icon";
     return (
       <Comp
         ref={ref}
@@ -49,7 +50,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={loading || props.disabled}
         {...props}
       >
-        {loading ? (
+        {iconOnlyLoading ? (
+          <PiCircleNotch className="animate-spin" aria-hidden />
+        ) : loading ? (
           <>
             <PiCircleNotch className="animate-spin" aria-hidden />
             {children}

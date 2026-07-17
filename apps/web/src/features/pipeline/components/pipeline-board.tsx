@@ -13,11 +13,12 @@ import {
   useSensors,
   type CollisionDetection,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { useMemo, useState } from "react";
-import { groupByStage, LEAD_STAGES, leadStageLabels, needsMoveConfirmation } from "../board";
+import { useMemo, useRef, useState } from "react";
+import { groupByStage, LEAD_STAGES, leadStageLabels, moveLead, needsMoveConfirmation } from "../board";
 import { LeadCardPreview } from "./lead-card";
 import { PipelineColumn } from "./pipeline-column";
 
@@ -52,6 +53,8 @@ export function PipelineBoard({
   onPrefetchDetail?: (leadId: string) => void;
 }) {
   const [activeLead, setActiveLead] = useState<LeadSummary | null>(null);
+  const [previewLeads, setPreviewLeads] = useState<LeadSummary[] | null>(null);
+  const previewLeadsRef = useRef<LeadSummary[] | null>(null);
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null);
 
@@ -68,8 +71,29 @@ export function PipelineBoard({
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? null : undefined;
   }, []);
 
-  const columns = useMemo(() => groupByStage(leads), [leads]);
+  const visibleLeads = previewLeads ?? leads;
+  const columns = useMemo(() => groupByStage(visibleLeads), [visibleLeads]);
   const leadsById = useMemo(() => new Map(leads.map((lead) => [lead.id, lead])), [leads]);
+
+  function getMoveTarget(items: LeadSummary[], activeId: string, overId: string) {
+    const targetColumns = groupByStage(items);
+    const isColumnDrop = (LEAD_STAGES as string[]).includes(overId);
+
+    if (isColumnDrop) {
+      const stage = overId as LeadStage;
+      const targetColumn = targetColumns.find((column) => column.stage === stage);
+      return {
+        stage,
+        position: targetColumn?.leads.filter((lead) => lead.id !== activeId).length ?? 0,
+      };
+    }
+
+    const overLead = items.find((lead) => lead.id === overId);
+    if (!overLead) return null;
+    const targetColumn = targetColumns.find((column) => column.stage === overLead.stage);
+    const targetIndex = targetColumn?.leads.findIndex((lead) => lead.id === overId) ?? 0;
+    return { stage: overLead.stage, position: targetIndex };
+  }
 
   function requestMove(leadId: string, stage: LeadStage, position: number) {
     const lead = leadsById.get(leadId);
@@ -86,31 +110,53 @@ export function PipelineBoard({
   function handleDragStart(event: DragStartEvent) {
     const lead = leadsById.get(String(event.active.id));
     setActiveLead(lead ?? null);
+    previewLeadsRef.current = null;
+    setPreviewLeads(null);
   }
 
-  function handleDragEnd(event: DragEndEvent) {
-    setActiveLead(null);
+  function handleDragOver(event: DragOverEvent) {
     const { active, over } = event;
     if (!over) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
+
+    setPreviewLeads((current) => {
+      const items = current ?? leads;
+      const activeItem = items.find((lead) => lead.id === activeId);
+      if (!activeItem) return current;
+
+      const target = getMoveTarget(items, activeId, overId);
+      if (!target) return current;
+      if (activeItem.stage === target.stage && activeItem.position === target.position) return current;
+
+      const nextItems = moveLead(items, activeId, target.stage, target.position);
+      previewLeadsRef.current = nextItems;
+      return nextItems;
+    });
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setActiveLead(null);
+    const finalPreview = previewLeadsRef.current;
+    previewLeadsRef.current = null;
+    setPreviewLeads(null);
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = String(active.id);
     const activeLeadData = leadsById.get(activeId);
     if (!activeLeadData) return;
 
-    const isColumnDrop = (LEAD_STAGES as string[]).includes(overId);
-    if (isColumnDrop) {
-      const stage = overId as LeadStage;
-      const targetColumn = columns.find((column) => column.stage === stage);
-      requestMove(activeId, stage, targetColumn?.leads.length ?? 0);
+    const previewLead = finalPreview?.find((lead) => lead.id === activeId);
+    if (previewLead) {
+      requestMove(activeId, previewLead.stage, previewLead.position);
       return;
     }
 
-    const overLead = leadsById.get(overId);
-    if (!overLead) return;
-    const targetColumn = columns.find((column) => column.stage === overLead.stage);
-    const targetIndex = targetColumn?.leads.findIndex((lead) => lead.id === overId) ?? 0;
-    requestMove(activeId, overLead.stage, targetIndex);
+    const target = getMoveTarget(leads, activeId, String(over.id));
+    if (!target) return;
+    requestMove(activeId, target.stage, target.position);
   }
 
   function confirmPendingMove() {
@@ -135,8 +181,13 @@ export function PipelineBoard({
         sensors={sensors}
         collisionDetection={pipelineCollisionDetection}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
-        onDragCancel={() => setActiveLead(null)}
+        onDragCancel={() => {
+          setActiveLead(null);
+          previewLeadsRef.current = null;
+          setPreviewLeads(null);
+        }}
       >
         <div className="flex gap-3 overflow-x-auto pb-2">
           {columns.map((column) => (

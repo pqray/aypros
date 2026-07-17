@@ -98,6 +98,24 @@ describe("createGooglePlacesProvider", () => {
     });
   });
 
+  it("fetches place details by place id with the minimal field mask", async () => {
+    const fetchFn = fetchResponding(200, placeFixture);
+    const provider = createGooglePlacesProvider({ apiKey: "secret-key", fetchFn });
+
+    const business = await provider.getDetails("ChIJabc123");
+
+    expect(business).toMatchObject({
+      providerPlaceId: "ChIJabc123",
+      name: "Padaria Central",
+      websiteUrl: "https://padariacentral.com.br/",
+    });
+
+    const [url, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toContain("/v1/places/ChIJabc123");
+    expect((init.headers as Record<string, string>)["X-Goog-FieldMask"]).toContain("displayName");
+    expect((init.headers as Record<string, string>)["X-Goog-FieldMask"]).not.toContain("places.");
+  });
+
   it("returns empty page when provider finds nothing", async () => {
     const provider = createGooglePlacesProvider({
       apiKey: "k",
@@ -113,6 +131,7 @@ describe("createGooglePlacesProvider", () => {
   it.each([
     [429, { error: { status: "RESOURCE_EXHAUSTED", message: "Quota" } }, "QUOTA_EXCEEDED"],
     [400, { error: { status: "INVALID_ARGUMENT", message: "Bad location" } }, "INVALID_LOCATION"],
+    [404, { error: { status: "NOT_FOUND", message: "Gone" } }, "NOT_FOUND"],
     [500, { error: { status: "INTERNAL", message: "boom" } }, "PROVIDER_ERROR"],
   ] as const)("maps HTTP %s to %s", async (status, body, code) => {
     const provider = createGooglePlacesProvider({

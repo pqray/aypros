@@ -6,13 +6,29 @@ import {
   type DiscoveryPage,
   type DiscoveryProvider,
   type DiscoverySearchParams,
+  type PlaceDetailsProvider,
 } from "./types";
 
 export const GOOGLE_PLACES_PROVIDER = "google_places";
 
 const SEARCH_TEXT_URL = "https://places.googleapis.com/v1/places:searchText";
+const PLACE_DETAILS_URL = "https://places.googleapis.com/v1/places";
 
-const FIELD_MASK = [
+const PLACE_FIELDS = [
+  "id",
+  "displayName",
+  "formattedAddress",
+  "addressComponents",
+  "nationalPhoneNumber",
+  "internationalPhoneNumber",
+  "websiteUri",
+  "rating",
+  "userRatingCount",
+  "types",
+  "location",
+];
+
+const SEARCH_FIELD_MASK = [
   "places.id",
   "places.displayName",
   "places.formattedAddress",
@@ -26,6 +42,8 @@ const FIELD_MASK = [
   "places.location",
   "nextPageToken",
 ].join(",");
+
+const DETAILS_FIELD_MASK = PLACE_FIELDS.join(",");
 
 const addressComponentSchema = z.object({
   longText: z.string().optional(),
@@ -110,13 +128,16 @@ function mapErrorResponse(status: number, body: unknown): DiscoveryError {
   if (status === 400 && googleStatus === "INVALID_ARGUMENT") {
     return new DiscoveryError("INVALID_LOCATION", message);
   }
+  if (status === 404 || googleStatus === "NOT_FOUND") {
+    return new DiscoveryError("NOT_FOUND", message);
+  }
   return new DiscoveryError("PROVIDER_ERROR", message ?? `Google Places HTTP ${status}`);
 }
 
 export function createGooglePlacesProvider(options: {
   apiKey: string;
   fetchFn?: typeof fetch;
-}): DiscoveryProvider {
+}): DiscoveryProvider & PlaceDetailsProvider {
   const { apiKey, fetchFn = fetch } = options;
 
   return {
@@ -132,7 +153,7 @@ export function createGooglePlacesProvider(options: {
           headers: {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": apiKey,
-            "X-Goog-FieldMask": FIELD_MASK,
+            "X-Goog-FieldMask": SEARCH_FIELD_MASK,
           },
           body: JSON.stringify({
             textQuery: `${params.segment} em ${location}`,
@@ -164,6 +185,37 @@ export function createGooglePlacesProvider(options: {
         businesses: parsed.data.places.map(mapPlaceToBusiness),
         nextPageToken: parsed.data.nextPageToken ?? null,
       };
+    },
+
+    async getDetails(placeId: string): Promise<DiscoveredBusiness> {
+      let response: Response;
+      try {
+        response = await fetchFn(`${PLACE_DETAILS_URL}/${encodeURIComponent(placeId)}`, {
+          method: "GET",
+          headers: {
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": DETAILS_FIELD_MASK,
+          },
+        });
+      } catch (error) {
+        throw new DiscoveryError(
+          "PROVIDER_ERROR",
+          error instanceof Error ? error.message : "Network error",
+        );
+      }
+
+      const body: unknown = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw mapErrorResponse(response.status, body);
+      }
+
+      const parsed = placeSchema.safeParse(body);
+      if (!parsed.success) {
+        throw new DiscoveryError("PROVIDER_ERROR", "Unexpected Google Places details shape");
+      }
+
+      return mapPlaceToBusiness(parsed.data);
     },
   };
 }

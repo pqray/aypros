@@ -247,36 +247,37 @@ const resultsQuerySchema = z.object({
 
 const idParamSchema = z.object({ id: z.string().uuid() });
 
-type ResultsFilter = z.infer<typeof resultsQuerySchema>["filter"];
-type ResultsSort = z.infer<typeof resultsQuerySchema>["sort"];
+const searchResultRowSchema = z.object({
+  business_id: z.string(),
+  position: z.coerce.number().int(),
+  name: z.string(),
+  address: z.string().nullable(),
+  city: z.string().nullable(),
+  state: z.string().nullable(),
+  phone: z.string().nullable(),
+  website_url: z.string().nullable(),
+  rating: z.coerce.number().nullable(),
+  review_count: z.coerce.number().int().nullable(),
+  categories: z.array(z.string()).default([]),
+  favorited: z.boolean(),
+  total_count: z.coerce.number().int(),
+});
 
-function hasWebsite(item: SearchResultItem): boolean {
-  return Boolean(item.websiteUrl?.trim());
-}
-
-function applyResultsView(
-  items: SearchResultItem[],
-  filter: ResultsFilter,
-  sort: ResultsSort,
-): SearchResultItem[] {
-  const filtered = items.filter((item) => {
-    if (filter === "with_site") return hasWebsite(item);
-    if (filter === "without_site") return !hasWebsite(item);
-    return true;
-  });
-
-  return [...filtered].sort((a, b) => {
-    switch (sort) {
-      case "name":
-        return a.name.localeCompare(b.name, "pt-BR");
-      case "rating":
-        return (b.rating ?? -1) - (a.rating ?? -1) || a.position - b.position;
-      case "reviews":
-        return (b.reviewCount ?? -1) - (a.reviewCount ?? -1) || a.position - b.position;
-      default:
-        return a.position - b.position;
-    }
-  });
+function toSearchResultItem(row: z.infer<typeof searchResultRowSchema>): SearchResultItem {
+  return {
+    businessId: row.business_id,
+    position: row.position,
+    name: row.name,
+    address: row.address,
+    city: row.city,
+    state: row.state,
+    phone: row.phone,
+    websiteUrl: row.website_url,
+    rating: row.rating,
+    reviewCount: row.review_count,
+    categories: row.categories,
+    favorited: row.favorited,
+  };
 }
 
 export type SearchRoutesOptions = {
@@ -420,7 +421,7 @@ export function registerSearchRoutes(app: FastifyInstance, options: SearchRoutes
     const { page, pageSize } = query.data;
     const from = (page - 1) * pageSize;
 
-    const { data, count, error } = await ctx.supabase
+    const { data, count, error } = await serviceDb
       .from("searches")
       .select(SEARCH_FIELDS, { count: "exact" })
       .eq("organization_id", ctx.orgId)
@@ -448,7 +449,7 @@ export function registerSearchRoutes(app: FastifyInstance, options: SearchRoutes
     const ctx = await requireOrgContext(request, reply);
     if (!ctx) return;
 
-    const { data, error } = await ctx.supabase
+    const { data, error } = await serviceDb
       .from("searches")
       .select(SEARCH_FIELDS)
       .eq("organization_id", ctx.orgId)
@@ -478,7 +479,7 @@ export function registerSearchRoutes(app: FastifyInstance, options: SearchRoutes
     const ctx = await requireOrgContext(request, reply);
     if (!ctx) return;
 
-    const { data: search } = await ctx.supabase
+    const { data: search } = await serviceDb
       .from("searches")
       .select("id")
       .eq("organization_id", ctx.orgId)
@@ -490,78 +491,26 @@ export function registerSearchRoutes(app: FastifyInstance, options: SearchRoutes
     }
 
     const { page, pageSize, filter, sort } = query.data;
-    const from = (page - 1) * pageSize;
-
-    const { data, error } = await ctx.supabase
-      .from("search_results")
-      .select(
-        "position, business:businesses(id, name, address, city, state, phone, website_url, rating, review_count, categories)",
-      )
-      .eq("search_id", params.data.id)
-      .order("position", { ascending: true })
-      .limit(discoveryConfig.maxResultsPerSearch);
+    const { data, error } = await serviceDb.rpc("get_search_results_page_api", {
+      target_search_id: params.data.id,
+      org_id: ctx.orgId,
+      website_filter: filter,
+      sort_by: sort,
+      page,
+      page_size: pageSize,
+    });
 
     if (error) {
       return reply.code(500).send({ error: "Erro ao carregar resultados" } satisfies ApiErrorBody);
     }
 
-    const rows = (data ?? []) as Array<Record<string, unknown>>;
-    const businessIds = rows
-      .map((row) => (row.business as Record<string, unknown> | null)?.id)
-      .filter((id): id is string => typeof id === "string");
-
-    const { data: favoriteRows, error: favoritesError } =
-      businessIds.length > 0
-        ? await ctx.supabase
-            .from("favorites")
-            .select("business_id")
-            .eq("organization_id", ctx.orgId)
-            .in("business_id", businessIds)
-        : { data: [] as Array<{ business_id: string }>, error: null };
-
-    if (favoritesError) {
-      return reply.code(500).send({ error: "Erro ao carregar resultados" } satisfies ApiErrorBody);
-    }
-
-    const favoritedIds = new Set(
-      (favoriteRows ?? []).map((row) => (row as { business_id: string }).business_id),
-    );
-
-    const items: SearchResultItem[] = [];
-    for (const row of rows) {
-      const business = row.business as Record<string, unknown> | null;
-      if (!business) continue;
-      const businessId = String(business.id);
-      items.push({
-        businessId,
-        position: Number(row.position),
-        name: String(business.name),
-        address: (business.address as string | null) ?? null,
-        city: (business.city as string | null) ?? null,
-        state: (business.state as string | null) ?? null,
-        phone: (business.phone as string | null) ?? null,
-        websiteUrl: (business.website_url as string | null) ?? null,
-        rating:
-          business.rating === null || business.rating === undefined
-            ? null
-            : Number(business.rating),
-        reviewCount:
-          business.review_count === null || business.review_count === undefined
-            ? null
-            : Number(business.review_count),
-        categories: Array.isArray(business.categories) ? (business.categories as string[]) : [],
-        favorited: favoritedIds.has(businessId),
-      });
-    }
-
-    const viewedItems = applyResultsView(items, filter, sort);
-    const paginatedItems = viewedItems.slice(from, from + pageSize);
+    const rows = z.array(searchResultRowSchema).parse(data ?? []);
 
     return reply.send({
-      items: paginatedItems,
+      items: rows.map(toSearchResultItem),
       page,
       pageSize,
-      total: viewedItems.length,
+      total: rows[0]?.total_count ?? 0,
     } satisfies SearchResultsResponse);
   });
 
@@ -574,7 +523,7 @@ export function registerSearchRoutes(app: FastifyInstance, options: SearchRoutes
     const ctx = await requireOrgContext(request, reply);
     if (!ctx) return;
 
-    const { data: existing } = await ctx.supabase
+    const { data: existing } = await serviceDb
       .from("searches")
       .select(SEARCH_FIELDS)
       .eq("organization_id", ctx.orgId)
@@ -592,7 +541,7 @@ export function registerSearchRoutes(app: FastifyInstance, options: SearchRoutes
         .send({ error: "Esta pesquisa não pode ser reexecutada agora" } satisfies ApiErrorBody);
     }
 
-    const { data: updated, error: updateError } = await ctx.supabase
+    const { data: updated, error: updateError } = await serviceDb
       .from("searches")
       .update({ status: "pending", error_message: null, updated_at: new Date().toISOString() })
       .eq("organization_id", ctx.orgId)

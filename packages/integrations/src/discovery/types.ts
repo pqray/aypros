@@ -38,6 +38,7 @@ export const discoveryErrorCodes = [
   "RATE_LIMITED",
   "QUOTA_EXCEEDED",
   "INVALID_LOCATION",
+  "NOT_FOUND",
   "PROVIDER_ERROR",
 ] as const;
 
@@ -56,4 +57,9 @@ export class DiscoveryError extends Error {
 export interface DiscoveryProvider {
   name: string;
   search(params: DiscoverySearchParams): Promise<DiscoveryPage>;
+}
+
+export interface PlaceDetailsProvider {
+  name: string;
+  getDetails(placeId: string): Promise<DiscoveredBusiness>;
 }

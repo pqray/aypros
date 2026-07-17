@@ -2,8 +2,10 @@ import { auditConfig } from "@aypros/config";
 import {
   auditWebsite,
   AuditError,
+  mapCategoriesToSegment,
   type AuditDetections,
   type AuditResult,
+  type BusinessSegment,
 } from "@aypros/integrations";
 import {
   calculateOpportunityScore,
@@ -26,6 +28,9 @@ type BusinessAuditRow = {
   phone: string | null;
   rating: number | string | null;
   review_count: number | null;
+  categories?: string[] | null;
+  refreshed_at?: string | null;
+  provider_status?: "active" | "removed" | "error" | null;
   raw: Record<string, unknown> | null;
 };
 
@@ -59,6 +64,45 @@ type ScoreSummaryRow = {
   created_at: string;
 };
 
+type AuditSummaryRpcRow = {
+  business_id: string;
+  business_name: string;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  phone: string | null;
+  website_url: string | null;
+  rating: number | string | null;
+  review_count: number | null;
+  categories: string[];
+  refreshed_at: string | null;
+  provider_status: "active" | "removed" | "error" | null;
+  raw: Record<string, unknown> | null;
+  audit_id: string | null;
+  audit_status: AuditSummaryRow["status"] | null;
+  final_url: string | null;
+  http_status: number | null;
+  response_time_ms: number | null;
+  redirect_count: number | null;
+  is_https: boolean | null;
+  detections: AuditSummaryRow["detections"] | null;
+  evidence: AuditSummaryRow["evidence"] | null;
+  error_code: string | null;
+  audit_created_at: string | null;
+  audit_completed_at: string | null;
+  score_id: string | null;
+  score_audit_id: string | null;
+  score: number | null;
+  score_level: ScoreSummaryRow["level"] | null;
+  score_confidence: ScoreSummaryRow["confidence"] | null;
+  reasons: ScoreSummaryRow["reasons"] | null;
+  suggested_services: string[] | null;
+  algorithm_version: string | null;
+  score_created_at: string | null;
+  favorited: boolean;
+  lead_id: string | null;
+};
+
 function toBusinessInput(row: BusinessAuditRow): ScoreBusinessInput {
   return {
     websiteUrl: row.website_url,
@@ -67,6 +111,9 @@ function toBusinessInput(row: BusinessAuditRow): ScoreBusinessInput {
     reviewCount: row.review_count,
     raw: {
       socialOnly: row.raw?.social_only === true || row.raw?.socialOnly === true,
+      segment:
+        ((row.raw?.segment ?? row.raw?.business_segment) as BusinessSegment | undefined) ??
+        mapCategoriesToSegment(row.categories ?? []),
     },
   };
 }
@@ -83,6 +130,9 @@ function toBusinessDetail(row: BusinessAuditRow): BusinessAuditSummaryResponse["
     rating: row.rating === null || row.rating === undefined ? null : Number(row.rating),
     reviewCount: row.review_count,
     categories: (row as BusinessAuditRow & { categories?: string[] }).categories ?? [],
+    segment:
+      ((row.raw?.segment ?? row.raw?.business_segment) as BusinessSegment | undefined) ??
+      mapCategoriesToSegment((row as BusinessAuditRow & { categories?: string[] }).categories ?? []),
   };
 }
 
@@ -104,8 +154,21 @@ function toScoreAuditInput(audit: AuditResult | null): ScoreAuditInput {
       hasDescription: detectionState(audit.detections, "hasDescription"),
       outdated: detectionState(audit.detections, "outdated"),
       basicBuilder: detectionState(audit.detections, "basicBuilder"),
+      linkInBio: detectionState(audit.detections, "linkInBio"),
+      deliveryPlatform: detectionState(audit.detections, "deliveryPlatform"),
+      menuOnline: detectionState(audit.detections, "menuOnline"),
     },
   };
+}
+
+async function persistBusinessSegment(db: SupabaseClient, business: BusinessAuditRow) {
+  const segment = mapCategoriesToSegment(business.categories ?? []);
+  const raw = { ...(business.raw ?? {}), segment };
+  business.raw = raw;
+  const { error } = await db.from("businesses").update({ raw }).eq("id", business.id);
+  if (error) {
+    throw new Error(`business segment update failed: ${error.message}`);
+  }
 }
 
 async function ensureAuditRateLimit(db: SupabaseClient, orgId: string) {
@@ -237,7 +300,7 @@ export async function auditBusiness(params: {
 
   const { data: business, error: businessError } = await params.db
     .from("businesses")
-    .select("id, name, website_url, phone, rating, review_count, raw")
+    .select("id, name, website_url, phone, rating, review_count, categories, raw")
     .eq("id", params.businessId)
     .maybeSingle();
 
@@ -249,6 +312,7 @@ export async function auditBusiness(params: {
   }
 
   const businessRow = business as BusinessAuditRow;
+  await persistBusinessSegment(params.db, businessRow);
   let audit: AuditResult | null = null;
   let auditId: string | null = null;
 
@@ -325,95 +389,68 @@ export function registerAuditRoutes(app: FastifyInstance, options: AuditRoutesOp
     if (!ctx) return;
 
     try {
-      if (!(await canAccessBusiness(serviceDb, ctx.orgId, params.data.businessId))) {
+      const { data, error } = await serviceDb
+        .rpc("get_business_audit_summary", {
+          target_business_id: params.data.businessId,
+          org_id: ctx.orgId,
+        })
+        .maybeSingle();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+      if (!data) {
         return reply.code(404).send({ error: "Empresa nao encontrada" } satisfies ApiErrorBody);
       }
 
-      const [businessResult, auditResult, scoreResult, favoriteResult, leadResult] = await Promise.all([
-        serviceDb
-          .from("businesses")
-          .select(
-            "id, name, address, city, state, phone, website_url, rating, review_count, categories, raw",
-          )
-          .eq("id", params.data.businessId)
-          .single(),
-        serviceDb
-          .from("website_audits")
-          .select(
-            "id, status, final_url, http_status, response_time_ms, redirect_count, is_https, detections, evidence, error_code, created_at, completed_at",
-          )
-          .eq("organization_id", ctx.orgId)
-          .eq("business_id", params.data.businessId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        serviceDb
-          .from("opportunity_scores")
-          .select(
-            "id, audit_id, score, level, confidence, reasons, suggested_services, algorithm_version, created_at",
-          )
-          .eq("business_id", params.data.businessId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        serviceDb
-          .from("favorites")
-          .select("business_id")
-          .eq("organization_id", ctx.orgId)
-          .eq("business_id", params.data.businessId)
-          .maybeSingle(),
-        serviceDb
-          .from("leads")
-          .select("id")
-          .eq("organization_id", ctx.orgId)
-          .eq("business_id", params.data.businessId)
-          .maybeSingle(),
-      ]);
-
-      if (businessResult.error || !businessResult.data) {
-        return reply.code(404).send({ error: "Empresa nao encontrada" } satisfies ApiErrorBody);
-      }
-      if (auditResult.error || scoreResult.error) {
-        throw new Error(
-          auditResult.error?.message ?? scoreResult.error?.message ?? "summary failed",
-        );
-      }
-
-      const audit = auditResult.data as AuditSummaryRow | null;
-      const score = scoreResult.data as ScoreSummaryRow | null;
+      const row = data as AuditSummaryRpcRow;
       return reply.send({
-        business: toBusinessDetail(businessResult.data as BusinessAuditRow),
-        latestAudit: audit
+        business: toBusinessDetail({
+          id: row.business_id,
+          name: row.business_name,
+          address: row.address,
+          city: row.city,
+          state: row.state,
+          phone: row.phone,
+          website_url: row.website_url,
+          rating: row.rating,
+          review_count: row.review_count,
+          categories: row.categories,
+          raw: row.raw,
+        } as BusinessAuditRow),
+        latestAudit: row.audit_id
           ? {
-              id: audit.id,
-              status: audit.status,
-              finalUrl: audit.final_url,
-              httpStatus: audit.http_status,
-              responseTimeMs: audit.response_time_ms,
-              redirectCount: audit.redirect_count,
-              isHttps: audit.is_https,
-              detections: audit.detections,
-              evidence: audit.evidence,
-              errorCode: audit.error_code,
-              createdAt: audit.created_at,
-              completedAt: audit.completed_at,
+              id: row.audit_id,
+              status: row.audit_status ?? "completed",
+              finalUrl: row.final_url,
+              httpStatus: row.http_status,
+              responseTimeMs: row.response_time_ms,
+              redirectCount: row.redirect_count,
+              isHttps: row.is_https,
+              detections: row.detections ?? {},
+              evidence: row.evidence ?? {},
+              errorCode: row.error_code,
+              createdAt: row.audit_created_at ?? new Date(0).toISOString(),
+              completedAt: row.audit_completed_at,
             }
           : null,
-        latestScore: score
+        latestScore: row.score_id
           ? {
-              id: score.id,
-              auditId: score.audit_id,
-              score: score.score,
-              level: score.level,
-              confidence: score.confidence,
-              reasons: score.reasons,
-              suggestedServices: score.suggested_services,
-              algorithmVersion: score.algorithm_version,
-              createdAt: score.created_at,
+              id: row.score_id,
+              auditId: row.score_audit_id,
+              score: row.score ?? 0,
+              level: row.score_level ?? "low",
+              confidence: row.score_confidence ?? "low",
+              reasons: row.reasons ?? [],
+              suggestedServices: row.suggested_services ?? [],
+              algorithmVersion: row.algorithm_version ?? "unknown",
+              createdAt: row.score_created_at ?? new Date(0).toISOString(),
             }
           : null,
-        favorited: favoriteResult.data !== null,
-        leadId: (leadResult.data as { id: string } | null)?.id ?? null,
+        refreshedAt: row.refreshed_at,
+        providerStatus: row.provider_status ?? "active",
+        favorited: row.favorited,
+        leadId: row.lead_id,
       } satisfies BusinessAuditSummaryResponse);
     } catch (error) {
       request.log.error({ err: error }, "business audit summary failed");

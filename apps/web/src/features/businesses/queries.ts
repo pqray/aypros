@@ -10,18 +10,36 @@ import {
   getBusinessAuditSummary,
   listBusinesses,
   listSavedFilters,
+  refreshBusinessData,
   runBusinessAudit,
 } from "./api";
 
 // Favoriting is shared across businesses/discovery/detail — see features/favorites.
 export { useToggleFavorite } from "../favorites/queries";
 
+export function businessAuditSummaryKey(businessId: string) {
+  return ["business", businessId, "audit-summary"] as const;
+}
+
 export function useBusinessAuditSummary(businessId: string) {
   return useQuery({
-    queryKey: ["business", businessId, "audit-summary"],
+    queryKey: businessAuditSummaryKey(businessId),
     queryFn: () => getBusinessAuditSummary(businessId),
     enabled: Boolean(businessId),
+    staleTime: 120_000,
   });
+}
+
+export function usePrefetchBusinessAuditSummary() {
+  const queryClient = useQueryClient();
+
+  return (businessId: string) => {
+    void queryClient.prefetchQuery({
+      queryKey: businessAuditSummaryKey(businessId),
+      queryFn: () => getBusinessAuditSummary(businessId),
+      staleTime: 120_000,
+    });
+  };
 }
 
 export function useRunBusinessAudit(businessId: string) {
@@ -30,7 +48,18 @@ export function useRunBusinessAudit(businessId: string) {
   return useMutation({
     mutationFn: () => runBusinessAudit(businessId),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["business", businessId, "audit-summary"] });
+      void queryClient.invalidateQueries({ queryKey: businessAuditSummaryKey(businessId) });
+    },
+  });
+}
+
+export function useRefreshBusinessData(businessId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => refreshBusinessData(businessId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: businessAuditSummaryKey(businessId) });
     },
   });
 }
@@ -43,7 +72,7 @@ export function useAuditBusiness(orgId: string | undefined) {
     mutationFn: (businessId: string) => runBusinessAudit(businessId),
     onSuccess: (_data, businessId) => {
       void queryClient.invalidateQueries({ queryKey: businessesQueryKeyPrefix(orgId) });
-      void queryClient.invalidateQueries({ queryKey: ["business", businessId, "audit-summary"] });
+      void queryClient.invalidateQueries({ queryKey: businessAuditSummaryKey(businessId) });
     },
   });
 }
@@ -53,7 +82,7 @@ export function useBusinessList(orgId: string | undefined, query: BusinessListQu
     queryKey: ["org", orgId, "businesses", query],
     queryFn: () => listBusinesses(query),
     enabled: Boolean(orgId),
-    staleTime: 30_000,
+    staleTime: 60_000,
     placeholderData: keepPreviousData,
   });
 }
@@ -89,7 +118,7 @@ export function useSavedFilters(orgId: string | undefined) {
     queryKey: ["org", orgId, "saved-filters"],
     queryFn: () => listSavedFilters(),
     enabled: Boolean(orgId),
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
   });
 }
 

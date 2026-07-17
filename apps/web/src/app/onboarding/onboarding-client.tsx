@@ -26,7 +26,7 @@ export function OnboardingClient() {
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <Card className="w-full max-w-lg">
         <CardHeader>
-          <CardTitle className="text-xl">Primeira configuracao</CardTitle>
+          <CardTitle className="text-xl">Primeira configuração</CardTitle>
           <CardDescription>Complete seu perfil e crie a organização de trabalho.</CardDescription>
         </CardHeader>
         <CardContent>

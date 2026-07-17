@@ -6,7 +6,7 @@
 2. **Server Actions / Route Handlers**: toda operação valida sessão + membership na organização alvo + papel quando exigido (`owner` gerencia org/membros; `admin`+ deleta dados; `member` usa o produto). Nunca confiar em `organization_id` vindo do cliente sem verificar membership.
 3. **RLS (Supabase)**: rede de segurança final.
 
-Com a API Node separada, a camada principal para endpoints de produto e `apps/api`. Toda rota em `apps/api` deve validar sessao, membership e papel antes de acessar dados de organizacao, mesmo quando a consulta tambem estiver protegida por RLS.
+Com a API Node separada, a camada principal para endpoints de produto e `apps/api`. Toda rota em `apps/api` deve validar sessão, membership e papel antes de acessar dados de organização, mesmo quando a consulta também estiver protegida por RLS.
 
 ## RLS
 
@@ -37,9 +37,9 @@ Ver regras completas em `09-website-http-audit.md` (validação de IP por resolu
 
 ## Rate limiting e limites
 
-MVP sem Redis → contadores no banco por organização + janela de tempo:
+MVP sem Redis → contadores no banco por organização + jánela de tempo:
 
-| Recurso | Limite (config em `packages/config`) |
+| Recursó | Limite (config em `packages/config`) |
 |---|---|
 | Pesquisas | N/hora por org |
 | Auditorias | N/hora por org |

@@ -1,6 +1,6 @@
 # Decisões de Arquitetura (ADRs)
 
-Registro de decisões importantes do projeto. Um arquivo por decisão: `NNN-titulo-curto.md` (ex.: `001-discovery-provider.md`).
+Registro de decisões importantes do projeto. Um arquivo por decisão: `NNN-título-curto.md` (ex.: `001-discovery-provider.md`).
 
 ## Formato (ADR curto)
 
@@ -38,9 +38,9 @@ Efeitos positivos e negativos, migrações necessárias, o que fica mais difíci
 | 1 | ~~Provider real de descoberta~~ — **resolvida**: Google Places API ([ADR 001](001-discovery-provider.md)) | 6 |
 | 2 | ~~Fonte tipográfica~~ — **resolvida**: Geist ([ADR 003](003-typography.md)) | 2 |
 | 3 | ~~Biblioteca de drag and drop do Kanban~~ — **resolvida**: @dnd-kit ([ADR 007](007-drag-and-drop-library.md)) | 9 |
-| 4 | ~~Mecanismo de convite para organizações no MVP~~ — **resolvida**: adicionar por e-mail usuario ja cadastrado ([ADR 004](004-organization-invites-mvp.md)) | 3 |
+| 4 | ~~Mecanismo de convite para organizações no MVP~~ — **resolvida**: adicionar por e-mail usuário já cadastrado ([ADR 004](004-organization-invites-mvp.md)) | 3 |
 | 5 | Plataforma de deploy — **explicitamente adiada para o deploy (pós-MVP)**: Vercel presumido para web; API container/Node a decidir ([ADR 002](002-deploy-platform.md)) | 1 |
 | 6 | ~~Backend Node separado~~ - **resolvida**: Fastify em `apps/api` com Docker local ([ADR 005](005-node-api-docker.md)) | 4 |
 | 7 | ~~Mecanismo de agendamento do refresh~~ - **resolvida**: scheduler in-process ([ADR 008](008-refresh-scheduler.md)) | 12 |
-| 8 | ~~Biblioteca de geracao de PDF do diagnostico~~ - **resolvida**: pdfkit ([ADR 009](009-pdf-library.md)) | 14 |
+| 8 | ~~Biblioteca de geração de PDF do diagnóstico~~ - **resolvida**: pdfkit ([ADR 009](009-pdf-library.md)) | 14 |
 | 9 | ~~Scoring v2 (motivos por segmento e pesos revisados)~~ - **resolvida**: sinais por segmento ([ADR 010](010-scoring-v2-segment-signals.md)) | 15 |

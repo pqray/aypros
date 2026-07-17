@@ -41,8 +41,8 @@ const websiteFilterLabels: Record<WebsiteFilter, string> = {
 const sortLabels: Record<SortOption, string> = {
   relevance: "Relevancia",
   name: "Nome (A-Z)",
-  rating: "Melhor avaliacao",
-  reviews: "Mais avaliacoes",
+  rating: "Melhor avaliação",
+  reviews: "Mais avaliações",
 };
 
 const pageSizes: PageSize[] = [10, 20, 30];
@@ -239,7 +239,7 @@ export function SearchResultsList({
               ))}
             </SelectContent>
           </Select>
-          <div className="flex rounded-lg border p-0.5" role="group" aria-label="Visualizacao">
+          <div className="flex rounded-lg border p-0.5" role="group" aria-label="Visualização">
             <Button
               type="button"
               variant="ghost"

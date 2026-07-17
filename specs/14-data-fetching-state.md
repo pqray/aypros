@@ -8,9 +8,9 @@ Autenticação/proteção de rota, perfil, organização, dados iniciais de pág
 
 ## TanStack Query (Client)
 
-Para tudo que é interativo: pesquisas e progresso, resultados paginados, favoritos, pipeline, notas, atividades, auditorias, gerações de IA e todas as mutações.
+Para tudo que é interativo: pesquisas e progresso, resultados páginados, favoritos, pipeline, notas, atividades, auditorias, gerações de IA e todas as mutações.
 
-Dados de produto devem ser buscados em `apps/api` via `NEXT_PUBLIC_API_URL`. Nao criar endpoints de produto em `apps/web/src/app/api`; essa pasta fica reservada para necessidades especificas do Next.
+Dados de produto devem ser buscados em `apps/api` via `NEXT_PUBLIC_API_URL`. Não criar endpoints de produto em `apps/web/src/app/api`; essa pasta fica reservada para necessidades específicas do Next.
 
 ### Query keys (padrão hierárquico, escopadas por org)
 
@@ -29,7 +29,7 @@ Dados de produto devem ser buscados em `apps/api` via `NEXT_PUBLIC_API_URL`. Nao
 
 ### Configuração
 
-- `staleTime` padrão: 30s; listas estáveis (pesquisas antigas): 5min; progresso de processo: 0.
+- `staleTime` padrão: 30s; listas estáveis (pesquisas antigas): 5min; progressó de processo: 0.
 - **Polling**: apenas em processos com estado não-terminal (`pending`/`processing`): `refetchInterval` 2–3s, parando quando `completed | partial | failed`.
 - **Invalidation** por evento: favoritar → `favorites` + `businesses`; mover lead → `pipeline` + `lead`; nota → `notes` + `activities`; auditoria concluída → `business`, `audits`, `businesses` (score).
 - **Optimistic updates** (favoritar, drag no Kanban, criar nota): `onMutate` atualiza cache + snapshot, `onError` rollback + toast Sonner, `onSettled` invalida.
@@ -44,4 +44,4 @@ Sidebar (colapso/drawer), command palette (aberta/fechada), seleção temporári
 
 ## React Hook Form + Zod
 
-Todos os formulários: autenticação, onboarding, busca, filtros, notas, configurações, pipeline. Schemas em `packages/validation`, reutilizados no servidor (mesma validação nos dois lados).
+Todos os formulários: autenticação, onboarding, busca, filtros, notas, configurações, pipeline. Schemas em `packages/validation`, reútilizados no servidor (mesma validação nos dois lados).

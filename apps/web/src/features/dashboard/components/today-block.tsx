@@ -26,7 +26,7 @@ export function TodayBlock({ leads, now }: { leads: DashboardTodayLead[]; now?: 
           <EmptyState
             icon={<PiCalendarCheck />}
             title="Nada pendente para hoje"
-            description="Leads com proxima acao vencida ou marcada para hoje aparecem aqui."
+            description="Leads com próxima ação vencida ou marcada para hoje aparecem aqui."
           />
         ) : (
           <ul className="divide-y divide-border">
@@ -41,7 +41,7 @@ export function TodayBlock({ leads, now }: { leads: DashboardTodayLead[]; now?: 
                     <div className="min-w-0 space-y-0.5">
                       <p className="truncate text-sm font-medium text-foreground">{lead.businessName}</p>
                       <p className="truncate text-xs text-muted-foreground">
-                        {lead.nextAction ?? "Proxima acao"} - {formatActionDate(lead.nextActionAt)}
+                        {lead.nextAction ?? "Proxima ação"} - {formatActionDate(lead.nextActionAt)}
                       </p>
                     </div>
                     <Badge variant={overdue ? "destructive" : "secondary"}>

@@ -5,16 +5,16 @@
 
 ## Contexto
 
-A Fase 12 precisa manter empresas ativas frescas sem introduzir Redis, worker dedicado ou uma fila externa antes do MVP. O volume inicial esperado e o cap diario de Place Details permitem processamento pequeno e serial.
+A Fase 12 precisa manter empresas ativas frescas sem introduzir Redis, worker dedicado ou uma fila externa antes do MVP. O volume inicial esperado e o cap diário de Place Details permitem processamento pequeno e serial.
 
-## Decisao
+## Decisão
 
-Usar scheduler in-process no `apps/api`, com `setInterval`, tick horario, batch pequeno, processamento serial e estado de retomada no banco (`businesses.refreshed_at`, `provider_status` e ultimas auditorias). O scheduler e desligado por `REFRESH_ENABLED=false` e nao roda em testes.
+Usar scheduler in-process no `apps/api`, com `setInterval`, tick horário, batch pequeno, processamento serial e estado de retomada no banco (`businesses.refreshed_at`, `provider_status` e últimas auditorias). O scheduler e desligado por `REFRESH_ENABLED=false` e não roda em testes.
 
 ## Alternativas consideradas
 
-- BullMQ/Redis - mais robusto para retry/concorrencia, mas aumenta infraestrutura e operacao antes do MVP.
-- Cron externo chamando endpoint interno - simples, mas ainda exige configuracao de deploy e protecao adicional de endpoint.
+- BullMQ/Redis - mais robusto para retry/concorrencia, mas aumenta infraestrutura e operação antes do MVP.
+- Cron externo chamando endpoint interno - simples, mas ainda exige configuração de deploy e proteção adicional de endpoint.
 
 ## Consequencias
 

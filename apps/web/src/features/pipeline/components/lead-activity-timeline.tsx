@@ -38,7 +38,7 @@ function activityDetail(activity: LeadActivity): string | null {
 export function LeadActivityTimeline({ activities }: { activities: LeadActivity[] }) {
   if (activities.length === 0) {
     return (
-      <EmptyState icon={<PiPulse />} title="Nenhuma atividade ainda" description="O historico deste lead aparece aqui." />
+      <EmptyState icon={<PiPulse />} title="Nenhuma atividade ainda" description="O histórico deste lead aparece aqui." />
     );
   }
 

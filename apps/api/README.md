@@ -4,7 +4,7 @@ Backend Node/Fastify separado do `apps/web`.
 
 ## Papel
 
-`apps/api` concentra endpoints de produto, regras de negocio, autorizacao, agregacoes e integracoes com Supabase/providers externos.
+`apps/api` concentra endpoints de produto, regras de negocio, autorização, agregacoes e integracoes com Supabase/providers externos.
 
 Fluxo padrao:
 
@@ -33,7 +33,7 @@ pnpm docker:api:down
 
 ## Fallback sem Docker
 
-Use apenas se o Docker Desktop não estiver disponivel:
+Use apenas se o Docker Desktop não estiver disponível:
 
 ```bash
 pnpm dev:api
@@ -41,7 +41,7 @@ pnpm dev:api
 
 ## Endpoints
 
-| Metodo | Rota | Uso |
+| Metodo | Rota | Usó |
 |---|---|---|
 | GET | `/health` | Healthcheck |
 | GET | `/v1/app-context` | Contexto autenticado do shell |

@@ -234,7 +234,7 @@ export function registerAiRoutes(app: FastifyInstance, options: AiRoutesOptions 
     }
     const body = generateAiSchema.safeParse(request.body);
     if (!body.success) {
-      return reply.code(400).send({ error: "Tipo de geracao inválido" } satisfies ApiErrorBody);
+      return reply.code(400).send({ error: "Tipo de geração inválido" } satisfies ApiErrorBody);
     }
 
     if (!provider) {
@@ -349,7 +349,7 @@ export function registerAiRoutes(app: FastifyInstance, options: AiRoutesOptions 
     } catch (error) {
       if (error instanceof Error && error.name === "RateLimitError") {
         return reply.code(429).send({
-          error: "Limite diario de gerações com IA atingido",
+          error: "Limite diário de gerações com IA atingido",
           code: "RATE_LIMITED",
         } satisfies ApiErrorBody);
       }

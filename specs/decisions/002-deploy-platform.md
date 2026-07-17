@@ -7,7 +7,7 @@
 
 A arquitetura original do MVP processava pesquisas e auditorias dentro de invocacoes serverless do Next, sem filas. A ADR 005 separou o backend em `apps/api` (Node/Fastify), entao deploy passa a ter dois alvos: web e API.
 
-## Decisao
+## Decisão
 
 Presumir **Vercel** como alvo inicial do `apps/web`. O deploy do `apps/api` deve ser decidido separadamente, com preferencia por plataforma que rode container Docker ou Node server persistente.
 
@@ -19,6 +19,6 @@ Presumir **Vercel** como alvo inicial do `apps/web`. O deploy do `apps/api` deve
 
 ## Consequencias
 
-- `apps/web` pode continuar em Vercel pela integracao com Next.
+- `apps/web` pode continuar em Vercel pela integração com Next.
 - `apps/api` precisa de runtime Node/container, variaveis server-side e CORS configurado para a origem do web.
-- Discovery/auditoria devem considerar limites da plataforma escolhida para a API, nao mais apenas limites dos Route Handlers do Next.
+- Discovery/auditoria devem considerar limites da plataforma escolhida para a API, não mais apenas limites dos Route Handlers do Next.

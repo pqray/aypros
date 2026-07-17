@@ -12,7 +12,14 @@ import {
   cn,
 } from "@aypros/ui";
 import type { BusinessReportFindingStatus } from "@aypros/types";
-import { PiChartLine, PiDownloadSimple } from "react-icons/pi";
+import {
+  PiArrowRight,
+  PiChartLine,
+  PiCheckCircle,
+  PiDownloadSimple,
+  PiQuestion,
+  PiWarningCircle,
+} from "react-icons/pi";
 import { useBusinessReport } from "../queries";
 
 const findingBadges: Record<
@@ -31,7 +38,7 @@ export function barToneClass(value: number): string {
 }
 
 /**
- * Diagnóstico completo na Visão geral — mesma fonte do PDF (GET /report),
+ * Diagnóstico completo na Visão geral: mesma fonte do PDF (GET /report),
  * então baixar o PDF vira opção, não obrigação.
  */
 export function DiagnosticOverviewCard({
@@ -53,8 +60,9 @@ export function DiagnosticOverviewCard({
   }
 
   const { summary, httpStatusNote, findings, recommendations, nextSteps } = report.data;
-  const problemCount = findings.filter((finding) => finding.status === "problem").length;
-  const unknownCount = findings.filter((finding) => finding.status === "unknown").length;
+  const problemFindings = findings.filter((finding) => finding.status === "problem");
+  const okFindings = findings.filter((finding) => finding.status === "ok");
+  const unknownFindings = findings.filter((finding) => finding.status === "unknown");
 
   return (
     <Card>
@@ -86,65 +94,166 @@ export function DiagnosticOverviewCard({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-lg border p-3">
-            <p className="text-2xl font-semibold">{problemCount}</p>
-            <p className="text-xs text-muted-foreground">pontos de atenção</p>
+          <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+            <div className="flex items-center gap-2">
+              <PiWarningCircle className="text-destructive" aria-hidden />
+              <p className="text-2xl font-semibold">{problemFindings.length}</p>
+            </div>
+            <p className="mt-1 text-xs font-medium text-destructive">pontos de atenção</p>
           </div>
-          <div className="rounded-lg border p-3">
-            <p className="text-2xl font-semibold">{recommendations.length}</p>
-            <p className="text-xs text-muted-foreground">recomendações</p>
+          <div className="rounded-lg border border-warning/25 bg-warning/10 p-3">
+            <div className="flex items-center gap-2">
+              <PiArrowRight className="text-warning" aria-hidden />
+              <p className="text-2xl font-semibold">{recommendations.length}</p>
+            </div>
+            <p className="mt-1 text-xs font-medium text-warning">recomendações</p>
           </div>
-          <div className="rounded-lg border p-3">
-            <p className="text-2xl font-semibold">{unknownCount}</p>
-            <p className="text-xs text-muted-foreground">não verificados</p>
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <div className="flex items-center gap-2">
+              <PiQuestion className="text-muted-foreground" aria-hidden />
+              <p className="text-2xl font-semibold">{unknownFindings.length}</p>
+            </div>
+            <p className="mt-1 text-xs font-medium text-muted-foreground">não verificados</p>
           </div>
         </div>
 
-        <div className="space-y-3">
-          {findings.map((finding) => {
-            const badge = findingBadges[finding.status];
-            return (
-              <div key={finding.title} className="rounded-lg border p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p
-                    className={cn(
-                      "text-sm font-medium",
-                      finding.status === "problem" ? "text-destructive" : "text-foreground",
-                    )}
-                  >
-                    {finding.title}
-                  </p>
-                  <Badge variant={badge.variant}>{badge.label}</Badge>
+        {problemFindings.length > 0 ? (
+          <section className="space-y-3">
+            <div>
+              <p className="text-sm font-semibold">Prioridades do diagnóstico</p>
+              <p className="text-xs text-muted-foreground">
+                Pontos que mais prejudicam conversão, confiança ou descoberta da empresa.
+              </p>
+            </div>
+            <div className="grid gap-3 xl:grid-cols-3">
+              {problemFindings.map((finding) => (
+                <div key={finding.title} className="rounded-lg border border-destructive/25 bg-destructive/5 p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-md bg-destructive/10 text-destructive">
+                      <PiWarningCircle aria-hidden />
+                    </span>
+                    <div className="min-w-0 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-semibold text-destructive">{finding.title}</p>
+                        <Badge variant="destructive">Atenção</Badge>
+                      </div>
+                      <p className="text-sm leading-5 text-foreground">{finding.body}</p>
+                      <div className="rounded-md bg-background/80 px-3 py-2 text-xs text-muted-foreground">
+                        <span className="font-medium text-foreground">Impacto: </span>
+                        {finding.impact}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <p className="mt-1 text-sm text-muted-foreground">{finding.body}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{finding.impact}</p>
-              </div>
-            );
-          })}
-        </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
-        {recommendations.length > 0 ? (
-          <div className="space-y-2">
-            <p className="text-sm font-semibold">Recomendações</p>
-            {recommendations.map((recommendation) => (
-              <div key={recommendation.text} className="flex items-center gap-2 text-sm">
-                <Badge variant={recommendation.priority === "alta" ? "destructive" : "warning"}>
-                  {recommendation.priority === "alta" ? "Alta" : "Média"}
-                </Badge>
-                <span className="min-w-0">{recommendation.text}</span>
-              </div>
-            ))}
+        {okFindings.length > 0 || unknownFindings.length > 0 ? (
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,24rem)]">
+            {okFindings.length > 0 ? (
+              <section className="rounded-lg border border-success/20 bg-success/5 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <PiCheckCircle className="text-success" aria-hidden />
+                  <p className="text-sm font-semibold">Sinais saudáveis</p>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {okFindings.map((finding) => (
+                    <div key={finding.title} className="rounded-md bg-background/80 px-3 py-2">
+                      <p className="text-sm font-medium">{finding.title}</p>
+                      <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                        {finding.impact}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {unknownFindings.length > 0 ? (
+              <section className="rounded-lg border bg-muted/30 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <PiQuestion className="text-muted-foreground" aria-hidden />
+                  <p className="text-sm font-semibold">Não verificados</p>
+                </div>
+                <div className="space-y-2">
+                  {unknownFindings.map((finding) => (
+                    <div
+                      key={finding.title}
+                      className="flex items-center justify-between gap-3 rounded-md bg-background/80 px-3 py-2"
+                    >
+                      <span className="min-w-0 truncate text-sm">{finding.title}</span>
+                      <Badge variant="secondary">Pendente</Badge>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </div>
         ) : null}
 
-        {nextSteps.length > 0 ? (
-          <div className="space-y-1.5">
-            <p className="text-sm font-semibold">Próximos passos</p>
-            <ol className="list-inside list-decimal space-y-1 text-sm text-muted-foreground">
-              {nextSteps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
+        {findings.length > 0 &&
+        problemFindings.length === 0 &&
+        okFindings.length === 0 &&
+        unknownFindings.length === 0 ? (
+          <div className="space-y-3">
+            {findings.map((finding) => {
+              const badge = findingBadges[finding.status];
+              return (
+                <div key={finding.title} className="rounded-lg border p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p
+                      className={cn(
+                        "text-sm font-medium",
+                        finding.status === "problem" ? "text-destructive" : "text-foreground",
+                      )}
+                    >
+                      {finding.title}
+                    </p>
+                    <Badge variant={badge.variant}>{badge.label}</Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">{finding.body}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{finding.impact}</p>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {recommendations.length > 0 || nextSteps.length > 0 ? (
+          <div className="grid gap-3 border-t pt-4 lg:grid-cols-2">
+            {recommendations.length > 0 ? (
+              <section className="rounded-lg border p-4">
+                <p className="text-sm font-semibold">Recomendações</p>
+                <div className="mt-3 space-y-2">
+                  {recommendations.map((recommendation) => (
+                    <div key={recommendation.text} className="flex items-start gap-2 text-sm">
+                      <Badge variant={recommendation.priority === "alta" ? "destructive" : "warning"}>
+                        {recommendation.priority === "alta" ? "Alta" : "Média"}
+                      </Badge>
+                      <span className="min-w-0 leading-5">{recommendation.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {nextSteps.length > 0 ? (
+              <section className="rounded-lg border p-4">
+                <p className="text-sm font-semibold">Próximos passos</p>
+                <div className="mt-3 space-y-2">
+                  {nextSteps.map((step, index) => (
+                    <div key={step} className="flex items-start gap-3 text-sm">
+                      <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                        {index + 1}
+                      </span>
+                      <span className="min-w-0 leading-5 text-muted-foreground">{step}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </div>
         ) : null}
       </CardContent>
@@ -194,7 +303,7 @@ function AxisGauge({ label, value }: { label: string; value: number | null }) {
   );
 }
 
-/** Maturidade digital por eixo com barras — substitui os cards secos de métrica. */
+/** Maturidade digital por eixo com barras; substitui os cards secos de métrica. */
 export function MaturityCard({
   businessId,
   responseTimeMs,

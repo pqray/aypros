@@ -64,6 +64,30 @@ A API escuta em `http://localhost:4000`; o web em `http://localhost:3000`.
 |---|---|---|
 | GET | `/health` | Healthcheck do container/processo |
 | GET | `/v1/app-context` | Contexto autenticado do shell: user, profile e organizacao ativa |
+| POST | `/v1/searches` | Cria pesquisa de descoberta (valida, rate limit por org, reusa pesquisa identica <24h) e dispara execucao |
+| GET | `/v1/searches` | Lista pesquisas da organizacao (paginado) |
+| GET | `/v1/searches/:id` | Status/progresso de uma pesquisa (polling) |
+| GET | `/v1/searches/:id/results` | Resultados persistidos da pesquisa (paginado, join com `businesses`) |
+| POST | `/v1/searches/:id/retry` | Reexecuta pesquisa `failed`/`partial`/travada (idempotente, retomavel) |
+| GET | `/v1/businesses/:businessId/audit-summary` | Retorna empresa, ultima auditoria HTTP e ultimo score de oportunidade |
+| POST | `/v1/businesses/:businessId/audit` | Executa auditoria HTTP individual, persiste audit/score e registra atividade |
+| GET | `/v1/businesses` | Lista empresas da organizacao com filtros/ordenacao/paginacao server-side (RPC `get_org_businesses`) |
+| GET | `/v1/businesses/export.csv` | Exporta a listagem filtrada (ou selecao) em CSV, com escaping contra formula injection; rate limit por org |
+| POST | `/v1/businesses/:businessId/favorite` | Favorita a empresa (idempotente) |
+| DELETE | `/v1/businesses/:businessId/favorite` | Remove favorito |
+| POST | `/v1/businesses/batch/favorite` | Favorita em lote |
+| POST | `/v1/businesses/batch/audit` | Audita em lote (reusa o fluxo de auditoria individual) |
+| GET | `/v1/saved-filters` | Lista filtros salvos da organizacao |
+| POST | `/v1/saved-filters` | Cria filtro salvo |
+| DELETE | `/v1/saved-filters/:id` | Remove filtro salvo |
+| GET | `/v1/pipeline` | Lista leads da organizacao com empresa e score embutidos (Kanban monta as colunas no cliente) |
+| POST | `/v1/leads` | Cria lead a partir de uma empresa (idempotente: reusa lead existente pela constraint org+empresa) |
+| POST | `/v1/leads/batch` | Cria leads em lote a partir de uma selecao de empresas |
+| GET | `/v1/leads/:id` | Detalhe do lead: empresa, notas e timeline de atividades |
+| PATCH | `/v1/leads/:id` | Move estagio/position (drag ou menu), edita status/valor/proxima acao; reindexacao simples da coluna |
+| POST | `/v1/leads/:id/notes` | Cria nota no lead e registra atividade |
+| PATCH | `/v1/notes/:id` | Edita nota |
+| DELETE | `/v1/notes/:id` | Remove nota |
 
 ## Padroes de implementacao
 

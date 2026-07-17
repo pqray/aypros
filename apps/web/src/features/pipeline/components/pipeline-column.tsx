@@ -1,0 +1,62 @@
+"use client";
+
+import { cn } from "@aypros/ui";
+import type { LeadStage } from "@aypros/types";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { useDroppable } from "@dnd-kit/core";
+import { leadStageLabels, type PipelineColumn as PipelineColumnData } from "../board";
+import { SortableLeadCard } from "./lead-card";
+
+function formatCurrency(value: number): string {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+}
+
+export function PipelineColumn({
+  column,
+  onMove,
+  movePendingLeadId,
+}: {
+  column: PipelineColumnData;
+  onMove: (leadId: string, stage: LeadStage) => void;
+  movePendingLeadId: string | null;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: column.stage });
+
+  return (
+    <div className="flex w-72 shrink-0 flex-col rounded-lg border bg-muted/30">
+      <div className="flex items-center justify-between gap-2 border-b px-3 py-2.5">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-foreground">
+            {leadStageLabels[column.stage]}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {column.count} {column.count === 1 ? "lead" : "leads"}
+            {column.totalValue > 0 ? ` · ${formatCurrency(column.totalValue)}` : ""}
+          </p>
+        </div>
+      </div>
+
+      <div
+        ref={setNodeRef}
+        className={cn(
+          "flex min-h-24 flex-1 flex-col gap-2 p-2 transition-colors",
+          isOver && "bg-accent/60",
+        )}
+      >
+        <SortableContext items={column.leads.map((lead) => lead.id)} strategy={verticalListSortingStrategy}>
+          {column.leads.map((lead) => (
+            <SortableLeadCard
+              key={lead.id}
+              lead={lead}
+              onMove={onMove}
+              movePending={movePendingLeadId === lead.id}
+            />
+          ))}
+        </SortableContext>
+        {column.leads.length === 0 ? (
+          <p className="px-2 py-4 text-center text-xs text-muted-foreground">Nenhum lead aqui</p>
+        ) : null}
+      </div>
+    </div>
+  );
+}

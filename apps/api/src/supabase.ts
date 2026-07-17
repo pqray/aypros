@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { parseCookie, stringifySetCookie } from "cookie";
@@ -44,6 +45,16 @@ function appendSetCookie(reply: FastifyReply, cookiesToSet: CookieToSet[]) {
   );
 
   reply.header("set-cookie", [...previous, ...next]);
+}
+
+/**
+ * RLS-bypassing client for server-only writes (businesses upsert, activities).
+ * Never expose data fetched with it without an explicit org scope filter.
+ */
+export function createServiceRoleClient(): SupabaseClient {
+  return createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 }
 
 export function createSupabaseClient(

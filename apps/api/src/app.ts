@@ -1,10 +1,19 @@
 import cors from "@fastify/cors";
+import { createGooglePlacesProvider } from "@aypros/integrations";
 import Fastify from "fastify";
 import { env } from "./env";
 import { loadAppContext } from "./app-context";
+import { registerAuditRoutes, type AuditRoutesOptions } from "./audits";
+import { registerBusinessRoutes, type BusinessRoutesOptions } from "./businesses";
+import { registerLeadRoutes, type LeadRoutesOptions } from "./leads";
+import { registerSearchRoutes, type SearchRoutesOptions } from "./searches";
 import { createSupabaseClient } from "./supabase";
 
-export function buildApp() {
+export function buildApp(
+  overrides: Partial<
+    SearchRoutesOptions & AuditRoutesOptions & BusinessRoutesOptions & LeadRoutesOptions
+  > = {},
+) {
   const app = Fastify({
     logger: {
       level: process.env.NODE_ENV === "test" ? "silent" : env.API_LOG_LEVEL,
@@ -27,7 +36,7 @@ export function buildApp() {
     credentials: true,
   });
 
-  app.get("/health", async () => ({ ok: true }));
+  app.get("/health", { logLevel: "silent" }, async () => ({ ok: true }));
 
   app.get("/v1/app-context", async (request, reply) => {
     try {
@@ -54,6 +63,16 @@ export function buildApp() {
       throw error;
     }
   });
+
+  registerSearchRoutes(app, {
+    discoveryProvider:
+      overrides.discoveryProvider ??
+      createGooglePlacesProvider({ apiKey: env.GOOGLE_PLACES_API_KEY }),
+    serviceDb: overrides.serviceDb,
+  });
+  registerAuditRoutes(app, { serviceDb: overrides.serviceDb });
+  registerBusinessRoutes(app, { serviceDb: overrides.serviceDb });
+  registerLeadRoutes(app, { serviceDb: overrides.serviceDb });
 
   return app;
 }

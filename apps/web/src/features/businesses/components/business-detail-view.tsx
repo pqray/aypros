@@ -21,6 +21,9 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
   cn,
   toast,
 } from "@aypros/ui";
@@ -34,6 +37,7 @@ import {
   PiGlobe,
   PiHeart,
   PiHeartFill,
+  PiInfo,
   PiKanban,
   PiMagnifyingGlass,
   PiMapPin,
@@ -394,6 +398,27 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
                       indicatorClassName={barToneClass(latestScore.score)}
                     />
                     <div className="space-y-2 border-t pt-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Impacto no score
+                        </p>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label="Como o score é calculado"
+                              className="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              <PiInfo aria-hidden />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            O score mede oportunidade comercial. Cada item vem da auditoria do site,
+                            dados públicos da empresa e sinais de presença digital. Valores positivos
+                            aumentam a prioridade; valores negativos reduzem.
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                       {latestScore.reasons.map((reason) => (
                         <div key={reason.code} className="flex justify-between gap-3 text-sm">
                           <span className="min-w-0">{reason.label}</span>

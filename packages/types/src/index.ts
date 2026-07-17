@@ -167,6 +167,7 @@ export type BusinessListItem = {
 };
 
 export type BusinessWebsiteFilter = "all" | "with_site" | "without_site";
+export type BusinessSegmentFilter = "all" | BusinessSegment;
 export type BusinessSortBy = "name" | "score" | "rating";
 export type BusinessSortDir = "asc" | "desc";
 
@@ -174,6 +175,8 @@ export type BusinessListQuery = {
   page?: number;
   pageSize?: number;
   websiteFilter?: BusinessWebsiteFilter;
+  segment?: BusinessSegmentFilter;
+  city?: string;
   minScore?: number;
   maxScore?: number;
   minRating?: number;

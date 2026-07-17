@@ -63,6 +63,8 @@ function renderTable(overrides: Partial<ComponentProps<typeof BusinessesTable>> 
     onAddToPipeline: vi.fn(),
     onSortChange: vi.fn(),
     onWebsiteFilterChange: vi.fn(),
+    onSegmentFilterChange: vi.fn(),
+    onCityFilterChange: vi.fn(),
   };
   render(
     <TooltipProvider>
@@ -75,6 +77,8 @@ function renderTable(overrides: Partial<ComponentProps<typeof BusinessesTable>> 
         sortBy="name"
         sortDir="asc"
         websiteFilter="all"
+        segmentFilter="all"
+        cityFilter=""
         {...handlers}
         {...overrides}
       />
@@ -92,6 +96,7 @@ describe("BusinessesTable", () => {
       "/businesses/b1",
     );
     expect(screen.getByText("Social apenas")).toBeInTheDocument();
+    expect(screen.getAllByText("Alimentação").length).toBeGreaterThan(0);
     expect(screen.getByLabelText(/oportunidade alta.*score 62/i)).toBeInTheDocument();
   });
 
@@ -143,5 +148,26 @@ describe("BusinessesTable", () => {
     await user.click(await screen.findByRole("menuitemradio", { name: "Sem site" }));
 
     expect(onWebsiteFilterChange).toHaveBeenCalledWith("without_site");
+  });
+
+  it("filters by segment from the Segmento column header", async () => {
+    const user = userEvent.setup();
+    const { onSegmentFilterChange } = renderTable();
+
+    await user.click(screen.getByRole("button", { name: "Segmento" }));
+    await user.click(await screen.findByRole("menuitemradio", { name: "Serviços" }));
+
+    expect(onSegmentFilterChange).toHaveBeenCalledWith("services");
+  });
+
+  it("filters by city from the Cidade column header", async () => {
+    const user = userEvent.setup();
+    const { onCityFilterChange } = renderTable();
+
+    await user.click(screen.getByRole("button", { name: "Cidade" }));
+    await user.type(await screen.findByLabelText("Filtrar por cidade"), "Macaé");
+    await user.click(screen.getByRole("button", { name: "Aplicar" }));
+
+    expect(onCityFilterChange).toHaveBeenCalledWith("Macaé");
   });
 });

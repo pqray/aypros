@@ -7,6 +7,8 @@ describe("parseBusinessListQuery", () => {
       page: 1,
       pageSize: 20,
       websiteFilter: "all",
+      segment: "all",
+      city: undefined,
       minScore: undefined,
       maxScore: undefined,
       minRating: undefined,
@@ -20,13 +22,15 @@ describe("parseBusinessListQuery", () => {
 
   it("parses every param from the URL", () => {
     const params = new URLSearchParams(
-      "page=2&pageSize=50&websiteFilter=without_site&minScore=40&maxScore=90&minRating=3.5&audited=true&inPipeline=false&search=padaria&sortBy=score&sortDir=desc",
+      "page=2&pageSize=50&websiteFilter=without_site&segment=food_service&city=Fortaleza&minScore=40&maxScore=90&minRating=3.5&audited=true&inPipeline=false&search=padaria&sortBy=score&sortDir=desc",
     );
 
     expect(parseBusinessListQuery(params)).toEqual({
       page: 2,
       pageSize: 50,
       websiteFilter: "without_site",
+      segment: "food_service",
+      city: "Fortaleza",
       minScore: 40,
       maxScore: 90,
       minRating: 3.5,
@@ -91,6 +95,7 @@ describe("hasActiveFilters", () => {
         page: 1,
         pageSize: 20,
         websiteFilter: "all",
+        segment: "all",
         sortBy: "name",
         sortDir: "asc",
       }),
@@ -99,6 +104,8 @@ describe("hasActiveFilters", () => {
 
   it("is true when any filter is set", () => {
     expect(hasActiveFilters({ websiteFilter: "without_site" })).toBe(true);
+    expect(hasActiveFilters({ segment: "services" })).toBe(true);
+    expect(hasActiveFilters({ city: "Macaé" })).toBe(true);
     expect(hasActiveFilters({ minScore: 40 })).toBe(true);
     expect(hasActiveFilters({ audited: true })).toBe(true);
     expect(hasActiveFilters({ search: "padaria" })).toBe(true);

@@ -35,6 +35,7 @@ describe("businessListQuerySchema", () => {
       page: 1,
       pageSize: 20,
       websiteFilter: "all",
+      segment: "all",
       favoritesOnly: false,
       sortBy: "name",
       sortDir: "asc",
@@ -46,6 +47,12 @@ describe("businessListQuerySchema", () => {
     expect(result.page).toBe(3);
     expect(result.minScore).toBe(40);
     expect(result.minRating).toBe(4.5);
+  });
+
+  it("accepts city and segment filters", () => {
+    const result = businessListQuerySchema.parse({ city: " Macaé ", segment: "food_service" });
+    expect(result.city).toBe("Macaé");
+    expect(result.segment).toBe("food_service");
   });
 
   it("parses tri-state booleans from strings", () => {

@@ -39,6 +39,8 @@ export function businessListQueryParams(query: BusinessListQuery): URLSearchPara
   if (query.page) params.set("page", String(query.page));
   if (query.pageSize) params.set("pageSize", String(query.pageSize));
   if (query.websiteFilter) params.set("websiteFilter", query.websiteFilter);
+  if (query.segment) params.set("segment", query.segment);
+  if (query.city) params.set("city", query.city);
   if (query.minScore !== undefined) params.set("minScore", String(query.minScore));
   if (query.maxScore !== undefined) params.set("maxScore", String(query.maxScore));
   if (query.minRating !== undefined) params.set("minRating", String(query.minRating));

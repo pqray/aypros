@@ -77,6 +77,14 @@ const optionalTriStateBoolean = z
   .transform((value) => (value === undefined ? undefined : value === "true"));
 
 export const businessWebsiteFilterSchema = z.enum(["all", "with_site", "without_site"]);
+export const businessSegmentFilterSchema = z.enum([
+  "all",
+  "restaurant",
+  "food_service",
+  "services",
+  "retail",
+  "other",
+]);
 export const businessSortBySchema = z.enum(["name", "score", "rating"]);
 export const businessSortDirSchema = z.enum(["asc", "desc"]);
 
@@ -84,6 +92,13 @@ export const businessListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   websiteFilter: businessWebsiteFilterSchema.default("all"),
+  segment: businessSegmentFilterSchema.default("all"),
+  city: z
+    .string()
+    .trim()
+    .max(80)
+    .transform((value) => value || undefined)
+    .optional(),
   minScore: z.coerce.number().int().min(0).max(100).optional(),
   maxScore: z.coerce.number().int().min(0).max(100).optional(),
   minRating: z.coerce.number().min(0).max(5).optional(),

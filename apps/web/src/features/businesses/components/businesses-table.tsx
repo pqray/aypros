@@ -9,6 +9,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
+  Input,
   ScoreBadge,
   Table,
   TableBody,
@@ -24,6 +25,7 @@ import {
 } from "@aypros/ui";
 import type {
   BusinessListItem,
+  BusinessSegmentFilter,
   BusinessSortBy,
   BusinessSortDir,
   BusinessWebsiteFilter,
@@ -36,7 +38,7 @@ import {
   type RowSelectionState,
 } from "@tanstack/react-table";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   PiCaretDown,
   PiCaretUp,
@@ -60,6 +62,15 @@ const websiteFilterLabels: Record<BusinessWebsiteFilter, string> = {
   all: "Todas",
   with_site: "Com site",
   without_site: "Sem site",
+};
+
+const segmentFilterLabels: Record<BusinessSegmentFilter, string> = {
+  all: "Todos",
+  restaurant: "Restaurante",
+  food_service: "Alimentação",
+  services: "Serviços",
+  retail: "Varejo",
+  other: "Outro",
 };
 
 function SortableHeader({
@@ -93,6 +104,106 @@ function SortableHeader({
         <PiCaretUpDown className="opacity-50" aria-hidden />
       )}
     </button>
+  );
+}
+
+function CityFilterHeader({
+  cityFilter,
+  onCityFilterChange,
+}: {
+  cityFilter: string;
+  onCityFilterChange: (city: string | undefined) => void;
+}) {
+  const [draft, setDraft] = useState(cityFilter);
+  const active = cityFilter.trim().length > 0;
+
+  useEffect(() => {
+    setDraft(cityFilter);
+  }, [cityFilter]);
+
+  function apply() {
+    onCityFilterChange(draft.trim() || undefined);
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className={cn("flex items-center gap-1 hover:text-foreground", active && "text-foreground")}
+        >
+          Cidade
+          <PiFunnel className={active ? undefined : "opacity-50"} aria-hidden />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-64 p-3">
+        <div className="space-y-2">
+          <Input
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                apply();
+              }
+            }}
+            placeholder="Filtrar por cidade"
+            aria-label="Filtrar por cidade"
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setDraft("");
+                onCityFilterChange(undefined);
+              }}
+            >
+              Limpar
+            </Button>
+            <Button type="button" size="sm" onClick={apply}>
+              Aplicar
+            </Button>
+          </div>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function SegmentFilterHeader({
+  segmentFilter,
+  onSegmentFilterChange,
+}: {
+  segmentFilter: BusinessSegmentFilter;
+  onSegmentFilterChange: (filter: BusinessSegmentFilter) => void;
+}) {
+  const active = segmentFilter !== "all";
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className={cn("flex items-center gap-1 hover:text-foreground", active && "text-foreground")}
+        >
+          Segmento
+          <PiFunnel className={active ? undefined : "opacity-50"} aria-hidden />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuRadioGroup
+          value={segmentFilter}
+          onValueChange={(value) => onSegmentFilterChange(value as BusinessSegmentFilter)}
+        >
+          {(Object.keys(segmentFilterLabels) as BusinessSegmentFilter[]).map((option) => (
+            <DropdownMenuRadioItem key={option} value={option}>
+              {segmentFilterLabels[option]}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -154,6 +265,10 @@ export function BusinessesTable({
   onSortChange,
   websiteFilter,
   onWebsiteFilterChange,
+  segmentFilter,
+  onSegmentFilterChange,
+  cityFilter,
+  onCityFilterChange,
 }: {
   items: BusinessListItem[];
   selectedIds: Set<string>;
@@ -170,6 +285,10 @@ export function BusinessesTable({
   onSortChange: (sortBy: BusinessSortBy, sortDir: BusinessSortDir) => void;
   websiteFilter: BusinessWebsiteFilter;
   onWebsiteFilterChange: (filter: BusinessWebsiteFilter) => void;
+  segmentFilter: BusinessSegmentFilter;
+  onSegmentFilterChange: (filter: BusinessSegmentFilter) => void;
+  cityFilter: string;
+  onCityFilterChange: (city: string | undefined) => void;
 }) {
   const rowSelection = useMemo<RowSelectionState>(() => {
     const state: RowSelectionState = {};
@@ -232,11 +351,23 @@ export function BusinessesTable({
       }),
       columnHelper.display({
         id: "location",
-        header: "Cidade",
+        header: () => (
+          <CityFilterHeader cityFilter={cityFilter} onCityFilterChange={onCityFilterChange} />
+        ),
         cell: ({ row }) =>
           [row.original.city, row.original.state].filter(Boolean).join("/") || (
             <span className="text-muted-foreground">—</span>
           ),
+      }),
+      columnHelper.display({
+        id: "segment",
+        header: () => (
+          <SegmentFilterHeader
+            segmentFilter={segmentFilter}
+            onSegmentFilterChange={onSegmentFilterChange}
+          />
+        ),
+        cell: ({ row }) => segmentFilterLabels[row.original.segment],
       }),
       columnHelper.display({
         id: "phone",
@@ -436,6 +567,10 @@ export function BusinessesTable({
       onSortChange,
       websiteFilter,
       onWebsiteFilterChange,
+      segmentFilter,
+      onSegmentFilterChange,
+      cityFilter,
+      onCityFilterChange,
     ],
   );
 

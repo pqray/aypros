@@ -1,9 +1,23 @@
-import type { BusinessListQuery, BusinessSortBy, BusinessSortDir, BusinessWebsiteFilter } from "@aypros/types";
+import type {
+  BusinessListQuery,
+  BusinessSegmentFilter,
+  BusinessSortBy,
+  BusinessSortDir,
+  BusinessWebsiteFilter,
+} from "@aypros/types";
 
 export const PAGE_SIZES = [10, 20, 50] as const;
 export const DEFAULT_PAGE_SIZE = 20;
 
 const WEBSITE_FILTERS: BusinessWebsiteFilter[] = ["all", "with_site", "without_site"];
+const SEGMENT_FILTERS: BusinessSegmentFilter[] = [
+  "all",
+  "restaurant",
+  "food_service",
+  "services",
+  "retail",
+  "other",
+];
 const SORT_BY_OPTIONS: BusinessSortBy[] = ["name", "score", "rating"];
 const SORT_DIR_OPTIONS: BusinessSortDir[] = ["asc", "desc"];
 
@@ -29,6 +43,11 @@ function parseBoolParam(value: string | null): boolean | undefined {
   return undefined;
 }
 
+function parseTextParam(value: string | null): string | undefined {
+  const parsed = value?.trim();
+  return parsed || undefined;
+}
+
 /** Reads the businesses table state from URL search params (specs/14: URL is the source of truth). */
 export function parseBusinessListQuery(searchParams: URLSearchParams): BusinessListQuery {
   const pageValue = Number(searchParams.get("page") ?? "1");
@@ -40,12 +59,14 @@ export function parseBusinessListQuery(searchParams: URLSearchParams): BusinessL
       ? pageSizeValue
       : DEFAULT_PAGE_SIZE,
     websiteFilter: parseOption(searchParams.get("websiteFilter"), WEBSITE_FILTERS, "all"),
+    segment: parseOption(searchParams.get("segment"), SEGMENT_FILTERS, "all"),
+    city: parseTextParam(searchParams.get("city")),
     minScore: parseIntParam(searchParams.get("minScore")),
     maxScore: parseIntParam(searchParams.get("maxScore")),
     minRating: parseFloatParam(searchParams.get("minRating")),
     audited: parseBoolParam(searchParams.get("audited")),
     inPipeline: parseBoolParam(searchParams.get("inPipeline")),
-    search: searchParams.get("search") || undefined,
+    search: parseTextParam(searchParams.get("search")),
     sortBy: parseOption(searchParams.get("sortBy"), SORT_BY_OPTIONS, "name"),
     sortDir: parseOption(searchParams.get("sortDir"), SORT_DIR_OPTIONS, "asc"),
   };
@@ -78,6 +99,8 @@ export function applyBusinessListQuery(
 export function hasActiveFilters(query: BusinessListQuery): boolean {
   return Boolean(
     (query.websiteFilter && query.websiteFilter !== "all") ||
+      (query.segment && query.segment !== "all") ||
+      query.city ||
       query.minScore !== undefined ||
       query.maxScore !== undefined ||
       query.minRating !== undefined ||

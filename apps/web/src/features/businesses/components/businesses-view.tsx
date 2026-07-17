@@ -4,6 +4,7 @@ import { Button, EmptyState, PageHeader, Skeleton, toast } from "@aypros/ui";
 import type {
   BusinessListItem,
   BusinessListQuery,
+  BusinessSegmentFilter,
   BusinessSortBy,
   BusinessSortDir,
   BusinessWebsiteFilter,
@@ -75,6 +76,14 @@ export function BusinessesView({
 
   function handleWebsiteFilterChange(websiteFilter: BusinessWebsiteFilter) {
     applyQuery({ websiteFilter, page: 1 });
+  }
+
+  function handleSegmentFilterChange(segment: BusinessSegmentFilter) {
+    applyQuery({ segment, page: 1 });
+  }
+
+  function handleCityFilterChange(city: string | undefined) {
+    applyQuery({ city, page: 1 });
   }
 
   function handleViewChange(nextView: BusinessesViewMode) {
@@ -188,6 +197,8 @@ export function BusinessesView({
                 audited: undefined,
                 inPipeline: undefined,
                 search: undefined,
+                segment: "all",
+                city: undefined,
               })}>
                 Limpar filtros
               </Button>
@@ -226,6 +237,10 @@ export function BusinessesView({
               onSortChange={handleSortChange}
               websiteFilter={query.websiteFilter ?? "all"}
               onWebsiteFilterChange={handleWebsiteFilterChange}
+              segmentFilter={query.segment ?? "all"}
+              onSegmentFilterChange={handleSegmentFilterChange}
+              cityFilter={query.city ?? ""}
+              onCityFilterChange={handleCityFilterChange}
             />
           ) : (
             <BusinessesCards

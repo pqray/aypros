@@ -76,6 +76,8 @@ type ListParams = {
   page: number;
   pageSize: number;
   websiteFilter: "all" | "with_site" | "without_site";
+  segment: "all" | "restaurant" | "food_service" | "services" | "retail" | "other";
+  city?: string;
   minScore?: number;
   maxScore?: number;
   minRating?: number;
@@ -92,6 +94,8 @@ async function fetchBusinessList(supabase: SupabaseClient, orgId: string, params
   const { data, error } = await supabase.rpc("get_org_businesses_api", {
     org_id: orgId,
     website_filter: params.websiteFilter,
+    segment_filter: params.segment,
+    city_filter: params.city,
     min_score: params.minScore,
     max_score: params.maxScore,
     min_rating: params.minRating,

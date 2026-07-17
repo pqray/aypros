@@ -15,12 +15,21 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@aypros/ui";
-import type { BusinessListQuery } from "@aypros/types";
+import type { BusinessListQuery, BusinessSegmentFilter } from "@aypros/types";
 import { useEffect, useState } from "react";
 import { PiFunnel } from "react-icons/pi";
 import { hasActiveFilters } from "../filters";
 
 type TriState = "all" | "true" | "false";
+
+const segmentLabels: Record<BusinessSegmentFilter, string> = {
+  all: "Todos",
+  restaurant: "Restaurante",
+  food_service: "Alimentação",
+  services: "Serviços",
+  retail: "Varejo",
+  other: "Outro",
+};
 
 function toTriState(value: boolean | undefined): TriState {
   if (value === true) return "true";
@@ -76,6 +85,35 @@ export function BusinessesFiltersSheet({
           <SheetTitle>Filtros</SheetTitle>
           <SheetDescription>Refine a lista de empresas descobertas.</SheetDescription>
         </SheetHeader>
+
+        <div className="space-y-2">
+          <Label htmlFor="filter-city">Cidade</Label>
+          <Input
+            id="filter-city"
+            placeholder="Ex.: Macaé"
+            value={query.city ?? ""}
+            onChange={(event) => onApply({ city: event.target.value || undefined })}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="filter-segment">Segmento</Label>
+          <Select
+            value={query.segment ?? "all"}
+            onValueChange={(value) => onApply({ segment: value as BusinessSegmentFilter })}
+          >
+            <SelectTrigger id="filter-segment">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(segmentLabels) as BusinessSegmentFilter[]).map((segment) => (
+                <SelectItem key={segment} value={segment}>
+                  {segmentLabels[segment]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <div className="space-y-2">
           <Label>Score</Label>
@@ -167,6 +205,8 @@ export function BusinessesFiltersSheet({
                 audited: undefined,
                 inPipeline: undefined,
                 search: undefined,
+                segment: "all",
+                city: undefined,
               });
             }}
           >

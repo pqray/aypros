@@ -3,6 +3,7 @@ import type {
   BatchAuditResponse,
   BatchFavoriteResponse,
   BusinessAuditSummaryResponse,
+  BusinessRefreshResponse,
   BusinessListQuery,
   BusinessListResponse,
   SavedFilter,
@@ -18,6 +19,12 @@ export function getBusinessAuditSummary(businessId: string): Promise<BusinessAud
 
 export function runBusinessAudit(businessId: string): Promise<unknown> {
   return apiFetch<unknown>(`/v1/businesses/${businessId}/audit`, {
+    method: "POST",
+  });
+}
+
+export function refreshBusinessData(businessId: string): Promise<BusinessRefreshResponse> {
+  return apiFetch<BusinessRefreshResponse>(`/v1/businesses/${businessId}/refresh`, {
     method: "POST",
   });
 }
@@ -98,6 +105,33 @@ export async function exportBusinessesCsv(
   const link = document.createElement("a");
   link.href = url;
   link.download = "empresas.csv";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function downloadBusinessReportPdf(businessId: string, businessName: string): Promise<void> {
+  const response = await fetch(`${apiUrl}/v1/businesses/${businessId}/report.pdf`, {
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const body = (await response
+      .json()
+      .catch(() => ({ error: "Erro inesperado" }))) as ApiErrorBody;
+    throw new ApiError(response.status, body);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  const safeName = businessName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  link.download = `diagnostico-${safeName || "empresa"}.pdf`;
   link.click();
   URL.revokeObjectURL(url);
 }

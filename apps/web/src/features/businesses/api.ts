@@ -3,10 +3,12 @@ import type {
   BatchAuditResponse,
   BatchFavoriteResponse,
   BusinessAuditSummaryResponse,
+  BusinessBriefingResponse,
   BusinessRefreshResponse,
   BusinessReportResponse,
   BusinessListQuery,
   BusinessListResponse,
+  GenerateBusinessBriefingResponse,
   SavedFilter,
   SavedFilterListResponse,
 } from "@aypros/types";
@@ -26,6 +28,16 @@ export function runBusinessAudit(businessId: string): Promise<unknown> {
 
 export function getBusinessReport(businessId: string): Promise<BusinessReportResponse> {
   return apiFetch<BusinessReportResponse>(`/v1/businesses/${businessId}/report`);
+}
+
+export function getBusinessBriefing(businessId: string): Promise<BusinessBriefingResponse> {
+  return apiFetch<BusinessBriefingResponse>(`/v1/businesses/${businessId}/briefing`);
+}
+
+export function generateBusinessBriefing(businessId: string): Promise<GenerateBusinessBriefingResponse> {
+  return apiFetch<GenerateBusinessBriefingResponse>(`/v1/businesses/${businessId}/briefing`, {
+    method: "POST",
+  });
 }
 
 export function refreshBusinessData(businessId: string): Promise<BusinessRefreshResponse> {

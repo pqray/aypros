@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { buildCorrectiveMessages, buildPromptMessages, promptVersions } from "./prompts";
-import type { AiInput, AiKind } from "./types";
+import {
+  buildBusinessBriefingCorrectiveMessages,
+  buildBusinessBriefingMessages,
+  buildCorrectiveMessages,
+  buildPromptMessages,
+  businessBriefingPromptVersion,
+  promptVersions,
+} from "./prompts";
+import type { AiInput, AiKind, BusinessBriefingInput } from "./types";
 
 const input: AiInput = {
   business: {
@@ -73,5 +80,44 @@ describe("promptVersions", () => {
       whatsapp_message: "whatsapp-v2",
       email_message: "email-v4",
     });
+  });
+});
+
+describe("business briefing prompt", () => {
+  const briefingInput: BusinessBriefingInput = {
+    ...input,
+    business: { ...input.business, segment: "services" },
+    report: {
+      summary: "Empresa de serviços com presença digital parcial.",
+      findings: [{ title: "Descrição ausente", body: "Sem description.", impact: "Menos clareza.", status: "problem" }],
+      recommendations: [{ priority: "alta", text: "Revisar SEO básico." }],
+      nextSteps: ["Validar hipótese comercial."],
+      httpStatusNote: null,
+    },
+    pipeline: null,
+  };
+
+  it("has anti-hallucination and segment-specific rules", () => {
+    const [system] = buildBusinessBriefingMessages(briefingInput);
+    expect(system?.content).toContain("Use SOMENTE os fatos");
+    expect(system?.content).toContain("Não invente Instagram");
+    expect(system?.content).toContain("Não fale de cardápio");
+    expect(system?.content).toContain("restaurant ou food_service");
+  });
+
+  it("sends the structured briefing input as JSON", () => {
+    const user = buildBusinessBriefingMessages(briefingInput).at(-1);
+    expect(user?.role).toBe("user");
+    expect(JSON.parse(user!.content.slice(user!.content.indexOf("{")))).toMatchObject({
+      business: { segment: "services" },
+      report: { recommendations: [{ text: "Revisar SEO básico." }] },
+    });
+  });
+
+  it("has an immutable version and corrective retry message", () => {
+    expect(businessBriefingPromptVersion).toBe("business-briefing-v1");
+    const messages = buildBusinessBriefingCorrectiveMessages(briefingInput, "nope");
+    expect(messages).toHaveLength(3);
+    expect(messages.at(-1)?.content).toContain("APENAS com o objeto JSON");
   });
 });

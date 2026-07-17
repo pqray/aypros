@@ -51,6 +51,7 @@ import { useCreateLead } from "@/features/pipeline/queries";
 import { formatRelativeTime } from "@/lib/format";
 import { useTabParam } from "@/lib/use-tab-param";
 import { downloadBusinessReportPdf } from "../api";
+import { BusinessAiBriefingCard } from "./business-ai-briefing-card";
 import { barToneClass, DiagnosticOverviewCard, MaturityCard } from "./business-diagnostic";
 import {
   useBusinessAuditSummary,
@@ -332,6 +333,8 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
+          <BusinessAiBriefingCard businessId={businessId} />
+
           <DiagnosticOverviewCard
             businessId={businessId}
             onDownloadPdf={() => void handleDownloadReport()}

@@ -1,4 +1,4 @@
-import type { AiInput, AiKind } from "./types";
+import type { AiInput, AiKind, BusinessBriefingInput } from "./types";
 
 /**
  * Prompt versions are immutable (specs/13): changing any prompt text below
@@ -12,6 +12,8 @@ export const promptVersions: Record<AiKind, string> = {
   // v3: corpo estruturado em parágrafos reais (o v2 saía raso, tudo num bloco só)
   email_message: "email-v4",
 };
+
+export const businessBriefingPromptVersion = "business-briefing-v1";
 
 const FACTS_RULES = `REGRAS OBRIGATÓRIAS:
 - Use SOMENTE os fatos presentes no JSON de entrada. Não invente métricas, prêmios, dados de tráfego, anos de mercado nem problemas não listados.
@@ -74,6 +76,44 @@ export function buildPromptMessages(kind: AiKind, input: AiInput): AiPromptMessa
   return [
     { role: "system", content: KIND_INSTRUCTIONS[kind] },
     { role: "user", content: `Fatos sobre a empresa (JSON):\n${JSON.stringify(input)}` },
+  ];
+}
+
+const BUSINESS_BRIEFING_INSTRUCTIONS = `Você é um consultor comercial sênior de uma agência que vende serviços digitais para pequenos negócios locais.
+Gere um briefing de pré-venda para o vendedor entender a empresa antes da abordagem.
+
+REGRAS OBRIGATÓRIAS:
+- Use SOMENTE os fatos presentes no JSON de entrada.
+- Separe fatos detectados de hipóteses comerciais.
+- Não invente Instagram, seguidores, posts, engajamento, tráfego, prêmios, anos de mercado ou problemas não listados.
+- Instagram, Linktree, iFood, delivery, WhatsApp ou redes sociais só podem ser citados se houver sinal salvo/detectado no JSON.
+- Se não houver evidência social, diga que não há evidência salva de canal social próprio.
+- Não fale de cardápio para segmento que não seja restaurant ou food_service.
+- Achados inconclusive/unknown não podem ser afirmados como problema; trate como incerteza.
+- Evite texto genérico como "melhorar presença online" sem conectar a um achado real e ao impacto comercial.
+- Escreva em português do Brasil, para uso interno do vendedor.
+- Responda APENAS com JSON válido, sem markdown.
+
+Formato exato:
+{"context":"quem é a empresa e por que vale olhar para ela","digitalPresence":"leitura da presença digital com fatos detectados","opportunities":["oportunidade comercial concreta"],"risks":["risco ou incerteza"],"salesAngle":"ângulo de abordagem recomendado","recommendedOffer":"oferta mais adequada","nextStep":"próximo passo recomendado","confidenceNotes":["observação sobre limites dos dados"]}`;
+
+export function buildBusinessBriefingMessages(input: BusinessBriefingInput): AiPromptMessages {
+  return [
+    { role: "system", content: BUSINESS_BRIEFING_INSTRUCTIONS },
+    { role: "user", content: `Fatos estruturados sobre a empresa (JSON):\n${JSON.stringify(input)}` },
+  ];
+}
+
+export function buildBusinessBriefingCorrectiveMessages(
+  input: BusinessBriefingInput,
+  invalidOutput: string,
+): AiPromptMessages {
+  return [
+    ...buildBusinessBriefingMessages(input),
+    {
+      role: "user",
+      content: `Sua resposta anterior foi inválida:\n${invalidOutput.slice(0, 2000)}\n\nResponda novamente APENAS com o objeto JSON no formato exato pedido.`,
+    },
   ];
 }
 

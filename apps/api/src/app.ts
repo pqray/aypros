@@ -6,6 +6,7 @@ import { env } from "./env";
 import { loadAppContext } from "./app-context";
 import { registerAiRoutes, type AiRoutesOptions } from "./ai";
 import { registerAuditRoutes, type AuditRoutesOptions } from "./audits";
+import { registerBusinessBriefingRoutes, type BusinessBriefingRoutesOptions } from "./business-briefings";
 import { registerBusinessRoutes, type BusinessRoutesOptions } from "./businesses";
 import { registerLeadRoutes, type LeadRoutesOptions } from "./leads";
 import { runRefreshTick } from "./refresh";
@@ -32,6 +33,7 @@ export function buildApp(
       BusinessRoutesOptions &
       LeadRoutesOptions &
       AiRoutesOptions &
+      BusinessBriefingRoutesOptions &
       ReportRoutesOptions
   > = {},
 ) {
@@ -131,6 +133,10 @@ export function buildApp(
   });
   registerLeadRoutes(app, { serviceDb: overrides.serviceDb });
   registerAiRoutes(app, { serviceDb: overrides.serviceDb, aiProvider: overrides.aiProvider });
+  registerBusinessBriefingRoutes(app, {
+    serviceDb: overrides.serviceDb,
+    briefingProvider: overrides.briefingProvider,
+  });
   registerReportRoutes(app, { serviceDb: overrides.serviceDb });
 
   if (process.env.NODE_ENV !== "test" && env.REFRESH_ENABLED) {

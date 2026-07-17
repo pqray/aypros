@@ -1,4 +1,5 @@
 import type { LeadSummary } from "@aypros/types";
+import { TooltipProvider } from "@aypros/ui";
 import { render, screen } from "@testing-library/react";
 import { DndContext } from "@dnd-kit/core";
 import { describe, expect, it, vi } from "vitest";
@@ -31,16 +32,18 @@ function makeLead(overrides: Partial<LeadSummary> = {}): LeadSummary {
 
 function renderColumn(leads: LeadSummary[]) {
   return render(
-    <DndContext onDragEnd={vi.fn()}>
-      <PipelineColumn
-        column={{
-          stage: "new",
-          leads,
-          count: leads.length,
-          totalValue: leads.reduce((sum, lead) => sum + (lead.potentialValue ?? 0), 0),
-        }}
-      />
-    </DndContext>,
+    <TooltipProvider>
+      <DndContext onDragEnd={vi.fn()}>
+        <PipelineColumn
+          column={{
+            stage: "new",
+            leads,
+            count: leads.length,
+            totalValue: leads.reduce((sum, lead) => sum + (lead.potentialValue ?? 0), 0),
+          }}
+        />
+      </DndContext>
+    </TooltipProvider>,
   );
 }
 

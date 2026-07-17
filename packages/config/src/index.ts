@@ -33,6 +33,8 @@ export const aiConfig = {
     whatsapp_message: 512,
     email_message: 1024,
   },
+  /** Briefing consultivo salvo por empresa (fase 18). */
+  maxBusinessBriefingTokens: 1536,
 } as const;
 
 export const businessesConfig = {

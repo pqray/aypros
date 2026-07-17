@@ -53,6 +53,17 @@ export const emailMessageOutputSchema = z.object({
     ),
 });
 
+export const businessBriefingOutputSchema = z.object({
+  context: line(700),
+  digitalPresence: line(800),
+  opportunities: z.array(line(240)).min(1).max(5),
+  risks: z.array(line(240)).max(5).default([]),
+  salesAngle: line(600),
+  recommendedOffer: line(500),
+  nextStep: line(350),
+  confidenceNotes: z.array(line(220)).max(5).default([]),
+});
+
 export const aiOutputSchemas: Record<AiKind, z.ZodType> = {
   commercial_summary: commercialSummaryV2OutputSchema,
   whatsapp_message: whatsappMessageOutputSchema,

@@ -247,6 +247,32 @@ export const aiGenerations = pgTable("ai_generations", {
   createdAt,
 });
 
+export const businessAiBriefings = pgTable(
+  "business_ai_briefings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id").notNull(),
+    businessId: uuid("business_id").notNull(),
+    kind: text("kind").notNull().default("commercial_briefing"),
+    contentJson: jsonb("content_json").notNull(),
+    summary: text("summary").notNull(),
+    model: text("model").notNull(),
+    promptVersion: text("prompt_version").notNull(),
+    sourceHash: text("source_hash").notNull(),
+    createdBy: uuid("created_by").notNull(),
+    createdAt,
+    updatedAt,
+  },
+  (table) => [
+    index("business_ai_briefings_org_business_kind_created_idx").on(
+      table.organizationId,
+      table.businessId,
+      table.kind,
+      table.createdAt,
+    ),
+  ],
+);
+
 export type Profile = typeof profiles.$inferSelect;
 export type Organization = typeof organizations.$inferSelect;
 export type OrganizationMember = typeof organizationMembers.$inferSelect;

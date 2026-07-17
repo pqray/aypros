@@ -73,11 +73,49 @@ export type EmailMessageOutput = {
   body: string;
 };
 
+export type BusinessBriefingInput = AiInput & {
+  report: {
+    summary: string;
+    findings: Array<{ title: string; body: string; impact: string; status: "problem" | "ok" | "unknown" }>;
+    recommendations: Array<{ priority: "alta" | "media"; text: string }>;
+    nextSteps: string[];
+    httpStatusNote: string | null;
+  } | null;
+  pipeline: {
+    leadId: string;
+    stage: string;
+    status: string;
+    assignedToName: string | null;
+    lastContactAt: string | null;
+    nextAction: string | null;
+    nextActionAt: string | null;
+    notes: string[];
+  } | null;
+};
+
+export type BusinessBriefingOutput = {
+  context: string;
+  digitalPresence: string;
+  opportunities: string[];
+  risks: string[];
+  salesAngle: string;
+  recommendedOffer: string;
+  nextStep: string;
+  confidenceNotes: string[];
+};
+
 export type AiOutput =
   | CommercialSummaryOutput
   | CommercialSummaryV2Output
   | WhatsappMessageOutput
   | EmailMessageOutput;
+
+export type BusinessBriefingResult = {
+  output: BusinessBriefingOutput;
+  model: string;
+  tokensUsed: number | null;
+  promptVersion: string;
+};
 
 export type AiGenerationResult = {
   output: AiOutput;

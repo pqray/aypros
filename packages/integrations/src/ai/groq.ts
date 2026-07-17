@@ -1,7 +1,23 @@
 import Groq from "groq-sdk";
-import { aiOutputSchemas } from "./schemas";
-import { buildCorrectiveMessages, buildPromptMessages, promptVersions } from "./prompts";
-import { AiError, type AiInput, type AiKind, type AiOutput, type AiProvider } from "./types";
+import { aiOutputSchemas, businessBriefingOutputSchema } from "./schemas";
+import {
+  buildBusinessBriefingCorrectiveMessages,
+  buildBusinessBriefingMessages,
+  buildCorrectiveMessages,
+  buildPromptMessages,
+  businessBriefingPromptVersion,
+  promptVersions,
+} from "./prompts";
+import {
+  AiError,
+  type AiInput,
+  type AiKind,
+  type AiOutput,
+  type AiProvider,
+  type BusinessBriefingInput,
+  type BusinessBriefingOutput,
+  type BusinessBriefingResult,
+} from "./types";
 
 export type ChatCompletionParams = {
   model: string;
@@ -27,6 +43,19 @@ export type GroqAiProviderOptions = {
   fallbackModel?: string;
   timeoutMs: number;
   maxTokensByKind: Record<AiKind, number>;
+  client?: ChatCompletionClient;
+};
+
+export type BusinessBriefingProvider = {
+  generate(input: BusinessBriefingInput): Promise<BusinessBriefingResult>;
+};
+
+export type GroqBusinessBriefingProviderOptions = {
+  apiKey: string;
+  model: string;
+  fallbackModel?: string;
+  timeoutMs: number;
+  maxTokens: number;
   client?: ChatCompletionClient;
 };
 
@@ -64,6 +93,17 @@ function parseOutput(kind: AiKind, content: string): AiOutput | null {
   }
   const result = aiOutputSchemas[kind].safeParse(parsed);
   return result.success ? (result.data as AiOutput) : null;
+}
+
+function parseBusinessBriefingOutput(content: string): BusinessBriefingOutput | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return null;
+  }
+  const result = businessBriefingOutputSchema.safeParse(parsed);
+  return result.success ? result.data : null;
 }
 
 export function createGroqAiProvider(options: GroqAiProviderOptions): AiProvider {
@@ -131,6 +171,75 @@ export function createGroqAiProvider(options: GroqAiProviderOptions): AiProvider
         model: activeModel,
         tokensUsed,
         promptVersion: promptVersions[kind],
+      };
+    },
+  };
+}
+
+export function createGroqBusinessBriefingProvider(
+  options: GroqBusinessBriefingProviderOptions,
+): BusinessBriefingProvider {
+  const client = options.client ?? createSdkClient(options.apiKey, options.timeoutMs);
+
+  async function callModel(
+    model: string,
+    messages: ChatCompletionParams["messages"],
+  ): Promise<ChatCompletionResult> {
+    try {
+      return await client.complete({
+        model,
+        messages,
+        response_format: { type: "json_object" },
+        max_tokens: options.maxTokens,
+        temperature: 0.35,
+      });
+    } catch (error) {
+      throw mapProviderError(error);
+    }
+  }
+
+  return {
+    async generate(input) {
+      const messages = buildBusinessBriefingMessages(input);
+
+      let activeModel = options.model;
+      let first: ChatCompletionResult;
+      try {
+        first = await callModel(activeModel, messages);
+      } catch (error) {
+        const aiError = error as AiError;
+        const canFallback =
+          options.fallbackModel &&
+          options.fallbackModel !== activeModel &&
+          (aiError.code === "PROVIDER_ERROR" || aiError.code === "RATE_LIMITED");
+        if (!canFallback) throw aiError;
+        activeModel = options.fallbackModel as string;
+        first = await callModel(activeModel, messages);
+      }
+
+      let tokensUsed = first.tokensUsed;
+      let output = parseBusinessBriefingOutput(first.content);
+
+      if (!output) {
+        const retry = await callModel(
+          activeModel,
+          buildBusinessBriefingCorrectiveMessages(input, first.content),
+        );
+        tokensUsed =
+          retry.tokensUsed === null && tokensUsed === null
+            ? null
+            : (tokensUsed ?? 0) + (retry.tokensUsed ?? 0);
+        output = parseBusinessBriefingOutput(retry.content);
+        if (!output) {
+          throw new AiError("INVALID_OUTPUT", "A IA não retornou o formato esperado.");
+        }
+      }
+
+      return {
+        output,
+        model: activeModel,
+        tokensUsed,
+        promptVersion: businessBriefingPromptVersion,
       };
     },
   };

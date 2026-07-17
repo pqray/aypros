@@ -431,3 +431,39 @@ export type AiGenerationsResponse = {
 export type GenerateAiResponse = {
   generation: AiGenerationSummary;
 };
+
+export type BusinessBriefingKind = "commercial_briefing";
+
+export type BusinessBriefingContent = {
+  context: string;
+  digitalPresence: string;
+  opportunities: string[];
+  risks: string[];
+  salesAngle: string;
+  recommendedOffer: string;
+  nextStep: string;
+  confidenceNotes: string[];
+};
+
+export type BusinessBriefing = {
+  id: string;
+  businessId: string;
+  kind: BusinessBriefingKind;
+  summary: string;
+  content: BusinessBriefingContent;
+  model: string;
+  promptVersion: string;
+  sourceHash: string;
+  isStale: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BusinessBriefingResponse = {
+  briefing: BusinessBriefing | null;
+  sourceHash: string;
+};
+
+export type GenerateBusinessBriefingResponse = {
+  briefing: BusinessBriefing;
+};

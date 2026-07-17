@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createGroqAiProvider,
+  createGroqBusinessBriefingProvider,
   mapProviderError,
   type ChatCompletionClient,
   type ChatCompletionParams,
 } from "./groq";
-import { AiError, type AiInput } from "./types";
+import { AiError, type AiInput, type BusinessBriefingInput } from "./types";
 
 const input: AiInput = {
   business: {
@@ -118,6 +119,78 @@ describe("createGroqAiProvider", () => {
       code: "TIMEOUT",
     });
     expect(complete).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("createGroqBusinessBriefingProvider", () => {
+  const briefingInput: BusinessBriefingInput = {
+    ...input,
+    report: {
+      summary: "Padaria ativa sem site próprio.",
+      findings: [],
+      recommendations: [{ priority: "alta", text: "Criar site próprio." }],
+      nextSteps: ["Validar oferta."],
+      httpStatusNote: null,
+    },
+    pipeline: null,
+  };
+
+  function briefingProviderWith(client: ChatCompletionClient) {
+    return createGroqBusinessBriefingProvider({
+      apiKey: "test",
+      model: "model-main",
+      timeoutMs: 1000,
+      maxTokens: 1536,
+      client,
+    });
+  }
+
+  it("returns a validated business briefing", async () => {
+    const output = {
+      context: "Padaria Central é uma padaria em Fortaleza com boa reputação.",
+      digitalPresence: "Não há site próprio informado nos dados salvos.",
+      opportunities: ["Criar uma presença própria para apresentar produtos e contato."],
+      risks: ["Não há evidência salva de canal social próprio."],
+      salesAngle: "Abordar pelo controle da presença digital.",
+      recommendedOffer: "Site institucional simples com SEO local.",
+      nextStep: "Validar se já existe canal oficial fora dos dados salvos.",
+      confidenceNotes: ["Sem auditoria de site porque não há URL própria."],
+    };
+    const complete = vi.fn().mockResolvedValue({ content: JSON.stringify(output), tokensUsed: 400 });
+    const provider = briefingProviderWith({ complete });
+
+    const result = await provider.generate(briefingInput);
+
+    expect(result.output).toEqual(output);
+    expect(result.promptVersion).toBe("business-briefing-v1");
+    const params = complete.mock.calls[0]?.[0] as ChatCompletionParams;
+    expect(params.max_tokens).toBe(1536);
+    expect(params.messages[0]?.content).toContain("Não fale de cardápio");
+  });
+
+  it("retries invalid briefing output once", async () => {
+    const complete = vi
+      .fn()
+      .mockResolvedValueOnce({ content: "no json", tokensUsed: 20 })
+      .mockResolvedValueOnce({
+        content: JSON.stringify({
+          context: "Contexto.",
+          digitalPresence: "Presença.",
+          opportunities: ["Oportunidade."],
+          risks: [],
+          salesAngle: "Ângulo.",
+          recommendedOffer: "Oferta.",
+          nextStep: "Próximo passo.",
+          confidenceNotes: [],
+        }),
+        tokensUsed: 30,
+      });
+    const provider = briefingProviderWith({ complete });
+
+    const result = await provider.generate(briefingInput);
+
+    expect(result.tokensUsed).toBe(50);
+    expect(complete).toHaveBeenCalledTimes(2);
   });
 });
 

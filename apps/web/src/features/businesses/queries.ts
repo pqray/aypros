@@ -8,7 +8,9 @@ import {
   batchFavoriteBusinesses,
   createSavedFilter,
   deleteSavedFilter,
+  generateBusinessBriefing,
   getBusinessAuditSummary,
+  getBusinessBriefing,
   getBusinessReport,
   listBusinesses,
   listSavedFilters,
@@ -51,6 +53,10 @@ export function businessReportKey(businessId: string) {
   return ["business", businessId, "report"] as const;
 }
 
+export function businessBriefingKey(businessId: string) {
+  return ["business", businessId, "briefing"] as const;
+}
+
 /** Diagnóstico traduzido (mesma fonte do PDF) para render na UI. */
 export function useBusinessReport(businessId: string) {
   return useQuery({
@@ -63,6 +69,31 @@ export function useBusinessReport(businessId: string) {
   });
 }
 
+export function useBusinessBriefing(businessId: string) {
+  return useQuery({
+    queryKey: businessBriefingKey(businessId),
+    queryFn: () => getBusinessBriefing(businessId),
+    enabled: Boolean(businessId),
+    staleTime: 120_000,
+    retry: (failureCount, error) =>
+      !(error instanceof ApiError && error.status === 404) && failureCount < 2,
+  });
+}
+
+export function useGenerateBusinessBriefing(businessId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => generateBusinessBriefing(businessId),
+    onSuccess: (response) => {
+      queryClient.setQueryData(businessBriefingKey(businessId), {
+        briefing: response.briefing,
+        sourceHash: response.briefing.sourceHash,
+      });
+    },
+  });
+}
+
 export function useRunBusinessAudit(businessId: string) {
   const queryClient = useQueryClient();
 
@@ -71,6 +102,7 @@ export function useRunBusinessAudit(businessId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: businessAuditSummaryKey(businessId) });
       void queryClient.invalidateQueries({ queryKey: businessReportKey(businessId) });
+      void queryClient.invalidateQueries({ queryKey: businessBriefingKey(businessId) });
     },
   });
 }
@@ -83,6 +115,7 @@ export function useRefreshBusinessData(businessId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: businessAuditSummaryKey(businessId) });
       void queryClient.invalidateQueries({ queryKey: businessReportKey(businessId) });
+      void queryClient.invalidateQueries({ queryKey: businessBriefingKey(businessId) });
     },
   });
 }

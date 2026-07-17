@@ -17,6 +17,7 @@ const mutate = vi.fn();
 const refreshMutate = vi.fn();
 const toggleFavoriteMutate = vi.fn();
 const createLeadMutate = vi.fn();
+const generateBriefingMutate = vi.fn();
 
 vi.mock("@/components/shell/use-app-context", () => ({
   useAppContext: () => ({ data: { organization: { id: "org1" } } }),
@@ -120,6 +121,14 @@ vi.mock("../queries", () => ({
       ],
     },
   }),
+  useBusinessBriefing: () => ({
+    isLoading: false,
+    data: {
+      sourceHash: "hash1",
+      briefing: null,
+    },
+  }),
+  useGenerateBusinessBriefing: () => ({ mutate: generateBriefingMutate, isPending: false }),
 }));
 
 describe("BusinessDetailView", () => {
@@ -128,6 +137,7 @@ describe("BusinessDetailView", () => {
     refreshMutate.mockClear();
     toggleFavoriteMutate.mockClear();
     createLeadMutate.mockClear();
+    generateBriefingMutate.mockClear();
   });
 
   it("runs a data refresh from the action menu", async () => {
@@ -145,6 +155,8 @@ describe("BusinessDetailView", () => {
     renderView("b1");
 
     expect(screen.getByText("Padaria Central")).toBeTruthy();
+    expect(screen.getByText("Briefing IA")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /gerar briefing/i })).toBeTruthy();
     // Visão geral (tab default): presença digital com sinais de segmento.
     expect(screen.getByText("Plataforma de delivery")).toBeTruthy();
     expect(screen.getByText("Sem cardápio online")).toBeTruthy();

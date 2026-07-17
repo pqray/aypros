@@ -344,7 +344,7 @@ export function friendlyHttpStatusNote(audit: AuditReportRow | null): string | n
     return audit.error_code ? "O site nao respondeu a verificacao automatica." : null;
   }
   if (botBlockedByStatus(audit)) {
-    return `O site bloqueia verificacoes automaticas (HTTP ${status}) — provavelmente esta no ar normalmente para visitantes.`;
+    return "O site bloqueou a verificacao automatica; isso costuma acontecer por protecao contra robos/CDN e nao significa, por si so, que esteja fora do ar para visitantes.";
   }
   if (status >= 200 && status < 300) return "Site no ar e respondendo normalmente.";
   if (status >= 300 && status < 400) return "O site redireciona para outro endereco.";

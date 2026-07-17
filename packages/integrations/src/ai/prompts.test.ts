@@ -69,7 +69,7 @@ describe("promptVersions", () => {
     expect(promptVersions).toEqual({
       commercial_summary: "summary-v2",
       whatsapp_message: "whatsapp-v2",
-      email_message: "email-v3",
+      email_message: "email-v4",
     });
   });
 });

@@ -158,7 +158,7 @@ describe("emailMessageOutputSchema", () => {
     "Abraços,\nRayssa\nAypros",
   ].join("\n\n");
 
-  it("accepts a structured multi-paragraph body (email-v3)", () => {
+  it("accepts a structured multi-paragraph body (email-v4)", () => {
     const result = emailMessageOutputSchema.safeParse({
       subject: "Uma ideia para a Padaria Central",
       body: richBody,
@@ -171,6 +171,15 @@ describe("emailMessageOutputSchema", () => {
       emailMessageOutputSchema.safeParse({
         subject: "Assunto",
         body: "Olá, vi que vocês ainda não têm site...",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a long body without real paragraph breaks", () => {
+    expect(
+      emailMessageOutputSchema.safeParse({
+        subject: "Assunto",
+        body: "Um diagnostico comercial detalhado. ".repeat(25),
       }).success,
     ).toBe(false);
   });

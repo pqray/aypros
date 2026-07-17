@@ -12,7 +12,7 @@ import {
   cn,
 } from "@aypros/ui";
 import type { BusinessReportFindingStatus } from "@aypros/types";
-import { PiDownloadSimple } from "react-icons/pi";
+import { PiChartLine, PiDownloadSimple } from "react-icons/pi";
 import { useBusinessReport } from "../queries";
 
 const findingBadges: Record<
@@ -53,20 +53,51 @@ export function DiagnosticOverviewCard({
   }
 
   const { summary, httpStatusNote, findings, recommendations, nextSteps } = report.data;
+  const problemCount = findings.filter((finding) => finding.status === "problem").length;
+  const unknownCount = findings.filter((finding) => finding.status === "unknown").length;
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-        <CardTitle>Diagnóstico da presença digital</CardTitle>
+        <div>
+          <CardTitle>Resumo da oportunidade</CardTitle>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Diagnostico comercial no app; o PDF fica como material opcional.
+          </p>
+        </div>
         <Button variant="outline" size="sm" loading={downloading} onClick={onDownloadPdf}>
           <PiDownloadSimple aria-hidden />
           Baixar PDF
         </Button>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="space-y-1">
-          <p className="text-sm text-foreground">{summary}</p>
-          {httpStatusNote ? <p className="text-xs text-muted-foreground">{httpStatusNote}</p> : null}
+        <div className="rounded-lg border bg-muted/30 p-4">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 rounded-md bg-background p-2 text-primary shadow-sm">
+              <PiChartLine aria-hidden />
+            </span>
+            <div className="min-w-0 space-y-2">
+              <p className="text-sm leading-6 text-foreground">{summary}</p>
+              {httpStatusNote ? (
+                <Badge variant="secondary">Verificacao automatica limitada</Badge>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border p-3">
+            <p className="text-2xl font-semibold">{problemCount}</p>
+            <p className="text-xs text-muted-foreground">pontos de atencao</p>
+          </div>
+          <div className="rounded-lg border p-3">
+            <p className="text-2xl font-semibold">{recommendations.length}</p>
+            <p className="text-xs text-muted-foreground">recomendacoes</p>
+          </div>
+          <div className="rounded-lg border p-3">
+            <p className="text-2xl font-semibold">{unknownCount}</p>
+            <p className="text-xs text-muted-foreground">nao verificados</p>
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -121,6 +152,48 @@ export function DiagnosticOverviewCard({
   );
 }
 
+function axisTone(value: number | null): { label: string; className: string; color: string } {
+  if (value === null) {
+    return { label: "Nao verificado", className: "text-muted-foreground", color: "hsl(var(--muted))" };
+  }
+  if (value >= 70) return { label: "Forte", className: "text-success", color: "hsl(var(--success))" };
+  if (value >= 40) return { label: "Medio", className: "text-warning", color: "hsl(var(--warning))" };
+  return { label: "Critico", className: "text-destructive", color: "hsl(var(--destructive))" };
+}
+
+function AxisGauge({ label, value }: { label: string; value: number | null }) {
+  const tone = axisTone(value);
+  const percent = value ?? 0;
+
+  return (
+    <div className="rounded-lg border p-3">
+      <div className="flex items-center gap-3">
+        <div
+          className="grid size-16 shrink-0 place-items-center rounded-full"
+          style={{
+            background: `conic-gradient(${tone.color} ${percent * 3.6}deg, hsl(var(--muted)) 0deg)`,
+          }}
+          aria-hidden
+        >
+          <div className="grid size-12 place-items-center rounded-full bg-background text-sm font-semibold">
+            {value === null ? "--" : value}
+          </div>
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">{label}</p>
+          <p className={cn("text-xs font-medium", tone.className)}>{tone.label}</p>
+        </div>
+      </div>
+      <Progress
+        className="mt-3"
+        value={percent}
+        aria-label={`${label}: ${value === null ? "nao verificado" : `${value} de 100`}`}
+        indicatorClassName={value === null ? "bg-muted" : barToneClass(value)}
+      />
+    </div>
+  );
+}
+
 /** Maturidade digital por eixo com barras — substitui os cards secos de métrica. */
 export function MaturityCard({
   businessId,
@@ -141,7 +214,6 @@ export function MaturityCard({
   }
 
   const meta = [
-    report.data.httpStatusNote,
     responseTimeMs !== null ? `Tempo de resposta: ${responseTimeMs} ms` : null,
     redirectCount !== null && redirectCount > 0 ? `${redirectCount} redirecionamento(s)` : null,
   ].filter(Boolean);
@@ -152,27 +224,24 @@ export function MaturityCard({
         <CardTitle>Maturidade digital</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {report.data.maturity.map((axis) => (
-          <div key={axis.label} className="space-y-1">
-            <div className="flex items-center justify-between gap-2 text-sm">
-              <span>{axis.label}</span>
-              <span className="text-xs text-muted-foreground">
-                {axis.value === null ? "Não verificado" : `${axis.value}/100`}
-              </span>
-            </div>
-            {axis.value === null ? (
-              <Progress value={0} aria-label={`${axis.label}: não verificado`} />
-            ) : (
-              <Progress
-                value={axis.value}
-                aria-label={`${axis.label}: ${axis.value} de 100`}
-                indicatorClassName={barToneClass(axis.value)}
-              />
-            )}
-          </div>
-        ))}
+        {report.data.httpStatusNote ? (
+          <Badge variant="secondary">Verificacao automatica limitada</Badge>
+        ) : null}
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {report.data.maturity.map((axis) => (
+            <AxisGauge key={axis.label} label={axis.label} value={axis.value} />
+          ))}
+        </div>
+
         {meta.length > 0 ? (
-          <p className="border-t pt-3 text-xs text-muted-foreground">{meta.join(" · ")}</p>
+          <div className="flex flex-wrap gap-2 border-t pt-3">
+            {meta.map((item) => (
+              <Badge key={item} variant="secondary">
+                {item}
+              </Badge>
+            ))}
+          </div>
         ) : null}
       </CardContent>
     </Card>

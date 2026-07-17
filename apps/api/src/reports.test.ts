@@ -202,9 +202,9 @@ describe("bot-blocked sites (HTTP 401/403/429)", () => {
     });
 
   it("explains the block instead of showing a raw status", () => {
-    expect(friendlyHttpStatusNote({ ...baseAudit, http_status: 403 })).toContain(
-      "bloqueia verificacoes automaticas",
-    );
+    const note = friendlyHttpStatusNote({ ...baseAudit, http_status: 403 });
+    expect(note).toContain("bloqueou a verificacao automatica");
+    expect(note).not.toContain("403");
     expect(friendlyHttpStatusNote({ ...baseAudit, http_status: 200 })).toContain("no ar");
   });
 
@@ -220,7 +220,8 @@ describe("bot-blocked sites (HTTP 401/403/429)", () => {
 
   it("exposes the friendly note in the JSON response", () => {
     const response = buildReportResponse(blockedModel());
-    expect(response.httpStatusNote).toContain("bloqueia verificacoes automaticas");
+    expect(response.httpStatusNote).toContain("bloqueou a verificacao automatica");
+    expect(response.httpStatusNote).not.toContain("403");
     expect(response.summary).toContain("Loja Protegida");
     expect(response.maturity.length).toBeGreaterThan(0);
     expect(response.nextSteps).toHaveLength(3);

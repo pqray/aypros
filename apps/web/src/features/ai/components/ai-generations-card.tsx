@@ -140,6 +140,7 @@ export function AiGenerationsCard({
   }, [latestIds]);
 
   function handleGenerate(kind: AiKind) {
+    setActiveKind(kind);
     generate.mutate(kind, {
       onError: (error) => {
         if (error instanceof ApiError && error.body.code === "RATE_LIMITED") {

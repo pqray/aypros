@@ -10,7 +10,7 @@ export const promptVersions: Record<AiKind, string> = {
   commercial_summary: "summary-v2",
   whatsapp_message: "whatsapp-v2",
   // v3: corpo estruturado em parágrafos reais (o v2 saía raso, tudo num bloco só)
-  email_message: "email-v3",
+  email_message: "email-v4",
 };
 
 const FACTS_RULES = `REGRAS OBRIGATÓRIAS:
@@ -59,6 +59,10 @@ ESTRUTURA OBRIGATÓRIA DO CORPO — 5 a 6 parágrafos curtos, cada um separado p
 
 - Assunto consultivo e específico para a empresa (nunca "Proposta comercial").
 - Tom profissional e próximo, sem parecer disparo em massa.
+- Corpo com pelo menos 450 caracteres. Se ficar curto, aprofunde o raciocínio usando os achados reais do input.
+- O texto precisa explicar "o que foi visto", "por que isso importa" e "qual seria o próximo movimento" em linguagem comercial.
+- Redes sociais, Instagram, Linktree, delivery e WhatsApp só entram se houver evidência detectada; se não houver, diga apenas que não há evidência salva de canal social próprio.
+- Evite frases genéricas como "melhorar sua presença online" sem conectar a um problema observado.
 
 Formato exato da resposta:
 {"subject": "assunto do e-mail", "body": "corpo do e-mail em texto puro com \\n\\n entre parágrafos"}`,

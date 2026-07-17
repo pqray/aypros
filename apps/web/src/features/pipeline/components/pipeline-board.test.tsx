@@ -1,6 +1,5 @@
 import type { LeadSummary } from "@aypros/types";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { PipelineBoard } from "./pipeline-board";
 
@@ -31,7 +30,7 @@ function makeLead(overrides: Partial<LeadSummary> = {}): LeadSummary {
 
 describe("PipelineBoard", () => {
   it("renders every fixed stage as a column", () => {
-    render(<PipelineBoard leads={[makeLead()]} onMove={vi.fn()} movePendingLeadId={null} />);
+    render(<PipelineBoard leads={[makeLead()]} onMove={vi.fn()} />);
 
     expect(screen.getByText("Novo")).toBeInTheDocument();
     expect(screen.getByText("Contactado")).toBeInTheDocument();
@@ -41,44 +40,13 @@ describe("PipelineBoard", () => {
     expect(screen.getByText("Perdido")).toBeInTheDocument();
   });
 
-  it("moves a lead to a non-terminal stage immediately, without confirmation", async () => {
-    const user = userEvent.setup();
-    const onMove = vi.fn();
-    render(<PipelineBoard leads={[makeLead()]} onMove={onMove} movePendingLeadId={null} />);
+  it("has a keyboard-focusable drag handle and no three-dots move menu on the card", () => {
+    render(<PipelineBoard leads={[makeLead()]} onMove={vi.fn()} />);
 
-    await user.click(screen.getByLabelText("Mover Padaria Central"));
-    await user.click(await screen.findByRole("menuitem", { name: "Contactado" }));
-
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(onMove).toHaveBeenCalledWith("l1", "contacted", 0);
-  });
-
-  it("asks for confirmation before moving a lead to won, and only calls onMove after confirming", async () => {
-    const user = userEvent.setup();
-    const onMove = vi.fn();
-    render(<PipelineBoard leads={[makeLead()]} onMove={onMove} movePendingLeadId={null} />);
-
-    await user.click(screen.getByLabelText("Mover Padaria Central"));
-    await user.click(await screen.findByRole("menuitem", { name: "Ganho" }));
-
-    expect(onMove).not.toHaveBeenCalled();
-    expect(await screen.findByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByText(/marcar como ganho/i)).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Confirmar" }));
-
-    expect(onMove).toHaveBeenCalledWith("l1", "won", 0);
-  });
-
-  it("does not move the lead when the won/lost confirmation is cancelled", async () => {
-    const user = userEvent.setup();
-    const onMove = vi.fn();
-    render(<PipelineBoard leads={[makeLead()]} onMove={onMove} movePendingLeadId={null} />);
-
-    await user.click(screen.getByLabelText("Mover Padaria Central"));
-    await user.click(await screen.findByRole("menuitem", { name: "Perdido" }));
-    await user.click(await screen.findByRole("button", { name: "Cancelar" }));
-
-    expect(onMove).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Arrastar Padaria Central")).toBeInTheDocument();
+    // The stage-move dropdown was removed in Phase 17 — drag (pointer or
+    // keyboard via the handle) and the detail page are the ways to move.
+    expect(screen.queryByLabelText("Mover Padaria Central")).not.toBeInTheDocument();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 });

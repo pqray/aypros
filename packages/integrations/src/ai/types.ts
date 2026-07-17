@@ -47,6 +47,21 @@ export type CommercialSummaryOutput = {
   salesAngle: string;
 };
 
+/** Análise consultiva estruturada (prompt summary-v2, fase 17). */
+export type CommercialSummaryV2Output = {
+  context: string;
+  digitalPresence: string;
+  strongSignals: string[];
+  weakSignals: string[];
+  gaps: string[];
+  channelDependence: string | null;
+  commercialImpact: string;
+  recommendedOffer: string;
+  salesAngle: string;
+  expectedObjections: string[];
+  nextStep: string;
+};
+
 export type WhatsappMessageOutput = {
   message: string;
 };
@@ -56,7 +71,11 @@ export type EmailMessageOutput = {
   body: string;
 };
 
-export type AiOutput = CommercialSummaryOutput | WhatsappMessageOutput | EmailMessageOutput;
+export type AiOutput =
+  | CommercialSummaryOutput
+  | CommercialSummaryV2Output
+  | WhatsappMessageOutput
+  | EmailMessageOutput;
 
 export type AiGenerationResult = {
   output: AiOutput;

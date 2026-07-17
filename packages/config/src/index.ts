@@ -28,7 +28,8 @@ export const aiConfig = {
   timeoutMs: 30_000,
   /** Output budget per kind — messages are short by design. */
   maxTokensByKind: {
-    commercial_summary: 1024,
+    // summary-v2 é uma análise estruturada em várias seções — precisa de folga.
+    commercial_summary: 1536,
     whatsapp_message: 512,
     email_message: 1024,
   },

@@ -89,7 +89,13 @@ A API escuta em `http://localhost:4000`; o web em `http://localhost:3000`.
 | PATCH | `/v1/notes/:id` | Edita nota |
 | DELETE | `/v1/notes/:id` | Remove nota |
 | GET | `/v1/businesses/:businessId/ai-generations` | Lista geracoes de IA da empresa na organizacao (rascunhos recentes por kind) |
-| POST | `/v1/businesses/:businessId/ai-generations` | Gera conteudo com Groq (summary/whatsapp/email): input estruturado do banco, Zod no output, rate limit diario por org, persiste em `ai_generations` e registra atividade; 503 se `GROQ_API_KEY` ausente |
+| POST | `/v1/businesses/:businessId/ai-generations` | Gera conteudo com Groq (summary/whatsapp/email v2): input estruturado do banco, Zod no output, rate limit diario por org, persiste em `ai_generations` e registra atividade; 503 se `GROQ_API_KEY` ausente |
+| POST | `/v1/businesses/:businessId/refresh` | Refresh manual de dados da empresa (Place Details + re-auditoria + score), respeitando caps de custo |
+| GET | `/v1/businesses/:businessId/report.pdf` | PDF de diagnostico v2 (resumo executivo, barra de score, maturidade por eixo, recomendacoes priorizadas); rate limit por org |
+| DELETE | `/v1/leads/:id` | Remove o lead do pipeline (empresa intacta, notas em cascata, activities preservadas via SET NULL) e registra `lead_archived` |
+| POST | `/v1/leads/:id/contacts` | Registra contato (canal + nota), atualiza `last_contact_at` e cria atividade `lead_contacted` |
+| GET | `/v1/organization/members` | Lista membros da organizacao (para atribuicao de leads) |
+| POST | `/v1/organization/members` | Adiciona membro ja cadastrado por e-mail (owner/admin) |
 
 ## Padroes de implementacao
 

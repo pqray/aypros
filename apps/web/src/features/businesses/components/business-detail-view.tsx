@@ -11,12 +11,15 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   EmptyState,
   ScoreBadge,
   Skeleton,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
   toast,
 } from "@aypros/ui";
 import Link from "next/link";
@@ -189,8 +192,6 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Acoes da empresa</DropdownMenuLabel>
-                <DropdownMenuSeparator />
                 {leadId ? (
                   <DropdownMenuItem asChild>
                     <Link href={`/pipeline/${leadId}`}>
@@ -304,133 +305,181 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Auditoria HTTP</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {business.websiteUrl ? (
-              <a
-                href={business.websiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm text-info hover:underline"
-              >
-                <PiGlobe aria-hidden />
-                {business.websiteUrl}
-              </a>
-            ) : (
-              <Badge variant="warning">Sem site</Badge>
-            )}
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">Visão geral</TabsTrigger>
+          <TabsTrigger value="metrics">Métricas</TabsTrigger>
+          <TabsTrigger value="ai">Abordagem IA</TabsTrigger>
+          <TabsTrigger value="report">Relatório</TabsTrigger>
+        </TabsList>
 
-            {!latestAudit ? (
-              <p className="text-sm text-muted-foreground">
-                Nenhuma auditoria registrada ainda. Empresas sem site ja recebem score com baixa
-                confianca.
-              </p>
-            ) : (
-              <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                <div>
-                  <dt className="text-muted-foreground">Status HTTP</dt>
-                  <dd className="font-medium">
-                    {latestAudit.httpStatus ?? latestAudit.errorCode ?? "N/A"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">HTTPS</dt>
-                  <dd className="font-medium">{latestAudit.isHttps ? "Sim" : "Nao"}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Tempo de resposta</dt>
-                  <dd className="font-medium">
-                    {latestAudit.responseTimeMs !== null
-                      ? `${latestAudit.responseTimeMs} ms`
-                      : "N/A"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Redirecionamentos</dt>
-                  <dd className="font-medium">{latestAudit.redirectCount ?? 0}</dd>
-                </div>
-              </dl>
-            )}
+        <TabsContent value="overview" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Presença digital</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {business.websiteUrl ? (
+                <a
+                  href={business.websiteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sm text-info hover:underline"
+                >
+                  <PiGlobe aria-hidden />
+                  {business.websiteUrl}
+                </a>
+              ) : (
+                <Badge variant="warning">Sem site próprio</Badge>
+              )}
+              {latestAudit ? (
+                <SegmentAuditDetailBadges
+                  segment={business.segment}
+                  detections={latestAudit.detections}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Nenhuma análise registrada ainda — rode &ldquo;Reanalisar&rdquo; para detectar
+                  presença digital e sinais do segmento.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            {latestAudit ? (
-              <SegmentAuditDetailBadges segment={business.segment} detections={latestAudit.detections} />
-            ) : null}
-
-            {latestAudit ? (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {(
-                  [
-                    ["hasViewport", "Responsivo"],
-                    ["hasTitle", "Title"],
-                    ["hasDescription", "Description"],
-                    ["outdated", "Desatualizado"],
-                    ["siteDown", "Fora do ar"],
-                    ["basicBuilder", "Builder basico"],
-                    ["linkInBio", "Link-in-bio"],
-                    ["deliveryPlatform", "Delivery"],
-                    ["menuOnline", "Cardapio online"],
-                  ] as const
-                ).map(([key, label]) => (
-                  <div key={key} className="rounded-md border px-3 py-2 text-sm">
-                    <p className="font-medium">{label}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {detectionLabel(latestAudit.detections[key]?.state)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Score</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {latestScore ? (
-              <>
-                <div className="flex items-center justify-between gap-3">
-                  <ScoreBadge level={latestScore.level} score={latestScore.score} />
-                  <Badge variant="secondary">
-                    Confianca {confidenceLabels[latestScore.confidence]}
-                  </Badge>
-                </div>
-                <div className="space-y-2">
-                  {latestScore.reasons.map((reason) => (
-                    <div key={reason.code} className="flex justify-between gap-3 text-sm">
-                      <span>{reason.label}</span>
-                      <span className="font-medium tabular-nums">
-                        {reason.impact > 0 ? `+${reason.impact}` : reason.impact}
-                      </span>
+        <TabsContent value="metrics">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
+            <Card>
+              <CardHeader>
+                <CardTitle>Auditoria HTTP</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!latestAudit ? (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhuma auditoria registrada ainda. Empresas sem site ja recebem score com baixa
+                    confianca.
+                  </p>
+                ) : (
+                  <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                    <div>
+                      <dt className="text-muted-foreground">Status HTTP</dt>
+                      <dd className="font-medium">
+                        {latestAudit.httpStatus ?? latestAudit.errorCode ?? "N/A"}
+                      </dd>
                     </div>
-                  ))}
-                </div>
-                {latestScore.suggestedServices.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {latestScore.suggestedServices.map((service) => (
-                      <Badge key={service} variant="outline">
-                        {service}
-                      </Badge>
+                    <div>
+                      <dt className="text-muted-foreground">HTTPS</dt>
+                      <dd className="font-medium">{latestAudit.isHttps ? "Sim" : "Nao"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Tempo de resposta</dt>
+                      <dd className="font-medium">
+                        {latestAudit.responseTimeMs !== null
+                          ? `${latestAudit.responseTimeMs} ms`
+                          : "N/A"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Redirecionamentos</dt>
+                      <dd className="font-medium">{latestAudit.redirectCount ?? 0}</dd>
+                    </div>
+                  </dl>
+                )}
+
+                {latestAudit ? (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {(
+                      [
+                        ["hasViewport", "Responsivo"],
+                        ["hasTitle", "Title"],
+                        ["hasDescription", "Description"],
+                        ["outdated", "Desatualizado"],
+                        ["siteDown", "Fora do ar"],
+                        ["basicBuilder", "Builder basico"],
+                        ["linkInBio", "Link-in-bio"],
+                        ["deliveryPlatform", "Delivery"],
+                        ["menuOnline", "Cardapio online"],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <div key={key} className="rounded-md border px-3 py-2 text-sm">
+                        <p className="font-medium">{label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {detectionLabel(latestAudit.detections[key]?.state)}
+                        </p>
+                      </div>
                     ))}
                   </div>
                 ) : null}
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                O score sera calculado apos a primeira auditoria ou automaticamente para empresas
-                sem site.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              </CardContent>
+            </Card>
 
-      <AiGenerationsCard businessId={businessId} leadId={leadId} phone={business.phone} />
+            <Card>
+              <CardHeader>
+                <CardTitle>Score</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {latestScore ? (
+                  <>
+                    <div className="flex items-center justify-between gap-3">
+                      <ScoreBadge level={latestScore.level} score={latestScore.score} />
+                      <Badge variant="secondary">
+                        Confianca {confidenceLabels[latestScore.confidence]}
+                      </Badge>
+                    </div>
+                    <div className="space-y-2">
+                      {latestScore.reasons.map((reason) => (
+                        <div key={reason.code} className="flex justify-between gap-3 text-sm">
+                          <span>{reason.label}</span>
+                          <span className="font-medium tabular-nums">
+                            {reason.impact > 0 ? `+${reason.impact}` : reason.impact}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    {latestScore.suggestedServices.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {latestScore.suggestedServices.map((service) => (
+                          <Badge key={service} variant="outline">
+                            {service}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    O score sera calculado apos a primeira auditoria ou automaticamente para empresas
+                    sem site.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="ai">
+          <AiGenerationsCard businessId={businessId} leadId={leadId} phone={business.phone} />
+        </TabsContent>
+
+        <TabsContent value="report">
+          <Card>
+            <CardHeader>
+              <CardTitle>Relatório de diagnóstico</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                PDF pronto para anexar em proposta ou enviar como análise gratuita: resumo
+                executivo, potencial da oportunidade, presença digital e recomendações priorizadas —
+                tudo em linguagem de dono de negócio, só com fatos detectados.
+              </p>
+              <Button loading={reportDownloading} onClick={handleDownloadReport}>
+                <PiDownloadSimple aria-hidden />
+                Baixar diagnóstico (PDF)
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

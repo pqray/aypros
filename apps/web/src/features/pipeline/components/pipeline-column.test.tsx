@@ -39,8 +39,6 @@ function renderColumn(leads: LeadSummary[]) {
           count: leads.length,
           totalValue: leads.reduce((sum, lead) => sum + (lead.potentialValue ?? 0), 0),
         }}
-        onMove={vi.fn()}
-        movePendingLeadId={null}
       />
     </DndContext>,
   );

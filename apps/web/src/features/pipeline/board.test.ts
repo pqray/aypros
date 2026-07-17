@@ -1,6 +1,6 @@
 import type { LeadSummary } from "@aypros/types";
 import { describe, expect, it } from "vitest";
-import { groupByStage, isOverdue, moveLead } from "./board";
+import { groupByStage, isOverdue, moveLead, needsMoveConfirmation } from "./board";
 
 function makeLead(overrides: Partial<LeadSummary> = {}): LeadSummary {
   return {
@@ -121,5 +121,22 @@ describe("isOverdue", () => {
 
   it("is false for a date in the future", () => {
     expect(isOverdue("2026-07-17T12:00:00Z", now)).toBe(false);
+  });
+});
+
+describe("needsMoveConfirmation", () => {
+  it("requires confirmation when entering won or lost from another stage", () => {
+    expect(needsMoveConfirmation("new", "won")).toBe(true);
+    expect(needsMoveConfirmation("proposal_sent", "lost")).toBe(true);
+  });
+
+  it("does not require confirmation for non-terminal targets", () => {
+    expect(needsMoveConfirmation("new", "contacted")).toBe(false);
+    expect(needsMoveConfirmation("won", "in_conversation")).toBe(false);
+  });
+
+  it("does not require confirmation when reordering inside won/lost", () => {
+    expect(needsMoveConfirmation("won", "won")).toBe(false);
+    expect(needsMoveConfirmation("lost", "lost")).toBe(false);
   });
 });

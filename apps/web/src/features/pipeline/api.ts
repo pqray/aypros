@@ -52,6 +52,10 @@ export function updateLead(leadId: string, input: UpdateLeadInput): Promise<Lead
   });
 }
 
+export async function deleteLead(leadId: string): Promise<void> {
+  await apiFetch<void>(`/v1/leads/${leadId}`, { method: "DELETE" });
+}
+
 export function createLeadContact(
   leadId: string,
   input: CreateLeadContactInput,

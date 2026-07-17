@@ -47,10 +47,34 @@ type Draft = {
   text: string;
 };
 
+function listSection(title: string, items: string[]): string | null {
+  if (items.length === 0) return null;
+  return `${title}:\n${items.map((item) => `- ${item}`).join("\n")}`;
+}
+
 function outputToDraft(kind: AiKind, generation: AiGenerationSummary): Draft {
   const output = generation.output as AiOutput | null;
   if (!output) return { sourceId: generation.id, subject: "", text: "" };
 
+  // summary-v2 (fase 17): análise consultiva estruturada.
+  if (kind === "commercial_summary" && "context" in output) {
+    const sections = [
+      output.context,
+      `Presença digital:\n${output.digitalPresence}`,
+      listSection("Sinais fortes", output.strongSignals),
+      listSection("Sinais fracos", output.weakSignals),
+      listSection("Lacunas (não verificado)", output.gaps),
+      output.channelDependence ? `Dependência de canal:\n${output.channelDependence}` : null,
+      `Impacto comercial:\n${output.commercialImpact}`,
+      `Oferta recomendada:\n${output.recommendedOffer}`,
+      `Ângulo de abordagem:\n${output.salesAngle}`,
+      listSection("Objeções esperadas", output.expectedObjections),
+      `Próximo passo:\n${output.nextStep}`,
+    ].filter((section): section is string => section !== null);
+    return { sourceId: generation.id, subject: "", text: sections.join("\n\n") };
+  }
+
+  // summary-v1 (gerações antigas persistidas continuam legíveis).
   if (kind === "commercial_summary" && "summary" in output) {
     const sections = [output.summary];
     if (output.painPoints.length > 0) {

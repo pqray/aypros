@@ -15,7 +15,7 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { useMemo, useState } from "react";
-import { groupByStage, LEAD_STAGES, leadStageLabels } from "../board";
+import { groupByStage, LEAD_STAGES, leadStageLabels, needsMoveConfirmation } from "../board";
 import { LeadCardPreview } from "./lead-card";
 import { PipelineColumn } from "./pipeline-column";
 
@@ -29,12 +29,10 @@ type PendingMove = {
 export function PipelineBoard({
   leads,
   onMove,
-  movePendingLeadId,
   onPrefetchDetail,
 }: {
   leads: LeadSummary[];
   onMove: (leadId: string, stage: LeadStage, position: number) => void;
-  movePendingLeadId: string | null;
   onPrefetchDetail?: (leadId: string) => void;
 }) {
   const [activeLead, setActiveLead] = useState<LeadSummary | null>(null);
@@ -61,7 +59,7 @@ export function PipelineBoard({
     if (!lead) return;
     if (lead.stage === stage && lead.position === position) return;
 
-    if ((stage === "won" || stage === "lost") && lead.stage !== stage) {
+    if (needsMoveConfirmation(lead.stage, stage)) {
       setPendingMove({ leadId, stage, position, businessName: lead.businessName });
       return;
     }
@@ -98,11 +96,6 @@ export function PipelineBoard({
     requestMove(activeId, overLead.stage, targetIndex);
   }
 
-  function handleMoveFromMenu(leadId: string, stage: LeadStage) {
-    const targetColumn = columns.find((column) => column.stage === stage);
-    requestMove(leadId, stage, targetColumn?.leads.length ?? 0);
-  }
-
   function confirmPendingMove() {
     if (!pendingMove) return;
     onMove(pendingMove.leadId, pendingMove.stage, pendingMove.position);
@@ -120,13 +113,7 @@ export function PipelineBoard({
       >
         <div className="flex gap-3 overflow-x-auto pb-2">
           {columns.map((column) => (
-            <PipelineColumn
-              key={column.stage}
-              column={column}
-              onMove={handleMoveFromMenu}
-              movePendingLeadId={movePendingLeadId}
-              onPrefetchDetail={onPrefetchDetail}
-            />
+            <PipelineColumn key={column.stage} column={column} onPrefetchDetail={onPrefetchDetail} />
           ))}
         </div>
         <DragOverlay dropAnimation={dropAnimation}>

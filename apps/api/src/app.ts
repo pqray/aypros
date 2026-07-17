@@ -76,6 +76,9 @@ export function buildApp(
   const localhostOrigin = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
   void app.register(cors, {
+    // @fastify/cors v11 só libera GET/HEAD/POST por default — sem esta lista o
+    // preflight de PATCH/DELETE (mover lead, remover nota) falha no navegador.
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
     origin(origin, callback) {
       const allowed =
         !origin ||

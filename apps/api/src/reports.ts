@@ -54,6 +54,11 @@ export type ReportFinding = {
   status: "problem" | "ok" | "unknown";
 };
 
+export type ReportRecommendation = {
+  priority: "alta" | "media";
+  text: string;
+};
+
 type ReportModel = {
   business: BusinessReportRow;
   audit: AuditReportRow | null;
@@ -63,12 +68,21 @@ type ReportModel = {
   generatedAt: string;
   findings: ReportFinding[];
   suggestions: string[];
+  maturity: MaturityAxis[];
+  recommendations: ReportRecommendation[];
+  nextSteps: string[];
 };
 
 const stateLabels: Record<ReportFinding["status"], string> = {
   problem: "Ponto de atencao",
   ok: "Ok",
   unknown: "Nao verificado",
+};
+
+const statusWeight: Record<ReportFinding["status"], number> = {
+  problem: 0,
+  ok: 1,
+  unknown: 2,
 };
 
 function detectionState(
@@ -205,7 +219,90 @@ export function translateDetection(params: {
         };
   }
 
+  // Sinais sociais/segmento (fase 15) — so entram no relatorio quando detectados;
+  // ausencia de sinal nao vira afirmacao (fase 17).
+  if (code === "linkInBio" && state === "detected") {
+    return {
+      title: "Presenca concentrada em link-in-bio",
+      body: "O endereco divulgado aponta para uma pagina de links (ex.: Linktree), nao para um site proprio.",
+      impact: "A apresentacao da empresa fica dependente de uma pagina generica de terceiros.",
+      status: "problem",
+    };
+  }
+
+  if (code === "deliveryPlatform" && state === "detected") {
+    return {
+      title: "Vendas dependem de plataforma de delivery",
+      body: "O canal digital encontrado e uma plataforma de delivery de terceiros.",
+      impact: "Cada pedido paga comissao e o relacionamento com o cliente fica com a plataforma.",
+      status: "problem",
+    };
+  }
+
+  if (code === "menuOnline" && state === "not_detected") {
+    return {
+      title: "Sem cardapio online proprio",
+      body: "Nao encontramos cardapio online proprio vinculado a presenca digital da empresa.",
+      impact: "Clientes que pesquisam antes de pedir nao encontram os produtos direto da empresa.",
+      status: "problem",
+    };
+  }
+
   return null;
+}
+
+export type MaturityAxis = {
+  label: string;
+  /** 0-100; null = nao verificado (nunca desenhado como zero). */
+  value: number | null;
+};
+
+/**
+ * Eixos de maturidade digital do PDF v2 — derivados só de fatos auditados;
+ * eixo sem evidencia vira "nao verificado" em vez de nota baixa.
+ */
+export function buildMaturityAxes(params: {
+  business: Pick<BusinessReportRow, "website_url">;
+  audit: AuditReportRow | null;
+}): MaturityAxis[] {
+  const { business, audit } = params;
+  const hasSite = Boolean(business.website_url);
+
+  function fromDetection(code: string, invert = false): number | null {
+    const state = detectionState(audit, code);
+    if (!state || state === "inconclusive") return null;
+    const positive = invert ? state === "not_detected" : state === "detected";
+    return positive ? 90 : 25;
+  }
+
+  const seoSignals = [fromDetection("hasTitle"), fromDetection("hasDescription")].filter(
+    (value): value is number => value !== null,
+  );
+
+  let performance: number | null = null;
+  if (audit?.response_time_ms !== null && audit?.response_time_ms !== undefined) {
+    performance = audit.response_time_ms <= 1000 ? 90 : audit.response_time_ms <= 3000 ? 60 : 25;
+  }
+
+  let trust: number | null = null;
+  if (audit?.is_https === true) trust = 90;
+  else if (audit?.is_https === false) trust = 25;
+  if (detectionState(audit, "sslError") === "detected") trust = 15;
+
+  return [
+    { label: "Site proprio", value: hasSite ? 90 : 10 },
+    { label: "Adaptacao para celular", value: hasSite ? fromDetection("hasViewport") : 10 },
+    {
+      label: "SEO basico",
+      value: hasSite
+        ? seoSignals.length > 0
+          ? Math.round(seoSignals.reduce((sum, value) => sum + value, 0) / seoSignals.length)
+          : null
+        : 10,
+    },
+    { label: "Velocidade", value: hasSite ? performance : null },
+    { label: "Confianca (HTTPS)", value: hasSite ? trust : null },
+  ];
 }
 
 function businessSummary(business: BusinessReportRow): string {
@@ -250,7 +347,15 @@ export function buildReportModel(params: {
         translateDetection({ code: "hasDescription", state: detectionState(params.audit, "hasDescription"), audit: params.audit }),
         translateDetection({ code: "outdated", state: detectionState(params.audit, "outdated"), audit: params.audit }),
         translateDetection({ code: "basicBuilder", state: detectionState(params.audit, "basicBuilder"), audit: params.audit }),
-      ].filter((finding): finding is ReportFinding => finding !== null)
+        translateDetection({ code: "linkInBio", state: detectionState(params.audit, "linkInBio"), audit: params.audit }),
+        translateDetection({ code: "deliveryPlatform", state: detectionState(params.audit, "deliveryPlatform"), audit: params.audit }),
+        translateDetection({ code: "menuOnline", state: detectionState(params.audit, "menuOnline"), audit: params.audit }),
+      ]
+        .filter((finding): finding is ReportFinding => finding !== null)
+        // Problemas primeiro: são o que o dono do negócio precisa ver, e o PDF
+        // corta a lista — um achado de segmento não pode ficar de fora por
+        // chegar depois dos "Ok".
+        .sort((a, b) => statusWeight[a.status] - statusWeight[b.status])
     : noSiteFindings(params.business);
 
   const suggestions =
@@ -259,6 +364,23 @@ export function buildReportModel(params: {
       : params.business.website_url
         ? ["Revisao da presenca digital", "Melhorias de conversao"]
         : ["Criacao de site", "SEO local"];
+
+  const problems = findings.filter((finding) => finding.status === "problem");
+  const recommendations: ReportRecommendation[] = [
+    ...problems.slice(0, 3).map((finding) => ({
+      priority: "alta" as const,
+      text: `Resolver: ${finding.title.toLowerCase()}`,
+    })),
+    ...suggestions.slice(0, 3).map((service) => ({ priority: "media" as const, text: service })),
+  ];
+
+  const nextSteps = [
+    "Validar este diagnostico em uma conversa rapida com a empresa.",
+    problems.length > 0
+      ? `Priorizar o ponto de maior impacto: ${problems[0]!.title.toLowerCase()}.`
+      : "Aprofundar a analise nos pontos marcados como nao verificados.",
+    `Apresentar uma proposta de ${suggestions[0]?.toLowerCase() ?? "presenca digital"} com escopo e prazo.`,
+  ];
 
   return {
     business: params.business,
@@ -269,6 +391,9 @@ export function buildReportModel(params: {
     generatedAt: params.generatedAt ?? new Date().toISOString(),
     findings,
     suggestions,
+    maturity: buildMaturityAxes({ business: params.business, audit: params.audit }),
+    recommendations,
+    nextSteps,
   };
 }
 
@@ -280,7 +405,25 @@ function addMuted(doc: PDFKit.PDFDocument, text: string) {
   doc.fontSize(9).fillColor("#6b7280").text(text);
 }
 
-function renderPdf(model: ReportModel): Promise<Buffer> {
+function scoreBarColor(value: number): string {
+  if (value >= 70) return "#2f7d54";
+  if (value >= 40) return "#9a6b1f";
+  return "#991b1b";
+}
+
+/** Barra horizontal simples (0-100) — o "grafico" permitido no MVP do PDF v2. */
+function drawBar(
+  doc: PDFKit.PDFDocument,
+  params: { x: number; y: number; width: number; height: number; value: number; color: string },
+) {
+  doc.roundedRect(params.x, params.y, params.width, params.height, params.height / 2).fill("#e5e7eb");
+  const filled = Math.max(params.height, (params.value / 100) * params.width);
+  doc
+    .roundedRect(params.x, params.y, filled, params.height, params.height / 2)
+    .fill(params.color);
+}
+
+export function renderPdf(model: ReportModel): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: 48, info: { Title: `Diagnostico - ${model.business.name}` } });
     const chunks: Buffer[] = [];
@@ -300,19 +443,55 @@ function renderPdf(model: ReportModel): Promise<Buffer> {
     addMuted(doc, `Gerado em ${new Date(model.generatedAt).toLocaleDateString("pt-BR")}`);
 
     addSectionTitle(doc, "Resumo executivo");
-    const scoreText = model.score
-      ? `Score de oportunidade: ${model.score.score}/100 (${model.score.level}).`
-      : "Score de oportunidade ainda nao calculado.";
-    doc.fontSize(11).fillColor("#374151").text(scoreText, { lineGap: 3 });
-    doc.text(
-      model.business.website_url
-        ? "A analise abaixo traduz sinais tecnicos do site em pontos praticos para melhorar confianca e conversao."
-        : "Como nao ha site proprio identificado, o diagnostico foca no potencial de criar uma presenca digital controlada pela empresa.",
-      { lineGap: 3 },
-    );
+    const problemCount = model.findings.filter((finding) => finding.status === "problem").length;
+    doc
+      .fontSize(11)
+      .fillColor("#374151")
+      .text(
+        model.business.website_url
+          ? `Analisamos a presenca digital de ${model.business.name} e encontramos ${problemCount} ponto(s) de atencao com impacto direto em confianca e conversao. A leitura abaixo traduz sinais tecnicos em decisoes praticas.`
+          : `${model.business.name} ainda nao tem site proprio identificado. O diagnostico foca no potencial de construir uma presenca digital controlada pela empresa, aproveitando a reputacao ja existente.`,
+        { lineGap: 3 },
+      );
+
+    if (model.score) {
+      doc.moveDown(0.6);
+      doc.fontSize(10).fillColor("#374151").text(`Potencial da oportunidade: ${model.score.score}/100`);
+      drawBar(doc, {
+        x: 48,
+        y: doc.y + 4,
+        width: doc.page.width - 96,
+        height: 10,
+        value: model.score.score,
+        color: scoreBarColor(model.score.score),
+      });
+      doc.y += 20;
+      addMuted(doc, `Confianca da analise: ${model.score.confidence === "high" ? "alta" : model.score.confidence === "medium" ? "media" : "baixa"}.`);
+    } else {
+      addMuted(doc, "Score de oportunidade ainda nao calculado.");
+    }
+
+    addSectionTitle(doc, "Maturidade digital por eixo");
+    for (const axis of model.maturity) {
+      doc.fontSize(10).fillColor("#374151").text(axis.label, 48, doc.y, { continued: false });
+      if (axis.value === null) {
+        addMuted(doc, "Nao verificado nesta analise");
+        doc.moveDown(0.35);
+      } else {
+        drawBar(doc, {
+          x: 48,
+          y: doc.y + 3,
+          width: doc.page.width - 96,
+          height: 7,
+          value: axis.value,
+          color: scoreBarColor(axis.value),
+        });
+        doc.y += 16;
+      }
+    }
 
     addSectionTitle(doc, "Principais achados");
-    for (const finding of model.findings.slice(0, 8)) {
+    for (const finding of model.findings.slice(0, 10)) {
       doc.fontSize(11).fillColor(finding.status === "problem" ? "#991b1b" : "#111827").text(finding.title, { continued: false });
       doc.fontSize(9).fillColor("#6b7280").text(stateLabels[finding.status]);
       doc.fontSize(10).fillColor("#374151").text(finding.body, { lineGap: 2 });
@@ -320,9 +499,14 @@ function renderPdf(model: ReportModel): Promise<Buffer> {
       doc.moveDown(0.45);
     }
 
-    addSectionTitle(doc, "Servicos sugeridos");
-    for (const service of model.suggestions.slice(0, 6)) {
-      doc.fontSize(11).fillColor("#374151").text(`- ${service}`);
+    addSectionTitle(doc, "Recomendacoes por prioridade");
+    for (const recommendation of model.recommendations.slice(0, 6)) {
+      doc
+        .fontSize(9)
+        .fillColor(recommendation.priority === "alta" ? "#991b1b" : "#9a6b1f")
+        .text(recommendation.priority === "alta" ? "PRIORIDADE ALTA" : "PRIORIDADE MEDIA");
+      doc.fontSize(11).fillColor("#374151").text(recommendation.text, { lineGap: 2 });
+      doc.moveDown(0.35);
     }
 
     if (model.score?.reasons?.length) {
@@ -331,6 +515,11 @@ function renderPdf(model: ReportModel): Promise<Buffer> {
         doc.fontSize(10).fillColor("#374151").text(`- ${reason.label} (${reason.impact > 0 ? "+" : ""}${reason.impact})`);
       }
     }
+
+    addSectionTitle(doc, "Proximos passos sugeridos");
+    model.nextSteps.forEach((step, index) => {
+      doc.fontSize(11).fillColor("#374151").text(`${index + 1}. ${step}`, { lineGap: 2 });
+    });
 
     doc.moveDown(1.2);
     doc.fontSize(9).fillColor("#6b7280").text(

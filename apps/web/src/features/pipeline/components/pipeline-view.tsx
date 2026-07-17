@@ -87,12 +87,7 @@ export function PipelineView() {
           }
         />
       ) : (
-        <PipelineBoard
-          leads={leads}
-          onMove={handleMove}
-          movePendingLeadId={updateLead.isPending ? (updateLead.variables?.leadId ?? null) : null}
-          onPrefetchDetail={prefetchLead}
-        />
+        <PipelineBoard leads={leads} onMove={handleMove} onPrefetchDetail={prefetchLead} />
       )}
     </div>
   );

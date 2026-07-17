@@ -31,6 +31,15 @@ describe("buildPromptMessages", () => {
     expect(system?.content).toContain("JSON");
   });
 
+  it.each(kinds)("only allows social/platform mentions backed by detected evidence (%s)", (kind) => {
+    const [system] = buildPromptMessages(kind, input);
+    // Fase 17: Instagram/Linktree/delivery só com sinal "detected"; nunca inventar
+    // perfil, seguidores ou posts.
+    expect(system?.content).toContain('state "detected"');
+    expect(system?.content).toContain("NUNCA invente perfil, seguidores");
+    expect(system?.content).toContain("dependência PROVÁVEL");
+  });
+
   it("sends the structured input as JSON in the user message", () => {
     const messages = buildPromptMessages("whatsapp_message", input);
     const user = messages.at(-1);
@@ -58,9 +67,9 @@ describe("buildCorrectiveMessages", () => {
 describe("promptVersions", () => {
   it("has one immutable version id per kind", () => {
     expect(promptVersions).toEqual({
-      commercial_summary: "summary-v1",
-      whatsapp_message: "whatsapp-v1",
-      email_message: "email-v1",
+      commercial_summary: "summary-v2",
+      whatsapp_message: "whatsapp-v2",
+      email_message: "email-v2",
     });
   });
 });

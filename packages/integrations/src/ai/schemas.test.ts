@@ -1,9 +1,84 @@
 import { describe, expect, it } from "vitest";
 import {
+  aiOutputSchemas,
   commercialSummaryOutputSchema,
+  commercialSummaryV2OutputSchema,
   emailMessageOutputSchema,
   whatsappMessageOutputSchema,
 } from "./schemas";
+
+const validSummaryV2 = {
+  context: "Padaria em Fortaleza com boa reputação no Google.",
+  digitalPresence: "Sem site próprio; presença via plataforma de delivery detectada.",
+  strongSignals: ["Nota 4.7 com 213 avaliações"],
+  weakSignals: ["Telefone fixo, sem WhatsApp confirmado"],
+  gaps: ["Não foi possível verificar redes sociais próprias"],
+  channelDependence: "Provável dependência do iFood para pedidos.",
+  commercialImpact: "Clientes diretos acabam indo para concorrentes com site.",
+  recommendedOffer: "Site institucional com cardápio próprio.",
+  salesAngle: "Reduzir a comissão de plataforma capturando pedidos diretos.",
+  expectedObjections: ["Já estou no iFood — responder com custo de comissão"],
+  nextStep: "Mandar mensagem citando a reputação e oferecer análise gratuita.",
+};
+
+describe("commercialSummaryV2OutputSchema", () => {
+  it("accepts a complete consultive analysis", () => {
+    const result = commercialSummaryV2OutputSchema.safeParse(validSummaryV2);
+    expect(result.success).toBe(true);
+  });
+
+  it("is the active schema for commercial_summary generations", () => {
+    expect(aiOutputSchemas.commercial_summary.safeParse(validSummaryV2).success).toBe(true);
+  });
+
+  it("accepts empty signal lists and null channel dependence (sem sinal não é erro)", () => {
+    const result = commercialSummaryV2OutputSchema.safeParse({
+      ...validSummaryV2,
+      strongSignals: [],
+      weakSignals: [],
+      gaps: [],
+      expectedObjections: [],
+      channelDependence: null,
+    });
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.channelDependence).toBeNull();
+  });
+
+  it("normalizes a missing/empty channelDependence to null", () => {
+    const { channelDependence: _omitted, ...withoutChannel } = validSummaryV2;
+    const result = commercialSummaryV2OutputSchema.safeParse(withoutChannel);
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.channelDependence).toBeNull();
+
+    const empty = commercialSummaryV2OutputSchema.safeParse({
+      ...validSummaryV2,
+      channelDependence: "  ",
+    });
+    expect(empty.success && empty.data.channelDependence).toBeNull();
+  });
+
+  it("rejects a partial analysis missing nextStep or commercialImpact", () => {
+    const { nextStep: _n, ...withoutNext } = validSummaryV2;
+    expect(commercialSummaryV2OutputSchema.safeParse(withoutNext).success).toBe(false);
+    const { commercialImpact: _c, ...withoutImpact } = validSummaryV2;
+    expect(commercialSummaryV2OutputSchema.safeParse(withoutImpact).success).toBe(false);
+  });
+
+  it("rejects an over-verbose section (limite anti-verborragia)", () => {
+    expect(
+      commercialSummaryV2OutputSchema.safeParse({
+        ...validSummaryV2,
+        commercialImpact: "x".repeat(501),
+      }).success,
+    ).toBe(false);
+    expect(
+      commercialSummaryV2OutputSchema.safeParse({
+        ...validSummaryV2,
+        strongSignals: Array.from({ length: 6 }, (_, i) => `sinal ${i}`),
+      }).success,
+    ).toBe(false);
+  });
+});
 
 describe("commercialSummaryOutputSchema", () => {
   it("accepts a complete valid output", () => {

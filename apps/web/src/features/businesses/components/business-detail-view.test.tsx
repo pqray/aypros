@@ -110,15 +110,20 @@ describe("BusinessDetailView", () => {
     expect(refreshMutate).toHaveBeenCalled();
   });
 
-  it("renders latest audit and score summary", () => {
+  it("shows digital presence in the overview tab and audit/score in the metrics tab", async () => {
+    const user = userEvent.setup();
     renderView("b1");
 
     expect(screen.getByText("Padaria Central")).toBeTruthy();
-    expect(screen.getByText("Auditoria HTTP")).toBeTruthy();
-    expect(screen.getByLabelText(/oportunidade.*score 43/i)).toBeTruthy();
-    expect(screen.getByText("Sem title/description adequados")).toBeTruthy();
+    // Visão geral (tab default): presença digital com sinais de segmento.
     expect(screen.getByText("Plataforma de delivery")).toBeTruthy();
     expect(screen.getByText("Sem cardapio online")).toBeTruthy();
+
+    await user.click(screen.getByRole("tab", { name: "Métricas" }));
+
+    expect(await screen.findByText("Auditoria HTTP")).toBeTruthy();
+    expect(screen.getByLabelText(/oportunidade.*score 43/i)).toBeTruthy();
+    expect(screen.getByText("Sem title/description adequados")).toBeTruthy();
   });
 
   it("runs a new audit from the action button", () => {

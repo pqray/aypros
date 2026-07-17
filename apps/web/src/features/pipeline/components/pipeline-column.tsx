@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "@aypros/ui";
-import type { LeadStage } from "@aypros/types";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useDroppable } from "@dnd-kit/core";
 import { leadStageLabels, type PipelineColumn as PipelineColumnData } from "../board";
@@ -13,13 +12,9 @@ function formatCurrency(value: number): string {
 
 export function PipelineColumn({
   column,
-  onMove,
-  movePendingLeadId,
   onPrefetchDetail,
 }: {
   column: PipelineColumnData;
-  onMove: (leadId: string, stage: LeadStage) => void;
-  movePendingLeadId: string | null;
   onPrefetchDetail?: (leadId: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.stage });
@@ -41,19 +36,13 @@ export function PipelineColumn({
       <div
         ref={setNodeRef}
         className={cn(
-          "flex min-h-24 flex-1 flex-col gap-2 p-2 transition-colors",
-          isOver && "bg-accent/60",
+          "flex min-h-24 flex-1 flex-col gap-2 rounded-b-lg p-2 transition-colors",
+          isOver && "bg-accent/70 ring-2 ring-inset ring-ring/40",
         )}
       >
         <SortableContext items={column.leads.map((lead) => lead.id)} strategy={verticalListSortingStrategy}>
           {column.leads.map((lead) => (
-            <SortableLeadCard
-              key={lead.id}
-              lead={lead}
-              onMove={onMove}
-              movePending={movePendingLeadId === lead.id}
-              onPrefetchDetail={onPrefetchDetail}
-            />
+            <SortableLeadCard key={lead.id} lead={lead} onPrefetchDetail={onPrefetchDetail} />
           ))}
         </SortableContext>
         {column.leads.length === 0 ? (

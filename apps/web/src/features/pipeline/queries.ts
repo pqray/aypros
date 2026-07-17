@@ -13,6 +13,7 @@ import {
   createLead,
   createLeadContact,
   createNote,
+  deleteLead,
   deleteNote,
   getLead,
   getOrganizationMembers,
@@ -69,6 +70,37 @@ export function usePrefetchLead(orgId: string | undefined) {
       staleTime: 120_000,
     });
   };
+}
+
+/** Removes a lead from the pipeline (the business itself stays untouched). */
+export function useDeleteLead(orgId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (leadId: string) => deleteLead(leadId),
+    onMutate: async (leadId) => {
+      await queryClient.cancelQueries({ queryKey: ["org", orgId, "pipeline"] });
+      const previous = queryClient.getQueriesData<PipelineResponse>({
+        queryKey: ["org", orgId, "pipeline"],
+      });
+      queryClient.setQueriesData<PipelineResponse>(
+        { queryKey: ["org", orgId, "pipeline"] },
+        (current) =>
+          current ? { items: current.items.filter((lead) => lead.id !== leadId) } : current,
+      );
+      return { previous };
+    },
+    onError: (_error, _leadId, context) => {
+      for (const [key, data] of context?.previous ?? []) {
+        queryClient.setQueryData(key, data);
+      }
+    },
+    onSettled: (_data, _error, leadId) => {
+      void queryClient.invalidateQueries({ queryKey: ["org", orgId, "pipeline"] });
+      queryClient.removeQueries({ queryKey: leadKey(orgId, leadId) });
+      void queryClient.invalidateQueries({ queryKey: ["org", orgId, "businesses"] });
+    },
+  });
 }
 
 /** Creates a lead for a business (idempotent — reuses the existing one, specs/12). */

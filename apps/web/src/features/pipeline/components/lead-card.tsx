@@ -6,21 +6,15 @@ import {
   AvatarImage,
   Card,
   CardContent,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
   ScoreBadge,
   cn,
 } from "@aypros/ui";
-import type { LeadStage, LeadSummary } from "@aypros/types";
+import type { LeadSummary } from "@aypros/types";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { PiClockCountdown, PiDotsSixVertical, PiDotsThreeVertical, PiPhoneCall } from "react-icons/pi";
+import { PiClockCountdown, PiDotsSixVertical, PiPhoneCall } from "react-icons/pi";
 import { formatRelativeTime } from "@/lib/format";
-import { LEAD_STAGES, isOverdue, leadStageLabels } from "../board";
+import { isOverdue } from "../board";
 import { LeadDetailLink } from "./lead-detail-link";
 
 const COOLING_LEAD_DAYS = 7;
@@ -60,40 +54,6 @@ function LeadAssigneeAvatar({ lead }: { lead: LeadSummary }) {
       {lead.assignedToAvatarUrl ? <AvatarImage src={lead.assignedToAvatarUrl} alt="" /> : null}
       <AvatarFallback>{initials(lead.assignedToName)}</AvatarFallback>
     </Avatar>
-  );
-}
-
-export function MoveLeadMenu({
-  lead,
-  onMove,
-  disabled,
-}: {
-  lead: LeadSummary;
-  onMove: (leadId: string, stage: LeadStage) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={`Mover ${lead.businessName}`}
-          disabled={disabled}
-          className="shrink-0 rounded-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
-        >
-          <PiDotsThreeVertical aria-hidden />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Mover para</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {LEAD_STAGES.filter((stage) => stage !== lead.stage).map((stage) => (
-          <DropdownMenuItem key={stage} onSelect={() => onMove(lead.id, stage)}>
-            {leadStageLabels[stage]}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }
 
@@ -157,13 +117,9 @@ function LeadCardBody({
 
 export function SortableLeadCard({
   lead,
-  onMove,
-  movePending,
   onPrefetchDetail,
 }: {
   lead: LeadSummary;
-  onMove: (leadId: string, stage: LeadStage) => void;
-  movePending: boolean;
   onPrefetchDetail?: (leadId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -178,26 +134,30 @@ export function SortableLeadCard({
 
   return (
     <div ref={setNodeRef} style={style}>
-      <Card className={cn("shadow-none", isDragging && "opacity-50 ring-2 ring-ring")}>
+      <Card
+        className={cn(
+          "shadow-none transition-shadow",
+          // While dragging, the original stays as a dimmed placeholder; the
+          // DragOverlay renders the floating copy.
+          isDragging && "border-dashed opacity-40",
+        )}
+      >
         <CardContent className="flex items-start gap-1 p-3">
           {/*
-            A dedicated drag handle — not the whole card — because dnd-kit's
-            drag listeners on an ancestor still intercept clicks from Radix's
-            portaled DropdownMenu: React re-dispatches portal events through
-            the React tree (not the DOM tree), so they'd bubble into the
-            listeners here and swallow the menu-item click.
+            A dedicated drag handle — not the whole card — so links and buttons
+            inside the card keep working, and keyboard users get an explicit,
+            focusable grab point (KeyboardSensor).
           */}
           <button
             type="button"
             aria-label={`Arrastar ${lead.businessName}`}
-            className="mt-0.5 shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing"
+            className="mt-0.5 shrink-0 cursor-grab touch-none rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
             {...attributes}
             {...listeners}
           >
             <PiDotsSixVertical aria-hidden />
           </button>
           <LeadCardBody lead={lead} onPrefetchDetail={onPrefetchDetail} />
-          <MoveLeadMenu lead={lead} onMove={onMove} disabled={movePending} />
         </CardContent>
       </Card>
     </div>
@@ -213,7 +173,7 @@ export function LeadCardPreview({
   onPrefetchDetail?: (leadId: string) => void;
 }) {
   return (
-    <Card className="shadow-lg ring-2 ring-ring">
+    <Card className="rotate-2 scale-[1.03] shadow-xl ring-2 ring-ring">
       <CardContent className="flex items-start gap-2 p-3">
         <LeadCardBody lead={lead} onPrefetchDetail={onPrefetchDetail} />
       </CardContent>

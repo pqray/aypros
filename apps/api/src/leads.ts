@@ -760,14 +760,65 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
     );
   });
 
+  app.delete("/v1/leads/:id", async (request, reply) => {
+    const params = idParamSchema.safeParse(request.params);
+    if (!params.success) {
+      return reply.code(400).send({ error: "Id inválido" } satisfies ApiErrorBody);
+    }
+
+    const ctx = await requireOrgContext(request, reply);
+    if (!ctx) return;
+
+    const { data: leadRow, error: leadError } = await ctx.supabase
+      .from("leads")
+      .select("id, business:businesses(id, name)")
+      .eq("organization_id", ctx.orgId)
+      .eq("id", params.data.id)
+      .maybeSingle();
+
+    if (leadError) {
+      return reply.code(500).send({ error: "Erro ao remover lead" } satisfies ApiErrorBody);
+    }
+    if (!leadRow) {
+      return reply.code(404).send({ error: "Lead não encontrado" } satisfies ApiErrorBody);
+    }
+
+    const current = leadRow as unknown as {
+      id: string;
+      business: { id: string; name: string } | null;
+    };
+
+    // Remove só o lead (notas caem em cascata); a empresa permanece intacta.
+    // activities.lead_id é ON DELETE SET NULL, então o histórico da org sobrevive.
+    const { error: deleteError } = await ctx.supabase
+      .from("leads")
+      .delete()
+      .eq("organization_id", ctx.orgId)
+      .eq("id", params.data.id);
+
+    if (deleteError) {
+      return reply.code(500).send({ error: "Erro ao remover lead" } satisfies ApiErrorBody);
+    }
+
+    await serviceDb.from("activities").insert({
+      organization_id: ctx.orgId,
+      business_id: current.business?.id,
+      actor_id: ctx.userId,
+      type: "lead_archived",
+      payload: { business_name: current.business?.name ?? null },
+    });
+
+    return reply.code(204).send();
+  });
+
   app.post("/v1/leads/:id/contacts", async (request, reply) => {
     const params = idParamSchema.safeParse(request.params);
     if (!params.success) {
-      return reply.code(400).send({ error: "Id invÃ¡lido" } satisfies ApiErrorBody);
+      return reply.code(400).send({ error: "Id inválido" } satisfies ApiErrorBody);
     }
     const body = createLeadContactSchema.safeParse(request.body ?? {});
     if (!body.success) {
-      return reply.code(400).send({ error: "Contato invÃ¡lido" } satisfies ApiErrorBody);
+      return reply.code(400).send({ error: "Contato inválido" } satisfies ApiErrorBody);
     }
 
     const ctx = await requireOrgContext(request, reply);
@@ -786,7 +837,7 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
       return reply.code(500).send({ error: "Erro ao registrar contato" } satisfies ApiErrorBody);
     }
     if (!updated || !(updated as unknown as LeadRow).business) {
-      return reply.code(404).send({ error: "Lead nÃ£o encontrado" } satisfies ApiErrorBody);
+      return reply.code(404).send({ error: "Lead não encontrado" } satisfies ApiErrorBody);
     }
 
     const row = updated as unknown as LeadRow;

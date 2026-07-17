@@ -1,6 +1,5 @@
 import type { LeadSummary } from "@aypros/types";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { DndContext } from "@dnd-kit/core";
 import { SortableContext } from "@dnd-kit/sortable";
 import { describe, expect, it, vi } from "vitest";
@@ -31,15 +30,14 @@ function makeLead(overrides: Partial<LeadSummary> = {}): LeadSummary {
   };
 }
 
-function renderCard(lead: LeadSummary, onMove = vi.fn()) {
+function renderCard(lead: LeadSummary) {
   render(
     <DndContext onDragEnd={vi.fn()}>
       <SortableContext items={[lead.id]}>
-        <SortableLeadCard lead={lead} onMove={onMove} movePending={false} />
+        <SortableLeadCard lead={lead} />
       </SortableContext>
     </DndContext>,
   );
-  return onMove;
 }
 
 describe("SortableLeadCard", () => {
@@ -62,23 +60,10 @@ describe("SortableLeadCard", () => {
     expect(dueText.className).toContain("text-destructive");
   });
 
-  it("moves the lead to another stage via the accessible menu", async () => {
-    const user = userEvent.setup();
-    const onMove = renderCard(makeLead());
+  it("exposes only the drag handle as a card action (no stage menu)", () => {
+    renderCard(makeLead());
 
-    await user.click(screen.getByLabelText("Mover Padaria Central"));
-    await user.click(await screen.findByRole("menuitem", { name: "Contactado" }));
-
-    expect(onMove).toHaveBeenCalledWith("l1", "contacted");
-  });
-
-  it("does not offer the lead's current stage as a move target", async () => {
-    const user = userEvent.setup();
-    renderCard(makeLead({ stage: "new" }));
-
-    await user.click(screen.getByLabelText("Mover Padaria Central"));
-
-    expect(await screen.findByText("Contactado")).toBeInTheDocument();
-    expect(screen.queryByRole("menuitem", { name: "Novo" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Arrastar Padaria Central")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Mover Padaria Central")).not.toBeInTheDocument();
   });
 });

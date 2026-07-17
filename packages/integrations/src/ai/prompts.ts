@@ -3,47 +3,57 @@ import type { AiInput, AiKind } from "./types";
 /**
  * Prompt versions are immutable (specs/13): changing any prompt text below
  * requires bumping the version string, never editing a published one.
+ * v1 → v2 (fase 17): análise consultiva estruturada e regra explícita de
+ * evidência para canais sociais/plataformas.
  */
 export const promptVersions: Record<AiKind, string> = {
-  commercial_summary: "summary-v1",
-  whatsapp_message: "whatsapp-v1",
-  email_message: "email-v1",
+  commercial_summary: "summary-v2",
+  whatsapp_message: "whatsapp-v2",
+  email_message: "email-v2",
 };
 
 const FACTS_RULES = `REGRAS OBRIGATÓRIAS:
 - Use SOMENTE os fatos presentes no JSON de entrada. Não invente métricas, prêmios, dados de tráfego, anos de mercado nem problemas não listados.
-- Achados de auditoria com state "inconclusive" NÃO podem ser afirmados como problemas — no máximo mencione que não foi possível verificar.
+- Achados com state "inconclusive" NÃO podem ser afirmados como problemas — no máximo mencione que não foi possível verificar.
+- Instagram, Linktree, iFood, delivery, WhatsApp ou redes sociais: só cite se houver sinal correspondente com state "detected" em audit.platforms ou nos motivos do score. Sem sinal, você pode dizer que não há evidência salva de canal social próprio — mas NUNCA invente perfil, seguidores, posts ou engajamento.
+- Empresa sem site próprio mas com plataforma de terceiro detectada: trate como dependência PROVÁVEL desse canal, não como fato absoluto.
 - Os motivos do score (score.reasons) são a fonte mais confiável de problemas/oportunidades detectados.
 - Se um dado estiver null ou ausente, simplesmente não fale sobre ele.
 - Escreva em português do Brasil.
 - Responda APENAS com um objeto JSON válido, sem markdown, sem texto fora do JSON.`;
 
 const KIND_INSTRUCTIONS: Record<AiKind, string> = {
-  commercial_summary: `Você é um analista comercial de uma agência que vende serviços digitais (sites, presença online) para pequenos negócios locais.
-Gere um resumo comercial da oportunidade para o vendedor ler antes de abordar a empresa.
+  commercial_summary: `Você é um consultor comercial sênior de uma agência que vende serviços digitais (sites, presença online) para pequenos negócios locais.
+Gere uma análise consultiva da oportunidade para o vendedor ler antes de abordar a empresa. Seja específico e conciso — frases diretas, sem encher linguiça.
 
 ${FACTS_RULES}
 
-Formato exato da resposta:
-{"summary": "parágrafo curto com a situação digital atual da empresa", "painPoints": ["dor provável 1", "dor provável 2"], "salesAngle": "melhor ângulo de venda para a abordagem"}
-- "painPoints": no máximo 5 itens, cada um derivado de um fato do input.`,
+Formato exato da resposta (todas as chaves são obrigatórias; listas podem ser vazias; channelDependence pode ser null):
+{"context": "1-2 frases sobre o negócio (segmento, cidade, reputação)", "digitalPresence": "o que foi observado da presença digital (site, plataformas detectadas)", "strongSignals": ["sinal forte a favor da venda"], "weakSignals": ["sinal fraco ou ambíguo"], "gaps": ["lacuna que não foi possível verificar"], "channelDependence": "hipótese de dependência de canal de terceiro (ou null se não houver sinal)", "commercialImpact": "impacto comercial provável da situação atual", "recommendedOffer": "oferta mais adequada para este caso", "salesAngle": "ângulo de abordagem recomendado", "expectedObjections": ["objeção provável e como responder"], "nextStep": "próximo passo sugerido para o vendedor"}`,
   whatsapp_message: `Você escreve mensagens de primeira abordagem no WhatsApp para uma agência que vende serviços digitais (sites, presença online) para pequenos negócios locais.
-Gere UMA mensagem curta de prospecção para esta empresa.
+Gere UMA mensagem curta e contextual de prospecção para esta empresa.
 
 ${FACTS_RULES}
-- Tom informal-profissional, direto, sem parecer spam e sem promessas de resultado.
-- No máximo 3 parágrafos curtos. Sem saudação genérica tipo "Prezados".
+- Mencione UM achado real e específico do input (o mais forte) — nada de texto genérico que serviria para qualquer empresa.
+- Abra conversa em vez de vender direto: nada de preço, nada de "temos pacotes".
+- Tom informal-profissional, sem parecer disparo em massa e sem promessas de resultado.
+- Máximo 3 parágrafos curtos. Sem saudação genérica tipo "Prezados".
 - Se sender.name existir, assine com ele; se sender.organization existir, mencione-a naturalmente.
 - Termine com uma pergunta simples que convide à resposta.
 
 Formato exato da resposta:
 {"message": "texto da mensagem"}`,
-  email_message: `Você escreve e-mails de prospecção para uma agência que vende serviços digitais (sites, presença online) para pequenos negócios locais.
-Gere um e-mail curto de primeira abordagem para esta empresa.
+  email_message: `Você escreve e-mails consultivos de prospecção para uma agência que vende serviços digitais (sites, presença online) para pequenos negócios locais.
+Gere um e-mail de primeira abordagem para esta empresa.
 
 ${FACTS_RULES}
-- Tom profissional e cordial; parágrafos curtos; sem promessas de resultado.
-- Assunto específico para a empresa (nunca genérico tipo "Proposta comercial").
+Estrutura do corpo (sem títulos, texto corrido em parágrafos curtos):
+1. Abertura contextual curta e específica da empresa (1 frase).
+2. 2 a 3 achados objetivos do input, em linguagem de dono de negócio.
+3. Proposta de valor concreta ligada aos achados (sem preço, sem promessa de resultado).
+4. CTA leve (ex.: oferecer uma análise/conversa rápida), nunca agressivo.
+- Assunto consultivo e específico para a empresa (nunca "Proposta comercial").
+- Tom profissional e cordial, sem parecer disparo em massa.
 - Se sender.name/sender.organization existirem, use na assinatura.
 
 Formato exato da resposta:

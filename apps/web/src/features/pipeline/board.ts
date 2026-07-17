@@ -88,6 +88,14 @@ export function moveLead(
   });
 }
 
+/**
+ * Entering a terminal stage (won/lost) is a business decision, not a board
+ * shuffle — it needs explicit confirmation before persisting (specs/12).
+ */
+export function needsMoveConfirmation(currentStage: LeadStage, nextStage: LeadStage): boolean {
+  return (nextStage === "won" || nextStage === "lost") && currentStage !== nextStage;
+}
+
 const OVERDUE_GRACE_MS = 0;
 
 export function isOverdue(nextActionAt: string | null, now: Date = new Date()): boolean {

@@ -55,7 +55,7 @@ describe("createGroqAiProvider", () => {
     expect(result.output).toEqual({ message: "Olá! Vi que a Padaria Central ainda não tem site." });
     expect(result.model).toBe("model-main");
     expect(result.tokensUsed).toBe(321);
-    expect(result.promptVersion).toBe("whatsapp-v1");
+    expect(result.promptVersion).toBe("whatsapp-v2");
     const params = complete.mock.calls[0]?.[0] as ChatCompletionParams;
     expect(params.response_format).toEqual({ type: "json_object" });
     expect(params.max_tokens).toBe(512);

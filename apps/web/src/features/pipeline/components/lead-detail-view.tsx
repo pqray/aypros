@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Badge,
   BusinessLogo,
   Button,
   Card,
@@ -17,27 +18,46 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+  SheetTrigger,
   Skeleton,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
   Textarea,
   cn,
   toast,
 } from "@aypros/ui";
 import type { ContactChannel, LeadStage, LeadStatus } from "@aypros/types";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   PiArrowLeft,
   PiClockCountdown,
   PiDownloadSimple,
+  PiListChecks,
   PiPhoneCall,
+  PiTrash,
   PiWarningCircle,
 } from "react-icons/pi";
 import { useAppContext } from "@/components/shell/use-app-context";
 import { AiGenerationsCard } from "@/features/ai/components/ai-generations-card";
 import { downloadBusinessReportPdf } from "@/features/businesses/api";
-import { LEAD_STAGES, isOverdue, leadStageLabels } from "../board";
+import { useBusinessAuditSummary } from "@/features/businesses/queries";
+import { LEAD_STAGES, isOverdue, leadStageLabels, needsMoveConfirmation } from "../board";
 import { formatRelativeTime } from "@/lib/format";
-import { useCreateLeadContact, useLead, useOrganizationMembers, useUpdateLead } from "../queries";
+import {
+  useCreateLeadContact,
+  useDeleteLead,
+  useLead,
+  useOrganizationMembers,
+  useUpdateLead,
+} from "../queries";
 import { LeadActivityTimeline } from "./lead-activity-timeline";
 import { LeadNotes } from "./lead-notes";
 
@@ -48,6 +68,12 @@ const leadStatusLabels: Record<LeadStatus, string> = {
   archived: "Arquivado",
 };
 
+const confidenceLabels = {
+  low: "Baixa",
+  medium: "Média",
+  high: "Alta",
+} as const;
+
 const contactChannelLabels: Record<ContactChannel, string> = {
   whatsapp: "WhatsApp",
   email: "E-mail",
@@ -55,18 +81,111 @@ const contactChannelLabels: Record<ContactChannel, string> = {
   other: "Outro",
 };
 
+function StageStepper({
+  current,
+  onSelect,
+  disabled,
+}: {
+  current: LeadStage;
+  onSelect: (stage: LeadStage) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="Estágio do lead"
+      className="flex flex-wrap gap-1 rounded-lg border bg-card p-1"
+    >
+      {LEAD_STAGES.map((stage) => {
+        const active = stage === current;
+        return (
+          <Button
+            key={stage}
+            type="button"
+            size="sm"
+            variant={active ? "secondary" : "ghost"}
+            aria-pressed={active}
+            disabled={disabled}
+            className={cn("h-8", active && "font-semibold")}
+            onClick={() => (active ? undefined : onSelect(stage))}
+          >
+            {leadStageLabels[stage]}
+          </Button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Score integrado: nota + confiança + principais motivos (specs fase 17, P1). */
+function PotentialBlock({ businessId }: { businessId: string }) {
+  const summary = useBusinessAuditSummary(businessId);
+
+  if (summary.isLoading) {
+    return <Skeleton className="h-40" />;
+  }
+
+  const score = summary.data?.latestScore ?? null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Potencial</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {score ? (
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <ScoreBadge level={score.level} score={score.score} />
+              <Badge variant="secondary">Confiança {confidenceLabels[score.confidence]}</Badge>
+            </div>
+            {score.reasons.length > 0 ? (
+              <div className="space-y-1.5">
+                {score.reasons.slice(0, 5).map((reason) => (
+                  <div key={reason.code} className="flex justify-between gap-3 text-sm">
+                    <span className="min-w-0">{reason.label}</span>
+                    <span className="shrink-0 font-medium tabular-nums">
+                      {reason.impact > 0 ? `+${reason.impact}` : reason.impact}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {score.suggestedServices.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {score.suggestedServices.map((service) => (
+                  <Badge key={service} variant="outline">
+                    {service}
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Sem score ainda — rode uma análise na página da empresa.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function LeadDetailView({ leadId }: { leadId: string }) {
+  const router = useRouter();
   const { data: context } = useAppContext();
   const orgId = context?.organization?.id;
   const detail = useLead(orgId, leadId);
   const members = useOrganizationMembers(orgId);
   const updateLead = useUpdateLead(orgId);
+  const deleteLead = useDeleteLead(orgId);
   const createContact = useCreateLeadContact(orgId, leadId);
 
   const [potentialValue, setPotentialValue] = useState("");
   const [nextAction, setNextAction] = useState("");
   const [nextActionDate, setNextActionDate] = useState("");
   const [pendingStage, setPendingStage] = useState<LeadStage | null>(null);
+  const [removeOpen, setRemoveOpen] = useState(false);
   const [contactChannel, setContactChannel] = useState<ContactChannel>("whatsapp");
   const [contactNote, setContactNote] = useState("");
   const [reportDownloading, setReportDownloading] = useState(false);
@@ -87,7 +206,7 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
 
   function handleStageChange(stage: LeadStage) {
     if (!detail.data) return;
-    if ((stage === "won" || stage === "lost") && detail.data.lead.stage !== stage) {
+    if (needsMoveConfirmation(detail.data.lead.stage, stage)) {
       setPendingStage(stage);
       return;
     }
@@ -99,6 +218,16 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
       saveField({ stage: pendingStage });
       setPendingStage(null);
     }
+  }
+
+  function handleRemoveLead() {
+    deleteLead.mutate(leadId, {
+      onSuccess: () => {
+        toast.success("Lead removido do pipeline. A empresa continua salva.");
+        router.push("/pipeline");
+      },
+      onError: () => toast.error("Não foi possível remover o lead."),
+    });
   }
 
   function handlePotentialValueBlur() {
@@ -136,7 +265,7 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
           setContactNote("");
           toast.success("Contato registrado.");
         },
-        onError: () => toast.error("Nao foi possivel registrar o contato."),
+        onError: () => toast.error("Não foi possível registrar o contato."),
       },
     );
   }
@@ -146,9 +275,9 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
     setReportDownloading(true);
     try {
       await downloadBusinessReportPdf(detail.data.business.id, detail.data.business.name);
-      toast.success("Diagnostico baixado.");
+      toast.success("Diagnóstico baixado.");
     } catch {
-      toast.error("Nao foi possivel baixar o diagnostico.");
+      toast.error("Não foi possível baixar o diagnóstico.");
     } finally {
       setReportDownloading(false);
     }
@@ -202,197 +331,209 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
           <Button asChild variant="outline">
             <Link href="/pipeline">
               <PiArrowLeft aria-hidden />
-              Voltar ao pipeline
+              Pipeline
             </Link>
           </Button>
           <Button variant="outline" loading={reportDownloading} onClick={handleDownloadReport}>
             <PiDownloadSimple aria-hidden />
-            Baixar diagnostico (PDF)
+            Diagnóstico (PDF)
+          </Button>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline">
+                <PiListChecks aria-hidden />
+                Atividades
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="overflow-y-auto">
+              <SheetTitle>Atividades</SheetTitle>
+              <SheetDescription className="sr-only">
+                Histórico de atividades deste lead
+              </SheetDescription>
+              <div className="mt-4">
+                <LeadActivityTimeline activities={activities} />
+              </div>
+            </SheetContent>
+          </Sheet>
+          <Button
+            variant="outline"
+            className="text-destructive hover:text-destructive"
+            loading={deleteLead.isPending}
+            onClick={() => setRemoveOpen(true)}
+          >
+            <PiTrash aria-hidden />
+            Remover do pipeline
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Lead</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="lead-stage">Estágio</Label>
-                <Select value={lead.stage} onValueChange={(value) => handleStageChange(value as LeadStage)}>
-                  <SelectTrigger id="lead-stage">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LEAD_STAGES.map((stage) => (
-                      <SelectItem key={stage} value={stage}>
-                        {leadStageLabels[stage]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lead-status">Status</Label>
-                <Select
-                  value={lead.status}
-                  onValueChange={(value) => saveField({ status: value as LeadStatus })}
-                >
-                  <SelectTrigger id="lead-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(leadStatusLabels) as LeadStatus[]).map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {leadStatusLabels[status]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lead-assignee">Responsavel</Label>
-                <Select
-                  value={lead.assignedTo ?? "none"}
-                  onValueChange={(value) => saveField({ assignedTo: value === "none" ? null : value })}
-                >
-                  <SelectTrigger id="lead-assignee">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sem responsavel</SelectItem>
-                    {(members.data?.items ?? []).map((member) => (
-                      <SelectItem key={member.userId} value={member.userId}>
-                        {member.fullName ?? member.userId}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lead-value">Valor potencial (R$)</Label>
-                <Input
-                  id="lead-value"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={potentialValue}
-                  onChange={(event) => setPotentialValue(event.target.value)}
-                  onBlur={handlePotentialValueBlur}
-                />
-              </div>
-              {lead.score !== null && lead.scoreLevel !== null ? (
+      <StageStepper current={lead.stage} onSelect={handleStageChange} disabled={updateLead.isPending} />
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
+        <Tabs defaultValue="lead">
+          <TabsList>
+            <TabsTrigger value="lead">Lead</TabsTrigger>
+            <TabsTrigger value="ai">Abordagem com IA</TabsTrigger>
+            <TabsTrigger value="notes">Notas</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="lead" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Dados comerciais</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Score</Label>
-                  <div>
-                    <ScoreBadge level={lead.scoreLevel} score={lead.score} />
-                  </div>
+                  <Label htmlFor="lead-status">Status comercial</Label>
+                  <Select
+                    value={lead.status}
+                    onValueChange={(value) => saveField({ status: value as LeadStatus })}
+                  >
+                    <SelectTrigger id="lead-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(leadStatusLabels) as LeadStatus[]).map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {leadStatusLabels[status]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              ) : null}
-              <div className="space-y-2">
-                <Label htmlFor="lead-next-action">Próxima ação</Label>
-                <Input
-                  id="lead-next-action"
-                  placeholder="Ex.: Ligar para confirmar proposta"
-                  value={nextAction}
-                  onChange={(event) => setNextAction(event.target.value)}
-                  onBlur={handleNextActionBlur}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lead-next-action-date" className={cn(overdue && "text-destructive")}>
-                  Data da próxima ação
-                  {overdue ? (
-                    <span className="ml-1 inline-flex items-center gap-1 text-xs">
-                      <PiClockCountdown aria-hidden />
-                      Vencida
-                    </span>
-                  ) : null}
-                </Label>
-                <Input
-                  id="lead-next-action-date"
-                  type="date"
-                  value={nextActionDate}
-                  onChange={(event) => handleNextActionDateChange(event.target.value)}
-                  className={cn(overdue && "border-destructive")}
-                />
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label>Ultimo contato</Label>
-                <p className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <PiPhoneCall aria-hidden />
-                  {lead.lastContactAt ? formatRelativeTime(lead.lastContactAt) : "Nenhum contato registrado"}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="space-y-2">
+                  <Label htmlFor="lead-assignee">Responsável</Label>
+                  <Select
+                    value={lead.assignedTo ?? "none"}
+                    onValueChange={(value) => saveField({ assignedTo: value === "none" ? null : value })}
+                  >
+                    <SelectTrigger id="lead-assignee">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem responsável</SelectItem>
+                      {(members.data?.items ?? []).map((member) => (
+                        <SelectItem key={member.userId} value={member.userId}>
+                          {member.fullName ?? member.userId}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lead-value">Valor potencial (R$)</Label>
+                  <Input
+                    id="lead-value"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={potentialValue}
+                    onChange={(event) => setPotentialValue(event.target.value)}
+                    onBlur={handlePotentialValueBlur}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lead-next-action">Próxima ação</Label>
+                  <Input
+                    id="lead-next-action"
+                    placeholder="Ex.: Ligar para confirmar proposta"
+                    value={nextAction}
+                    onChange={(event) => setNextAction(event.target.value)}
+                    onBlur={handleNextActionBlur}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lead-next-action-date" className={cn(overdue && "text-destructive")}>
+                    Data da próxima ação
+                    {overdue ? (
+                      <span className="ml-1 inline-flex items-center gap-1 text-xs">
+                        <PiClockCountdown aria-hidden />
+                        Vencida
+                      </span>
+                    ) : null}
+                  </Label>
+                  <Input
+                    id="lead-next-action-date"
+                    type="date"
+                    value={nextActionDate}
+                    onChange={(event) => handleNextActionDateChange(event.target.value)}
+                    className={cn(overdue && "border-destructive")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Último contato</Label>
+                  <p className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <PiPhoneCall aria-hidden />
+                    {lead.lastContactAt ? formatRelativeTime(lead.lastContactAt) : "Nenhum contato registrado"}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Registrar contato</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3 sm:grid-cols-[12rem_minmax(0,1fr)_auto]">
-              <div className="space-y-2">
-                <Label htmlFor="contact-channel">Canal</Label>
-                <Select
-                  value={contactChannel}
-                  onValueChange={(value) => setContactChannel(value as ContactChannel)}
+            <Card>
+              <CardHeader>
+                <CardTitle>Registrar contato</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-3 sm:grid-cols-[12rem_minmax(0,1fr)_auto]">
+                <div className="space-y-2">
+                  <Label htmlFor="contact-channel">Canal</Label>
+                  <Select
+                    value={contactChannel}
+                    onValueChange={(value) => setContactChannel(value as ContactChannel)}
+                  >
+                    <SelectTrigger id="contact-channel">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(contactChannelLabels) as ContactChannel[]).map((channel) => (
+                        <SelectItem key={channel} value={channel}>
+                          {contactChannelLabels[channel]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-note">Nota opcional</Label>
+                  <Textarea
+                    id="contact-note"
+                    rows={2}
+                    value={contactNote}
+                    onChange={(event) => setContactNote(event.target.value)}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  className="self-end"
+                  loading={createContact.isPending}
+                  onClick={handleRegisterContact}
                 >
-                  <SelectTrigger id="contact-channel">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(contactChannelLabels) as ContactChannel[]).map((channel) => (
-                      <SelectItem key={channel} value={channel}>
-                        {contactChannelLabels[channel]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contact-note">Nota opcional</Label>
-                <Textarea
-                  id="contact-note"
-                  rows={2}
-                  value={contactNote}
-                  onChange={(event) => setContactNote(event.target.value)}
-                />
-              </div>
-              <Button
-                type="button"
-                className="self-end"
-                loading={createContact.isPending}
-                onClick={handleRegisterContact}
-              >
-                <PiPhoneCall aria-hidden />
-                Registrar
-              </Button>
-            </CardContent>
-          </Card>
+                  <PiPhoneCall aria-hidden />
+                  Registrar
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-          <AiGenerationsCard businessId={business.id} leadId={lead.id} phone={business.phone} />
+          <TabsContent value="ai">
+            <AiGenerationsCard businessId={business.id} leadId={lead.id} phone={business.phone} />
+          </TabsContent>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Notas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <LeadNotes leadId={leadId} orgId={orgId} notes={notes} />
-            </CardContent>
-          </Card>
+          <TabsContent value="notes">
+            <Card>
+              <CardHeader>
+                <CardTitle>Notas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <LeadNotes leadId={leadId} orgId={orgId} notes={notes} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        <div className="space-y-4">
+          <PotentialBlock businessId={business.id} />
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Atividades</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <LeadActivityTimeline activities={activities} />
-          </CardContent>
-        </Card>
       </div>
 
       <ConfirmDialog
@@ -402,6 +543,15 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
         description="Isso também atualiza o status comercial do lead."
         confirmLabel="Confirmar"
         onConfirm={confirmStageChange}
+      />
+
+      <ConfirmDialog
+        open={removeOpen}
+        onOpenChange={setRemoveOpen}
+        title="Remover do pipeline?"
+        description={`"${business.name}" sai do pipeline, mas a empresa continua salva na sua base. Notas deste lead serão removidas.`}
+        confirmLabel="Remover"
+        onConfirm={handleRemoveLead}
       />
     </div>
   );

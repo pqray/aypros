@@ -38,6 +38,7 @@ Exemplo — Fase 5 (Dashboard) lê: `00`, `phases/phase-05-dashboard.md`, `03`, 
 | [17-security.md](17-security.md) | RLS, autorização, SSRF, secrets, rate limiting |
 | [18-roadmap.md](18-roadmap.md) | Evolução pós-MVP |
 | [19-backend-api.md](19-backend-api.md) | Backend Node separado, Docker, endpoints e contratos |
+| [20-data-refresh.md](20-data-refresh.md) | Refresh automático de dados: frescor, custo, scheduler |
 
 ## Índice — fases (`/specs/phases/`)
 
@@ -54,6 +55,9 @@ Exemplo — Fase 5 (Dashboard) lê: `00`, `phases/phase-05-dashboard.md`, `03`, 
 | [09 — Pipeline](phases/phase-09-pipeline.md) | Kanban, notas, atividades |
 | [10 — Groq](phases/phase-10-groq.md) | Resumos e mensagens com IA |
 | [11 — Finish](phases/phase-11-finish.md) | A11y, responsividade, polimento, testes finais |
+| [12 — Data Refresh](phases/phase-12-data-refresh.md) | Refresh automático de empresas ativas + refresh manual |
+| [13 — Outreach](phases/phase-13-outreach.md) | Registro de contato, wa.me com rascunho, bloco "Hoje" |
+| [14 — Diagnostic Report](phases/phase-14-diagnostic-report.md) | PDF de diagnóstico apresentável ao cliente |
 
 ## Decisões
 

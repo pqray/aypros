@@ -4,6 +4,12 @@
 
 Transformar auditoria + score em um PDF de diagnóstico apresentável ao dono do negócio: linguagem de cliente (não técnica), identidade da organização do usuário, e pronto pra anexar em proposta ou usar como isca ("análise gratuita").
 
+## Status atual
+
+Implementada tecnicamente. A Fase 17 evoluiu o relatório para PDF v2 e adicionou `GET /v1/businesses/:businessId/report` para renderizar o diagnóstico também dentro da UI.
+
+Validação manual com PDFs reais ainda pode ser feita no final, conforme combinado.
+
 ## Specs-base para leitura
 
 `00-project-rules.md`, `09-website-http-audit.md` (detecções/evidências), `10-opportunity-scoring.md` (motivos), `11-businesses-and-favorites.md` (detalhe da empresa), `17-security.md` (rate limiting), `03-design-system.md` (o PDF segue a paleta/tipografia do produto).
@@ -31,11 +37,11 @@ Biblioteca de geração de PDF server-side — decisão em ADR nesta fase (candi
 
 ## Critérios de aceite
 
-- [ ] PDF gerado só com fatos do banco; achados `inconclusive` aparecem como "não verificado", nunca como problema
-- [ ] Empresa sem site gera relatório focado em presença digital (não um PDF vazio)
+- [x] PDF gerado só com fatos do banco; achados `inconclusive` aparecem como "não verificado", nunca como problema
+- [x] Empresa sem site gera relatório focado em presença digital (não um PDF vazio)
 - [ ] Linguagem 100% de dono de negócio (validada pelo usuário em 2–3 empresas reais)
-- [ ] Rate limit ativo; download registra atividade
-- [ ] Sem dado de outra organização acessível pela rota (checagem de acesso igual às demais)
+- [x] Rate limit ativo; download registra atividade
+- [x] Sem dado de outra organização acessível pela rota (checagem de acesso igual às demais)
 
 ## Testes necessários
 
@@ -55,6 +61,6 @@ Texto genérico demais que soa automático — mitigar interpolando fatos concre
 
 ## Checklist de conclusão
 
-- [ ] Critérios verificados
+- [x] Critérios técnicos verificados
 - [ ] PDFs reais revisados e aprovados pelo usuário
-- [ ] Aprovação explícita antes da próxima fase
+- [ ] Aprovação explícita final após validação manual

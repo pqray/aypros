@@ -6,9 +6,9 @@ Camada em `packages/integrations` (`AiProvider`), chamada **somente server-side*
 
 | Kind | Saída |
 |---|---|
-| `commercial_summary` | resumo comercial da oportunidade: situação digital, dores prováveis, ângulo de venda |
+| `commercial_summary` | análise consultiva estruturada: contexto, presença digital, sinais, lacunas, impacto, oferta, ângulo e próximo passo |
 | `whatsapp_message` | mensagem curta de WhatsApp (informal-profissional, pt-BR, sem parecer spam) |
-| `email_message` | assunto + corpo de e-mail de prospecção |
+| `email_message` | assunto + corpo de e-mail consultivo de prospecção |
 
 ## Inputs estruturados
 
@@ -23,15 +23,27 @@ Montados no servidor a partir do banco — nunca texto livre do usuário como fo
 
 - Prompt exige resposta em JSON com schema fixo; parse + validação **Zod** antes de persistir/exibir.
 - JSON inválido → 1 retentativa com instrução corretiva → senão `failed` com mensagem clara.
+- `commercial_summary` usa contrato estruturado (`summary-v2`): `context`, `digitalPresence`, `strongSignals`, `weakSignals`, `gaps`, `channelDependence`, `commercialImpact`, `recommendedOffer`, `salesAngle`, `expectedObjections`, `nextStep`.
+- `email_message` usa `email-v4`: corpo com 5 a 6 parágrafos, pelo menos 450 caracteres e quebras reais entre parágrafos; corpo raso ou bloco único deve ser rejeitado.
 
 ## Proibição de inventar fatos
 
-Regra explícita no prompt: usar **somente** os fatos fornecidos no input; não inventar métricas, prêmios, dados de tráfego ou problemas não detectados; achados `inconclusive` não podem ser afirmados como problemas. A UI mostra a mensagem como **rascunho editável** — usuário copia manualmente (envio automático é pós-MVP).
+Regra explícita no prompt: usar **somente** os fatos fornecidos no input; não inventar métricas, prêmios, dados de tráfego ou problemas não detectados; achados `inconclusive` não podem ser afirmados como problemas.
+
+Instagram, Linktree, iFood, delivery, WhatsApp e redes sociais só podem ser citados quando houver sinal `detected` em `audit.platforms`, nas detecções de segmento ou nos motivos do score. Sem sinal, a IA pode dizer que não há evidência salva de canal social próprio; nunca pode inventar perfil, seguidores, posts ou engajamento.
+
+A UI mostra a mensagem como **rascunho editável** — usuário copia manualmente (envio automático é pós-MVP).
 
 ## Versionamento de prompts
 
-- Prompts em código com identificador `prompt_version` (ex.: `whatsapp-v1`), gravado em cada geração.
+- Prompts em código com identificador `prompt_version`, gravado em cada geração.
 - Mudança de prompt = nova versão; nunca editar versão publicada.
+
+Versões atuais:
+
+- `commercial_summary`: `summary-v2`.
+- `whatsapp_message`: `whatsapp-v2`.
+- `email_message`: `email-v4`.
 
 ## Modelo, tokens e custo
 

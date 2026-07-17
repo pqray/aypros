@@ -22,7 +22,7 @@ Biblioteca de drag and drop (ADR pendente #3 — decidir no início; critérios:
 
 1. Kanban com colunas fixas do enum e cards da spec 12.
 2. DnD com optimistic update + rollback com toast; persistir estágio e `position`.
-3. Alternativa acessível ao DnD (mover via menu do card).
+3. Alternativa acessível ao DnD. Histórico: na Fase 09 era "mover via menu do card"; a Fase 17 removeu esse menu e concentrou a edição nos controles do detalhe do lead.
 4. Confirmação leve ao mover para `won`/`lost` (+ `lead_status`).
 5. Notas com RHF+Zod; atividades automáticas (criação, mudança de estágio, nota).
 6. Próxima ação com destaque de atraso.

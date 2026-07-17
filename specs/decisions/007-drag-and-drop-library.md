@@ -5,7 +5,7 @@
 
 ## Contexto
 
-A Fase 09 (`12-pipeline-crm.md`) exige um Kanban de leads com drag and drop otimista entre colunas e reordenação (`position`). A spec da fase lista como critérios obrigatórios: acessibilidade, manutenção ativa e peso — e marca explicitamente a alternativa acessível ao DnD (mover via menu do card) como **obrigatória, não opcional**, dado o risco conhecido de DnD acessível ser difícil de acertar.
+A Fase 09 (`12-pipeline-crm.md`) exige um Kanban de leads com drag and drop otimista entre colunas e reordenação (`position`). Na época, a alternativa acessível ao DnD era "mover via menu do card". A Fase 17 removeu esse menu do card e moveu o caminho alternativo para controles diretos no detalhe do lead.
 
 ## Decisão
 
@@ -28,5 +28,5 @@ Usamos os pacotes estáveis `@dnd-kit/core`/`sortable` (não o `@dnd-kit/react`,
 ## Consequências
 
 - Implementação do Kanban usa `DndContext` + `SortableContext` + `useSortable`; estado otimista via TanStack Query (`onMutate`/rollback) ao soltar um card.
-- A alternativa por menu (mover via ação, não só arrastar) continua obrigatória na Fase 09 — cobre o caso de quem não consegue operar o drag mesmo com teclado, e serve de caminho principal em mobile.
+- A alternativa por menu foi a decisão da Fase 09. A Fase 17 substituiu o menu "Mover para..." do card por controles diretos no detalhe do lead; o requisito de acessibilidade permanece, mas o caminho alternativo não fica mais no card do Kanban.
 - Trocar de biblioteca depois é isolado ao `features/pipeline` (o resto do app não depende de DnD).

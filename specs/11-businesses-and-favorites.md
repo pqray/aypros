@@ -21,11 +21,14 @@ TanStack Table + paginação server-side (Route Handler + TanStack Query).
 
 ## Página da empresa (`/businesses/[id]`)
 
-- Cabeçalho: nome, endereço, telefone (ações de contato), rating, badges de site e score.
-- Score: valor, nível, confiança, `reasons` e serviços sugeridos.
-- **Presença digital**: site (com resultado da auditoria e evidências), redes sociais detectadas (ícones `si`).
-- **Histórico de auditorias**: lista de `website_audits` com data, status e score associado; botão "Reanalisar".
-- Ações: favoritar, adicionar ao pipeline, gerar resumo/mensagem com IA (`13-ai-groq.md`).
+- Cabeçalho: nome, logo, ações primárias discretas e menu de ações secundárias.
+- Metadados: frescor dos dados, endereço, telefone e site.
+- Tabs persistentes por URL:
+  - **Visão geral**: resumo da oportunidade, diagnóstico da presença digital, sinais de segmento e botão opcional para baixar PDF.
+  - **Métricas**: score, nível, confiança, `reasons`, serviços sugeridos e maturidade digital por eixo.
+  - **Abordagem IA**: resumo comercial, WhatsApp e e-mail (`13-ai-groq.md`).
+- **Presença digital**: site, resultado da auditoria, sinais sociais/segmento quando detectados e estados inconclusivos sem virar problema confirmado.
+- Ações: favoritar, adicionar/ver no pipeline, atualizar dados, reanalisar e baixar diagnóstico.
 - Se a empresa é lead: link para o card no pipeline.
 
 ## Favoritos (`/favorites`)

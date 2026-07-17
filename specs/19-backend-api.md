@@ -56,7 +56,8 @@ A API escuta em `http://localhost:4000`; o web em `http://localhost:3000`.
 - Compose: `docker-compose.api.yml`.
 - O container recebe env via `.env.local`.
 - `API_HOST` deve ser `0.0.0.0` no container.
-- `WEB_ORIGINS` controla CORS e aceita lista separada por virgula.
+- `WEB_ORIGINS` controla CORS e aceita lista separada por vírgula.
+- CORS deve permitir os métodos usados pelo app (`GET`, `POST`, `PATCH`, `DELETE`, `OPTIONS`) sem abrir origem além de `WEB_ORIGINS`.
 
 ## Endpoints atuais
 
@@ -89,8 +90,9 @@ A API escuta em `http://localhost:4000`; o web em `http://localhost:3000`.
 | PATCH | `/v1/notes/:id` | Edita nota |
 | DELETE | `/v1/notes/:id` | Remove nota |
 | GET | `/v1/businesses/:businessId/ai-generations` | Lista gerações de IA da empresa na organização (rascunhos recentes por kind) |
-| POST | `/v1/businesses/:businessId/ai-generations` | Gera conteúdo com Groq (summary/whatsapp/email v2): input estruturado do banco, Zod no output, rate limit diário por org, persiste em `ai_generations` e registra atividade; 503 se `GROQ_API_KEY` ausente |
+| POST | `/v1/businesses/:businessId/ai-generations` | Gera conteúdo com Groq (`summary-v2`, `whatsapp-v2`, `email-v4`): input estruturado do banco, Zod no output, rate limit diário por org, persiste em `ai_generations` e registra atividade; 503 se `GROQ_API_KEY` ausente |
 | POST | `/v1/businesses/:businessId/refresh` | Refresh manual de dados da empresa (Place Details + re-auditoria + score), respeitando caps de custo |
+| GET | `/v1/businesses/:businessId/report` | JSON do diagnóstico comercial usado pela UI: resumo, score, nota HTTP amigável, achados, maturidade, recomendações e próximos passos |
 | GET | `/v1/businesses/:businessId/report.pdf` | PDF de diagnóstico v2 (resumo executivo, barra de score, maturidade por eixo, recomendações priorizadas); rate limit por org |
 | DELETE | `/v1/leads/:id` | Remove o lead do pipeline (empresa intacta, notas em cascata, activities preservadas via SET NULL) e registra `lead_archived` |
 | POST | `/v1/leads/:id/contacts` | Registra contato (canal + nota), atualiza `last_contact_at` e cria atividade `lead_contacted` |

@@ -6,6 +6,20 @@ Transformar a IA e o pipeline de "rascunhos simples + Kanban funcional" em uma e
 
 Esta fase também corrige problemas de usabilidade imediatos no pipeline: PATCH bloqueado por CORS, feedback/drag fraco, excesso de menu de três pontos, remoção de leads do pipeline e textos/labels visuais poluídos.
 
+## Status atual
+
+Implementada tecnicamente em julho/2026. A validação automatizada passou com `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` e rebuild Docker da API quando houve mudança backend.
+
+Commits principais:
+
+- `c442e99` — implementação base da Fase 17.
+- `661e028` — feedback imediato de navegação.
+- `c655cb4` — tabs persistentes por URL, diagnóstico na visão geral, métricas visuais e rebuild.
+- `199d614` — polimento da experiência de IA/insights, `email-v4`, relatório amigável para bloqueio 403.
+- `ad9d680` / `ede5ef9` — normalização de copy em português.
+
+Validação manual ainda deve cobrir os fluxos listados em "Fluxo manual obrigatório".
+
 ## Specs-base para leitura
 
 `00-project-rules.md`, `03-design-system.md`, `10-opportunity-scoring.md`, `12-pipeline-crm.md`, `13-ai-groq.md`, `14-data-fetching-state.md`, `17-security.md`, `19-backend-api.md`, `20-data-refresh.md`.
@@ -63,13 +77,19 @@ Criar uma visão mais rica para a empresa, preferencialmente dentro de `/busines
 - **Visão geral**: identidade, contatos, site, presença digital, frescor dos dados.
 - **Métricas**: score, confiança, motivos, auditoria HTTP, presença social detectada, sinais de segmento.
 - **Abordagem IA**: diagnóstico comercial, WhatsApp, e-mail.
-- **Relatório**: preview/resumo e download do PDF.
+- **Resumo da oportunidade**: diagnóstico comercial direto na visão geral, com botão opcional para baixar PDF.
 
 Alternativa aceitável: uma página dedicada de insights se a tela de empresa ficar grande demais. A navegação deve continuar simples a partir da empresa e do lead.
 
-## Escopo P3 — IA consultiva v2
+## Escopo P3 — IA consultiva v2/v4
 
-Evoluir os prompts e o contrato de saída para `prompt_version` v2.
+Evoluir os prompts e o contrato de saída para versões imutáveis por kind.
+
+Versões atuais:
+
+- `commercial_summary`: `summary-v2`.
+- `whatsapp_message`: `whatsapp-v2`.
+- `email_message`: `email-v4`.
 
 ### Resumo comercial v2
 
@@ -95,16 +115,18 @@ Regras:
 - Se não houver dado social, a IA pode dizer "não há evidência salva de canal social próprio", mas não pode inventar perfil, seguidores ou frequência de posts.
 - Para métricas reais de Instagram (seguidores, posts, engajamento), manter fora do MVP sem provider externo pago.
 
-### E-mail v2
+### E-mail v4
 
 O e-mail deve ter:
 
 - assunto consultivo;
 - abertura contextual curta;
-- 2 a 3 achados objetivos;
+- 2 a 3 achados objetivos, explicando por que importam;
 - proposta de valor concreta;
 - CTA leve;
 - tom profissional, sem parecer disparo em massa.
+- corpo estruturado em 5 a 6 parágrafos separados por linha em branco;
+- mínimo de 450 caracteres e rejeição de corpo longo sem parágrafos reais.
 
 ### WhatsApp v2
 
@@ -149,24 +171,24 @@ Separar três níveis:
 - `apps/api/src/leads.ts`: remoção/arquivamento de lead e atividade.
 - `packages/types`, `packages/validation`: contratos novos, se necessário.
 - `apps/web/src/features/pipeline/*`: redesign do detalhe, remover menu do card, drag mais polido, remover lead.
-- `apps/web/src/features/businesses/*`: tabs/visão de métricas/IA/relatório.
-- `packages/integrations/src/ai/*`: prompts v2 e schemas v2.
-- `apps/api/src/ai.ts`: persistir `prompt_version` v2 e montar input enriquecido.
+- `apps/web/src/features/businesses/*`: tabs de visão geral/métricas/IA, resumo de oportunidade e botão de PDF.
+- `packages/integrations/src/ai/*`: prompts versionados e schemas de saída.
+- `apps/api/src/ai.ts`: persistir `prompt_version` por kind e montar input enriquecido.
 - `apps/api/src/reports.ts`: PDF v2 com seções e gráficos simples.
 - Testes de UI, prompts e API.
 
 ## Critérios de aceite
 
-- [ ] PATCH/DELETE do pipeline não falham em CORS no navegador.
-- [ ] Arrastar lead move imediatamente, tem animação mais clara e rollback em erro.
-- [ ] Card do Kanban não tem menu de três pontos para mover estágio.
-- [ ] Usuário consegue remover lead do pipeline com confirmação.
-- [ ] Detalhe do lead tem tabs/seções claras e score integrado ao bloco de potencial.
-- [ ] Atividades ficam em drawer/timeline lateral, sem competir com campos principais.
-- [ ] IA v2 gera resumo mais profundo e cita presença social apenas quando houver evidência.
-- [ ] E-mail v2 fica mais consultivo e contextual.
-- [ ] PDF v2 inclui resumo executivo, métricas visuais e recomendações priorizadas.
-- [ ] "Ações da empresa" removido ou substituído por agrupamento visual discreto.
+- [x] PATCH/DELETE do pipeline não falham em CORS no navegador.
+- [x] Arrastar lead move imediatamente, tem animação mais clara e rollback em erro.
+- [x] Card do Kanban não tem menu de três pontos para mover estágio.
+- [x] Usuário consegue remover lead do pipeline com confirmação.
+- [x] Detalhe do lead tem tabs/seções claras e score integrado ao bloco de potencial.
+- [x] Atividades ficam organizadas em timeline/drawer sem competir com campos principais.
+- [x] IA v2 gera resumo mais profundo e cita presença social apenas quando houver evidência.
+- [x] E-mail v4 fica mais consultivo, contextual e validado por parágrafos.
+- [x] PDF v2 inclui resumo executivo, métricas visuais e recomendações priorizadas.
+- [x] "Ações da empresa" removido ou substituído por agrupamento visual discreto.
 
 ## Testes necessários
 
@@ -220,7 +242,7 @@ Fluxo manual obrigatório:
 
 ## Checklist de conclusão
 
-- [ ] P0 corrigido e validado no navegador.
+- [x] P0 corrigido e coberto por validação técnica.
 - [ ] UX do lead aprovada manualmente.
-- [ ] Gerações IA v2 revisadas em 3 exemplos reais.
+- [ ] Gerações IA revisadas em 3 exemplos reais.
 - [ ] PDF v2 revisado em 2–3 empresas reais.

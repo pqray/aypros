@@ -20,11 +20,14 @@ Dados de produto devem ser buscados em `apps/api` via `NEXT_PUBLIC_API_URL`. Nã
 ['org', orgId, 'businesses', { filters, sort, page }]
 ['org', orgId, 'business', businessId]
 ['org', orgId, 'business', businessId, 'audits']
+['org', orgId, 'business', businessId, 'report']
+['org', orgId, 'business', businessId, 'ai-generations']
 ['org', orgId, 'favorites', { page }]
-['org', orgId, 'pipeline']
+['org', orgId, 'pipeline', { assignedTo }]
 ['org', orgId, 'lead', leadId]
 ['org', orgId, 'lead', leadId, 'notes']
 ['org', orgId, 'activities', { page }]
+['org', orgId, 'organization', 'members']
 ```
 
 ### Configuração
@@ -37,6 +40,14 @@ Dados de produto devem ser buscados em `apps/api` via `NEXT_PUBLIC_API_URL`. Nã
 ## URL como fonte de verdade
 
 Cidade, segmento, filtros, página, ordenação, aba ativa e modo de visualização vivem em **search params**. Regras: links compartilháveis; reload preserva estado; componentes leem da URL (não duplicar em estado local); atualizações via router com debounce em inputs de texto.
+
+Tabs persistentes atuais:
+
+- Empresa: `tab=overview|metrics|ai`.
+- Lead: `tab=lead|ai|notes|activities`.
+- Card de IA: `ai=commercial_summary|whatsapp_message|email_message`.
+
+Gerar conteúdo com IA não pode resetar a aba/sub-aba ativa.
 
 ## Zustand (somente interface)
 

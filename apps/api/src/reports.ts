@@ -1,4 +1,5 @@
 import { reportsConfig } from "@aypros/config";
+import { isFoodSegment, mapCategoriesToSegment, type BusinessSegment } from "@aypros/integrations";
 import type { ApiErrorBody, BusinessReportResponse } from "@aypros/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
@@ -98,6 +99,22 @@ function socialPlatform(business: Pick<BusinessReportRow, "raw">): string | null
 
 function socialOnly(business: Pick<BusinessReportRow, "raw">): boolean {
   return business.raw?.socialOnly === true || business.raw?.social_only === true;
+}
+
+function businessSegmentForReport(
+  business: Pick<BusinessReportRow, "categories" | "raw">,
+): BusinessSegment {
+  const rawSegment = business.raw?.segment ?? business.raw?.business_segment;
+  if (
+    rawSegment === "restaurant" ||
+    rawSegment === "food_service" ||
+    rawSegment === "services" ||
+    rawSegment === "retail" ||
+    rawSegment === "other"
+  ) {
+    return rawSegment;
+  }
+  return mapCategoriesToSegment(business.categories ?? []);
 }
 
 function instagramDetected(params: {
@@ -415,6 +432,7 @@ export function buildReportModel(params: {
   generatedAt?: string;
 }): ReportModel {
   const botBlocked = botBlockedByStatus(params.audit);
+  const foodSegment = isFoodSegment(businessSegmentForReport(params.business));
   const botBlockedNote: ReportFinding = {
     title: "Site com proteção contra acesso automático",
     body: "O site respondeu com bloqueio para a verificação automática — comum em sites atrás de firewall/CDN.",
@@ -445,8 +463,20 @@ export function buildReportModel(params: {
         }),
         translateDetection({ code: "socialLinks", state: detectionState(params.audit, "socialLinks"), audit: params.audit }),
         translateDetection({ code: "linkInBio", state: detectionState(params.audit, "linkInBio"), audit: params.audit }),
-        translateDetection({ code: "deliveryPlatform", state: detectionState(params.audit, "deliveryPlatform"), audit: params.audit }),
-        translateDetection({ code: "menuOnline", state: detectionState(params.audit, "menuOnline"), audit: params.audit }),
+        foodSegment
+          ? translateDetection({
+              code: "deliveryPlatform",
+              state: detectionState(params.audit, "deliveryPlatform"),
+              audit: params.audit,
+            })
+          : null,
+        foodSegment
+          ? translateDetection({
+              code: "menuOnline",
+              state: detectionState(params.audit, "menuOnline"),
+              audit: params.audit,
+            })
+          : null,
       ]
         .filter((finding): finding is ReportFinding => finding !== null)
         // Problemas primeiro: são o que o dono do negócio precisa ver, e o PDF

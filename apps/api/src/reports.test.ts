@@ -131,6 +131,39 @@ describe("buildReportModel", () => {
     expect(titles).not.toContain("Presença concentrada em link-in-bio");
   });
 
+  it("does not include menu or delivery findings outside food segments", () => {
+    const model = buildReportModel({
+      business: {
+        id: "b1",
+        name: "Mais Fitness",
+        address: null,
+        city: "Macaé",
+        state: "RJ",
+        phone: null,
+        website_url: "https://maisfitness.example",
+        rating: null,
+        review_count: null,
+        categories: ["gym"],
+        raw: { segment: "services" },
+      },
+      audit: {
+        ...baseAudit,
+        detections: {
+          deliveryPlatform: { state: "detected" },
+          menuOnline: { state: "not_detected" },
+        },
+      },
+      score: null,
+      organizationName: "Agencia Aypros",
+      senderName: null,
+      generatedAt: "2026-07-17T12:00:00Z",
+    });
+
+    const titles = model.findings.map((finding) => finding.title);
+    expect(titles).not.toContain("Vendas dependem de plataforma de delivery");
+    expect(titles).not.toContain("Sem cardápio online próprio");
+  });
+
   it("includes detected Instagram and social-only context", () => {
     const model = buildReportModel({
       business: {

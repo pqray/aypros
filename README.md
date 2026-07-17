@@ -4,7 +4,7 @@ Plataforma SaaS B2B de prospecção comercial para profissionais que vendem cria
 
 ## Documentação
 
-A fonte oficial de verdade do projeto está em [`/specs`](specs/README.md) — leia o índice antes de qualquer implementação. Decisões arquiteturais em [`/specs/decisions`](specs/decisions/README.md).
+A fonte oficial de verdade do projeto está em [`/specs`](specs/README.md) — leia o índice antes de qualquer implementação. Decisões arquiteturais em [`/specs/decisions`](specs/decisions/README.md). Guia completo de setup local (env vars, Supabase, troubleshooting) em [`docs/setup.md`](docs/setup.md).
 
 ## Stack
 

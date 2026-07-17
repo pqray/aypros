@@ -3,7 +3,7 @@
 import { Sheet, SheetContent, SheetDescription, SheetTitle, cn } from "@aypros/ui";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import React, { useState } from "react";
+import { useState } from "react";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import type { ShellOrganization, ShellUser } from "./app-shell";
 import { isActiveRoute, primaryNavItems, secondaryNavItems, type ShellNavItem } from "./navigation";
@@ -11,11 +11,10 @@ import { isActiveRoute, primaryNavItems, secondaryNavItems, type ShellNavItem } 
 // Labels ficam sempre no DOM em largura natural; a propria animacao de largura da
 // sidebar as revela (clip via overflow-hidden). O fade e so para o texto nao vazar
 // no trilho recolhido — sem delay, senao o nome "chega atrasado".
-function labelStyle(expanded: boolean): React.CSSProperties {
-  return {
-    opacity: expanded ? 1 : 0,
-    transition: expanded ? "opacity 150ms ease-out" : "opacity 100ms ease-in",
-  };
+function labelClasses(expanded: boolean): string {
+  return expanded
+    ? "opacity-100 transition-opacity duration-150 ease-out"
+    : "opacity-0 transition-opacity duration-100 ease-in";
 }
 
 function NavLink({ item, expanded, onNavigate }: { item: ShellNavItem; expanded: boolean; onNavigate?: () => void }) {
@@ -43,8 +42,7 @@ function NavLink({ item, expanded, onNavigate }: { item: ShellNavItem; expanded:
         <Icon className="size-[18px] shrink-0" aria-hidden />
       </span>
       <span
-        className="min-w-0 flex-1 overflow-hidden whitespace-nowrap"
-        style={labelStyle(expanded)}
+        className={cn("min-w-0 flex-1 overflow-hidden whitespace-nowrap", labelClasses(expanded))}
         aria-hidden={!expanded}
       >
         {item.label}
@@ -57,15 +55,19 @@ function SectionHeading({ expanded, label }: { expanded: boolean; label: string 
   return (
     <div className="relative h-7 shrink-0">
       <span
-        className="absolute inset-0 flex items-center overflow-hidden whitespace-nowrap px-3 text-[10px] font-medium uppercase tracking-[0.08em] text-sidebar-foreground/50"
-        style={labelStyle(expanded)}
+        className={cn(
+          "absolute inset-0 flex items-center overflow-hidden whitespace-nowrap px-3 text-[10px] font-medium uppercase tracking-[0.08em] text-sidebar-foreground/50",
+          labelClasses(expanded),
+        )}
         aria-hidden={!expanded}
       >
         {label}
       </span>
       <span
-        className="absolute inset-0 flex items-center justify-center"
-        style={{ opacity: expanded ? 0 : 1, transition: "opacity 200ms ease" }}
+        className={cn(
+          "absolute inset-0 flex items-center justify-center transition-opacity duration-200",
+          expanded ? "opacity-0" : "opacity-100",
+        )}
         aria-hidden
       >
         <span className="h-px w-6 bg-sidebar-border" />
@@ -95,8 +97,10 @@ function SidebarContent({
             </span>
           </span>
           <span
-            className="min-w-0 flex-1 overflow-hidden whitespace-nowrap text-sm font-semibold"
-            style={labelStyle(expanded)}
+            className={cn(
+              "min-w-0 flex-1 overflow-hidden whitespace-nowrap text-sm font-semibold",
+              labelClasses(expanded),
+            )}
             aria-hidden={!expanded}
           >
             Aypros
@@ -122,7 +126,10 @@ function SidebarContent({
             {(organization?.name ?? user?.email ?? "A").slice(0, 1).toUpperCase()}
           </span>
         </span>
-        <div className="min-w-0 flex-1 overflow-hidden" style={labelStyle(expanded)} aria-hidden={!expanded}>
+        <div
+          className={cn("min-w-0 flex-1 overflow-hidden", labelClasses(expanded))}
+          aria-hidden={!expanded}
+        >
           <p className="truncate text-xs font-medium">{organization?.name ?? "Sem organizacao"}</p>
           <p className="truncate text-xs text-sidebar-foreground/60">
             {user?.fullName || user?.email || "Carregando"}

@@ -42,7 +42,7 @@ export function SearchesView() {
     <div className="space-y-4">
       <PageHeader
         title="Pesquisas"
-        description="Historico de pesquisas da organizacao."
+        description="Histórico de pesquisas da organização."
         className="pb-2"
         actions={
           <Button asChild>

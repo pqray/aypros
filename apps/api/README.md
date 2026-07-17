@@ -33,7 +33,7 @@ pnpm docker:api:down
 
 ## Fallback sem Docker
 
-Use apenas se o Docker Desktop nao estiver disponivel:
+Use apenas se o Docker Desktop não estiver disponivel:
 
 ```bash
 pnpm dev:api
@@ -59,6 +59,6 @@ Obrigatorio:
 
 ## Regras
 
-- Novos endpoints de produto devem nascer aqui, nao em `apps/web/src/app/api`.
-- Toda rota com dados de organizacao deve validar sessao e membership.
-- Logs nao podem conter cookies, tokens ou secrets.
+- Novos endpoints de produto devem nascer aqui, não em `apps/web/src/app/api`.
+- Toda rota com dados de organização deve validar sessão e membership.
+- Logs não podem conter cookies, tokens ou secrets.

@@ -41,7 +41,7 @@ export const whatsappMessageOutputSchema = z.object({
 
 export const emailMessageOutputSchema = z.object({
   subject: line(200),
-  // email-v4 exige corpo estruturado; bloco raso ou curto demais nao passa.
+  // email-v4 exige corpo estruturado; bloco raso ou curto demais não passa.
   body: z
     .string()
     .trim()

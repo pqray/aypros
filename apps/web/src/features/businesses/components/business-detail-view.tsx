@@ -57,7 +57,7 @@ import { SegmentAuditDetailBadges } from "./segment-audit-badges";
 
 const confidenceLabels = {
   low: "Baixa",
-  medium: "Media",
+  medium: "Média",
   high: "Alta",
 } as const;
 
@@ -98,14 +98,14 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
   function handleAudit() {
     audit.mutate(undefined, {
       onSuccess: () => toast.success("Auditoria concluida."),
-      onError: () => toast.error("Nao foi possivel auditar o site."),
+      onError: () => toast.error("Não foi possível auditar o site."),
     });
   }
 
   function handleRefresh() {
     refresh.mutate(undefined, {
       onSuccess: () => toast.success("Dados atualizados."),
-      onError: () => toast.error("Nao foi possivel atualizar os dados."),
+      onError: () => toast.error("Não foi possível atualizar os dados."),
     });
   }
 
@@ -113,16 +113,16 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
     if (!summary.data) return;
     toggleFavorite.mutate(
       { businessId, favorited: !summary.data.favorited },
-      { onError: () => toast.error("Nao foi possivel atualizar o favorito.") },
+      { onError: () => toast.error("Não foi possível atualizar o favorito.") },
     );
   }
 
   function handleAddToPipeline() {
     createLead.mutate(businessId, {
       onSuccess: (response) => {
-        toast.success(response.created ? "Lead adicionado ao pipeline." : "Esta empresa ja esta no pipeline.");
+        toast.success(response.created ? "Lead adicionado ao pipeline." : "Esta empresa já está no pipeline.");
       },
-      onError: () => toast.error("Nao foi possivel adicionar ao pipeline."),
+      onError: () => toast.error("Não foi possível adicionar ao pipeline."),
     });
   }
 
@@ -131,9 +131,9 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
     setReportDownloading(true);
     try {
       await downloadBusinessReportPdf(businessId, summary.data.business.name);
-      toast.success("Diagnostico baixado.");
+      toast.success("Diagnóstico baixado.");
     } catch {
-      toast.error("Nao foi possivel baixar o diagnostico.");
+      toast.error("Não foi possível baixar o diagnóstico.");
     } finally {
       setReportDownloading(false);
     }
@@ -152,8 +152,8 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
     return (
       <EmptyState
         icon={<PiWarningCircle />}
-        title="Empresa nao encontrada"
-        description="Nao encontramos esta empresa no historico da organizacao."
+        title="Empresa não encontrada"
+        description="Não encontramos esta empresa no histórico da organização."
         action={
           <Button asChild variant="outline">
             <Link href="/businesses">Voltar para empresas</Link>
@@ -246,7 +246,7 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
                   }}
                 >
                   <PiDownloadSimple aria-hidden />
-                  Baixar diagnostico (PDF)
+                  Baixar diagnóstico (PDF)
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
@@ -273,7 +273,7 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
           {location ? (
             <BusinessMetaItem
               icon={<PiMapPin className="size-4" aria-hidden />}
-              label="Endereco"
+              label="Endereço"
               value={location}
             />
           ) : null}

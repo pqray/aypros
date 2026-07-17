@@ -203,7 +203,7 @@ export function registerAiRoutes(app: FastifyInstance, options: AiRoutesOptions 
   app.get("/v1/businesses/:businessId/ai-generations", async (request, reply) => {
     const params = businessIdParamSchema.safeParse(request.params);
     if (!params.success) {
-      return reply.code(400).send({ error: "Id invalido" } satisfies ApiErrorBody);
+      return reply.code(400).send({ error: "Id inválido" } satisfies ApiErrorBody);
     }
 
     const ctx = await requireOrgContext(request, reply);
@@ -223,23 +223,23 @@ export function registerAiRoutes(app: FastifyInstance, options: AiRoutesOptions 
       } satisfies AiGenerationsResponse);
     } catch (error) {
       request.log.error({ err: error }, "ai generations list failed");
-      return reply.code(500).send({ error: "Erro ao carregar geracoes" } satisfies ApiErrorBody);
+      return reply.code(500).send({ error: "Erro ao carregar gerações" } satisfies ApiErrorBody);
     }
   });
 
   app.post("/v1/businesses/:businessId/ai-generations", async (request, reply) => {
     const params = businessIdParamSchema.safeParse(request.params);
     if (!params.success) {
-      return reply.code(400).send({ error: "Id invalido" } satisfies ApiErrorBody);
+      return reply.code(400).send({ error: "Id inválido" } satisfies ApiErrorBody);
     }
     const body = generateAiSchema.safeParse(request.body);
     if (!body.success) {
-      return reply.code(400).send({ error: "Tipo de geracao invalido" } satisfies ApiErrorBody);
+      return reply.code(400).send({ error: "Tipo de geracao inválido" } satisfies ApiErrorBody);
     }
 
     if (!provider) {
       return reply.code(503).send({
-        error: "Geracao com IA nao esta configurada neste ambiente",
+        error: "Geração com IA não está configurada neste ambiente",
         code: "AI_NOT_CONFIGURED",
       } satisfies ApiErrorBody);
     }
@@ -249,7 +249,7 @@ export function registerAiRoutes(app: FastifyInstance, options: AiRoutesOptions 
 
     try {
       if (!(await canAccessBusiness(serviceDb, ctx.orgId, params.data.businessId))) {
-        return reply.code(404).send({ error: "Empresa nao encontrada" } satisfies ApiErrorBody);
+        return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
       await ensureAiRateLimit(serviceDb, ctx.orgId);
 
@@ -280,7 +280,7 @@ export function registerAiRoutes(app: FastifyInstance, options: AiRoutesOptions 
         ]);
 
       if (businessResult.error || !businessResult.data) {
-        return reply.code(404).send({ error: "Empresa nao encontrada" } satisfies ApiErrorBody);
+        return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
 
       const input = toAiInput({
@@ -349,12 +349,12 @@ export function registerAiRoutes(app: FastifyInstance, options: AiRoutesOptions 
     } catch (error) {
       if (error instanceof Error && error.name === "RateLimitError") {
         return reply.code(429).send({
-          error: "Limite diario de geracoes com IA atingido",
+          error: "Limite diario de gerações com IA atingido",
           code: "RATE_LIMITED",
         } satisfies ApiErrorBody);
       }
       request.log.error({ err: error }, "ai generation failed");
-      return reply.code(500).send({ error: "Erro ao gerar conteudo" } satisfies ApiErrorBody);
+      return reply.code(500).send({ error: "Erro ao gerar conteúdo" } satisfies ApiErrorBody);
     }
   });
 }

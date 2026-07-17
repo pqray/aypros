@@ -55,7 +55,7 @@ export function OrganizationMembersCard({
       toast.success("Membro adicionado.");
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel adicionar o membro.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível adicionar o membro.");
     },
   });
 
@@ -73,7 +73,7 @@ export function OrganizationMembersCard({
     <Card>
       <CardHeader>
         <CardTitle>Membros</CardTitle>
-        <CardDescription>Adicione usuarios ja cadastrados para dividir leads e responsabilidades.</CardDescription>
+        <CardDescription>Adicione usuários já cadastrados para dividir leads e responsabilidades.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         {canManage ? (

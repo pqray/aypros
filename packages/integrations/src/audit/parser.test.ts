@@ -57,7 +57,7 @@ describe("parseHtmlAudit", () => {
       status: 200,
       html: `
         <html>
-          <head><title>Site antigo exemplo</title><meta name="description" content="Descricao suficiente para teste." /></head>
+          <head><title>Site antigo exemplo</title><meta name="description" content="Descrição suficiente para teste." /></head>
           <body><footer>Copyright 2018</footer></body>
         </html>
       `,

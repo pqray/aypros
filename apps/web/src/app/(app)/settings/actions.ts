@@ -47,7 +47,7 @@ export async function updateProfileAction(
     .eq("id", userId);
 
   if (error) {
-    return { error: "Nao foi possivel atualizar o perfil." };
+    return { error: "Não foi possível atualizar o perfil." };
   }
 
   revalidatePath("/settings/profile");
@@ -64,7 +64,7 @@ export async function updateOrganizationAction(
   const organizationId = getString(formData, "organizationId");
 
   if (!parsed.success || !organizationId) {
-    return { error: parsed.success ? "Organizacao invalida." : parsed.error.issues[0]?.message };
+    return { error: parsed.success ? "Organização invalida." : parsed.error.issues[0]?.message };
   }
 
   const { supabase } = await getUserId();
@@ -74,9 +74,9 @@ export async function updateOrganizationAction(
     .eq("id", organizationId);
 
   if (error) {
-    return { error: "Nao foi possivel atualizar a organizacao." };
+    return { error: "Não foi possível atualizar a organização." };
   }
 
   revalidatePath("/settings/organization");
-  return { success: "Organizacao atualizada." };
+  return { success: "Organização atualizada." };
 }

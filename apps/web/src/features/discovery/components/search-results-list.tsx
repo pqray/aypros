@@ -183,7 +183,7 @@ export function SearchResultsList({
         title={running ? "Procurando empresas..." : "Nenhuma empresa encontrada"}
         description={
           running
-            ? "Os resultados aparecem aqui conforme sao descobertos."
+            ? "Os resultados aparecem aqui conforme são descobertos."
             : "Tente ajustar a cidade ou o segmento da pesquisa."
         }
       />
@@ -228,13 +228,13 @@ export function SearchResultsList({
             value={String(pageSize)}
             onValueChange={(value) => onPageSizeChange(Number(value) as PageSize)}
           >
-            <SelectTrigger className="h-8 w-40" aria-label="Resultados por pagina">
+            <SelectTrigger className="h-8 w-40" aria-label="Resultados por página">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {pageSizes.map((option) => (
                 <SelectItem key={option} value={String(option)}>
-                  {option} por pagina
+                  {option} por página
                 </SelectItem>
               ))}
             </SelectContent>

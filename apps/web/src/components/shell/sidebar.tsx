@@ -9,9 +9,9 @@ import { useSidebarStore } from "@/stores/sidebar-store";
 import type { ShellOrganization, ShellUser } from "./app-shell";
 import { isActiveRoute, primaryNavItems, secondaryNavItems, type ShellNavItem } from "./navigation";
 
-// Labels ficam sempre no DOM em largura natural; a propria animacao de largura da
-// sidebar as revela (clip via overflow-hidden). O fade e so para o texto nao vazar
-// no trilho recolhido — sem delay, senao o nome "chega atrasado".
+// Labels ficam sempre no DOM em largura natural; a própria animacao de largura da
+// sidebar as revela (clip via overflow-hidden). O fade e só para o texto não vazar
+// no trilho recolhido — sem delay, senão o nome "chega atrásado".
 function labelClasses(expanded: boolean): string {
   return expanded
     ? "opacity-100 transition-opacity duration-150 ease-out"
@@ -19,7 +19,7 @@ function labelClasses(expanded: boolean): string {
 }
 
 /**
- * Feedback imediato no clique: enquanto o App Router busca a rota, o ícone do
+ * Feedback imédiato no clique: enquanto o App Router busca a rota, o ícone do
  * item clicado vira spinner (useLinkStatus). Sem isso o clique parece morto
  * até a página nova chegar.
  */
@@ -101,7 +101,7 @@ function SidebarContent({
   organization: ShellOrganization;
   onNavigate?: () => void;
 }) {
-  const organizationName = organization?.name ?? "Sem organizacao";
+  const organizationName = organization?.name ?? "Sem organização";
   const organizationInitial = organizationName.slice(0, 1).toUpperCase();
 
   return (
@@ -169,7 +169,7 @@ export function Sidebar({ user, organization }: { user: ShellUser | null; organi
 
   return (
     <>
-      {/* Spacer fixo do trilho de icones; a expansao acontece por cima do conteudo */}
+      {/* Spacer fixo do trilho de icones; a expansão acontece por cima do conteúdo */}
       <div className="hidden w-16 shrink-0 lg:block" aria-hidden />
 
       <aside

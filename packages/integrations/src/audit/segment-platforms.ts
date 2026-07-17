@@ -57,7 +57,7 @@ export const SEGMENT_PLATFORM_DEFINITIONS: PlatformDefinition[] = [
   {
     id: "cardapio_web",
     kind: "delivery_platform",
-    label: "Cardapio Web",
+    label: "Cardápio Web",
     domains: ["cardapioweb.com"],
     htmlSignatures: ["cardapio web", "cardapioweb"],
   },

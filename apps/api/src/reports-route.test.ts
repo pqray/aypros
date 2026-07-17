@@ -69,8 +69,8 @@ function createServiceDb(options: { reportCount?: number } = {}) {
             score: 75,
             level: "high",
             confidence: "low",
-            reasons: [{ code: "no_site", label: "Nao possui site proprio", impact: 40 }],
-            suggested_services: ["Criacao de site"],
+            reasons: [{ code: "no_site", label: "Não possui site próprio", impact: 40 }],
+            suggested_services: ["Criação de site"],
             created_at: "2026-07-17T12:00:00Z",
           },
           error: null,
@@ -125,7 +125,7 @@ describe("report routes", () => {
     });
 
     expect(response.statusCode).toBe(404);
-    expect(response.json()).toEqual({ error: "Empresa nao encontrada" });
+    expect(response.json()).toEqual({ error: "Empresa não encontrada" });
 
     await app.close();
   });

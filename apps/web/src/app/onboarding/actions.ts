@@ -55,10 +55,10 @@ export async function completeOnboardingAction(
   );
 
   if (profileError) {
-    return { error: "Nao foi possivel atualizar seu perfil." };
+    return { error: "Não foi possível atualizar seu perfil." };
   }
 
-  const baseSlug = slugify(parsed.data.organizationName) || "organizacao";
+  const baseSlug = slugify(parsed.data.organizationName) || "organização";
   const slug = `${baseSlug}-${user.id.slice(0, 8)}`;
   const organizationId = crypto.randomUUID();
   const { error: organizationError } = await supabase.from("organizations").insert({
@@ -69,7 +69,7 @@ export async function completeOnboardingAction(
   });
 
   if (organizationError) {
-    return { error: "Nao foi possivel criar a organizacao." };
+    return { error: "Não foi possível criar a organização." };
   }
 
   const { error: memberError } = await supabase.from("organization_members").insert({
@@ -79,7 +79,7 @@ export async function completeOnboardingAction(
   });
 
   if (memberError) {
-    return { error: "Nao foi possivel vincular seu usuario a organizacao." };
+    return { error: "Não foi possível vincular seu usuário a organização." };
   }
 
   const { error: completionError } = await supabase
@@ -88,7 +88,7 @@ export async function completeOnboardingAction(
     .eq("id", user.id);
 
   if (completionError) {
-    return { error: "Nao foi possivel finalizar o onboarding." };
+    return { error: "Não foi possível finalizar o onboarding." };
   }
 
   redirect("/dashboard");

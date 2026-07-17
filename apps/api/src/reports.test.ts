@@ -25,7 +25,7 @@ describe("translateDetection", () => {
       translateDetection({ code: "hasViewport", state: "inconclusive", audit: null }),
     ).toMatchObject({
       status: "unknown",
-      title: "Adaptacao para celular",
+      title: "Adaptação para celular",
     });
   });
 
@@ -34,7 +34,7 @@ describe("translateDetection", () => {
       translateDetection({ code: "hasViewport", state: "not_detected", audit: null }),
     ).toMatchObject({
       status: "problem",
-      title: "Site nao se adapta bem ao celular",
+      title: "Site não se adapta bem ao celular",
     });
   });
 
@@ -87,10 +87,10 @@ describe("buildReportModel", () => {
 
     expect(model.findings[0]).toMatchObject({
       status: "problem",
-      title: "Empresa sem site proprio",
+      title: "Empresa sem site próprio",
     });
-    expect(model.suggestions).toContain("Criacao de site");
-    expect(model.maturity.find((axis) => axis.label === "Site proprio")?.value).toBe(10);
+    expect(model.suggestions).toContain("Criação de site");
+    expect(model.maturity.find((axis) => axis.label === "Site próprio")?.value).toBe(10);
     expect(model.recommendations[0]).toMatchObject({ priority: "alta" });
     expect(model.nextSteps).toHaveLength(3);
   });
@@ -126,16 +126,16 @@ describe("buildReportModel", () => {
 
     const titles = model.findings.map((finding) => finding.title);
     expect(titles).toContain("Vendas dependem de plataforma de delivery");
-    expect(titles).toContain("Sem cardapio online proprio");
+    expect(titles).toContain("Sem cardápio online próprio");
     // inconclusive nunca vira achado social afirmado
-    expect(titles).not.toContain("Presenca concentrada em link-in-bio");
+    expect(titles).not.toContain("Presença concentrada em link-in-bio");
   });
 
-  it("prioritizes problems as alta and suggestions as media", () => {
+  it("prioritizes problems as alta and suggestions as média", () => {
     const model = buildReportModel({
       business: {
         id: "b1",
-        name: "Loja X",
+        name: "Lojá X",
         address: null,
         city: null,
         state: null,
@@ -156,7 +156,7 @@ describe("buildReportModel", () => {
         level: "high",
         confidence: "medium",
         reasons: [],
-        suggested_services: ["Criacao de site moderno"],
+        suggested_services: ["Criação de site moderno"],
         created_at: "2026-07-17T12:00:00Z",
       },
       organizationName: "Agencia",
@@ -164,10 +164,10 @@ describe("buildReportModel", () => {
     });
 
     const altas = model.recommendations.filter((rec) => rec.priority === "alta");
-    const medias = model.recommendations.filter((rec) => rec.priority === "media");
+    const médias = model.recommendations.filter((rec) => rec.priority === "media");
     expect(altas.length).toBeGreaterThan(0);
-    expect(medias.map((rec) => rec.text)).toContain("Criacao de site moderno");
-    // alta sempre vem antes de media
+    expect(médias.map((rec) => rec.text)).toContain("Criação de site moderno");
+    // alta sempre vem antes de média
     expect(model.recommendations.findIndex((rec) => rec.priority === "media")).toBeGreaterThan(
       model.recommendations.findIndex((rec) => rec.priority === "alta"),
     );
@@ -179,7 +179,7 @@ describe("bot-blocked sites (HTTP 401/403/429)", () => {
     buildReportModel({
       business: {
         id: "b1",
-        name: "Loja Protegida",
+        name: "Lojá Protegida",
         address: null,
         city: null,
         state: null,
@@ -203,7 +203,7 @@ describe("bot-blocked sites (HTTP 401/403/429)", () => {
 
   it("explains the block instead of showing a raw status", () => {
     const note = friendlyHttpStatusNote({ ...baseAudit, http_status: 403 });
-    expect(note).toContain("bloqueou a verificacao automatica");
+    expect(note).toContain("bloqueou a verificação automática");
     expect(note).not.toContain("403");
     expect(friendlyHttpStatusNote({ ...baseAudit, http_status: 200 })).toContain("no ar");
   });
@@ -211,32 +211,32 @@ describe("bot-blocked sites (HTTP 401/403/429)", () => {
   it("never claims the site is down when it just blocks bots", () => {
     const model = blockedModel();
     const titles = model.findings.map((finding) => finding.title);
-    expect(titles).not.toContain("O site pode estar indisponivel");
+    expect(titles).not.toContain("O site pode estar indisponível");
     expect(model.findings[0]).toMatchObject({
-      title: "Site com protecao contra acesso automatico",
+      title: "Site com proteção contra acesso automático",
       status: "unknown",
     });
   });
 
   it("exposes the friendly note in the JSON response", () => {
     const response = buildReportResponse(blockedModel());
-    expect(response.httpStatusNote).toContain("bloqueou a verificacao automatica");
+    expect(response.httpStatusNote).toContain("bloqueou a verificação automática");
     expect(response.httpStatusNote).not.toContain("403");
-    expect(response.summary).toContain("Loja Protegida");
+    expect(response.summary).toContain("Lojá Protegida");
     expect(response.maturity.length).toBeGreaterThan(0);
     expect(response.nextSteps).toHaveLength(3);
   });
 });
 
 describe("buildMaturityAxes", () => {
-  it("marks unaudited axes as null (nao verificado) instead of low score", () => {
+  it("marks unaudited axes as null (não verificado) instead of low score", () => {
     const axes = buildMaturityAxes({
       business: { website_url: "https://example.com" },
       audit: null,
     });
 
-    expect(axes.find((axis) => axis.label === "Site proprio")?.value).toBe(90);
-    expect(axes.find((axis) => axis.label === "Adaptacao para celular")?.value).toBeNull();
+    expect(axes.find((axis) => axis.label === "Site próprio")?.value).toBe(90);
+    expect(axes.find((axis) => axis.label === "Adaptação para celular")?.value).toBeNull();
     expect(axes.find((axis) => axis.label === "Velocidade")?.value).toBeNull();
   });
 
@@ -255,10 +255,10 @@ describe("buildMaturityAxes", () => {
       },
     });
 
-    expect(axes.find((axis) => axis.label === "Adaptacao para celular")?.value).toBe(90);
-    expect(axes.find((axis) => axis.label === "SEO basico")?.value).toBe(58);
+    expect(axes.find((axis) => axis.label === "Adaptação para celular")?.value).toBe(90);
+    expect(axes.find((axis) => axis.label === "SEO básico")?.value).toBe(58);
     expect(axes.find((axis) => axis.label === "Velocidade")?.value).toBe(60);
-    expect(axes.find((axis) => axis.label === "Confianca (HTTPS)")?.value).toBe(90);
+    expect(axes.find((axis) => axis.label === "Confiança (HTTPS)")?.value).toBe(90);
   });
 
   it("gives every axis a floor value when there is no website at all", () => {

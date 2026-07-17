@@ -28,7 +28,7 @@ export function ActivitiesBlock({
     <Card>
       <CardHeader>
         <CardTitle>Atividades recentes</CardTitle>
-        <CardDescription>O que aconteceu por ultimo na organizacao.</CardDescription>
+        <CardDescription>O que aconteceu por último na organização.</CardDescription>
       </CardHeader>
       <CardContent>
         {activities.length === 0 ? (

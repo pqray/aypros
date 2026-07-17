@@ -378,19 +378,19 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
   app.post("/v1/organization/members", async (request, reply) => {
     const body = addOrganizationMemberSchema.safeParse(request.body ?? {});
     if (!body.success) {
-      return reply.code(400).send({ error: "Dados invalidos" } satisfies ApiErrorBody);
+      return reply.code(400).send({ error: "Dados inválidos" } satisfies ApiErrorBody);
     }
 
     const ctx = await requireOrgContext(request, reply);
     if (!ctx) return;
     if (ctx.role !== "owner" && ctx.role !== "admin") {
-      return reply.code(403).send({ error: "Sem permissao para adicionar membros" } satisfies ApiErrorBody);
+      return reply.code(403).send({ error: "Sem permissão para adicionar membros" } satisfies ApiErrorBody);
     }
 
     try {
       const user = await findAuthUserByEmail(serviceDb, body.data.email);
       if (!user) {
-        return reply.code(404).send({ error: "Usuario nao encontrado. Ele precisa se cadastrar primeiro." } satisfies ApiErrorBody);
+        return reply.code(404).send({ error: "Usuário não encontrado. Ele precisa se cadastrar primeiro." } satisfies ApiErrorBody);
       }
 
       const { data: existingMember, error: existingError } = await serviceDb
@@ -432,7 +432,7 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
   app.get("/v1/pipeline", async (request, reply) => {
     const query = pipelineQuerySchema.safeParse(request.query ?? {});
     if (!query.success) {
-      return reply.code(400).send({ error: "Parametros invalidos" } satisfies ApiErrorBody);
+      return reply.code(400).send({ error: "Parametros inválidos" } satisfies ApiErrorBody);
     }
 
     const ctx = await requireOrgContext(request, reply);
@@ -656,7 +656,7 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
     if (input.assignedTo !== undefined) {
       const assignedTo = await ensureAssignedMember(serviceDb, ctx.orgId, input.assignedTo);
       if (assignedTo === undefined) {
-        return reply.code(400).send({ error: "Responsavel invalido" } satisfies ApiErrorBody);
+        return reply.code(400).send({ error: "Responsavel inválido" } satisfies ApiErrorBody);
       }
       updates.assigned_to = assignedTo;
     }

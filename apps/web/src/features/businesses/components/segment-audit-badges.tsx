@@ -35,7 +35,7 @@ export function SegmentAuditBadges({
       {!compact ? <Badge variant="muted">{segmentLabels[segment]}</Badge> : null}
       {linkInBio ? <Badge variant="warning">Link-in-bio</Badge> : null}
       {deliveryPlatform ? <Badge variant="info">Delivery</Badge> : null}
-      {isFoodSegment(segment) && menuOnline ? <Badge variant="success">Cardapio</Badge> : null}
+      {isFoodSegment(segment) && menuOnline ? <Badge variant="success">Cardápio</Badge> : null}
     </>
   );
 }
@@ -57,10 +57,10 @@ export function SegmentAuditDetailBadges({
       {linkInBio ? <Badge variant="warning">Atende por link-in-bio</Badge> : null}
       {deliveryPlatform ? <Badge variant="info">Plataforma de delivery</Badge> : null}
       {isFoodSegment(segment) && menuOnline === "detected" ? (
-        <Badge variant="success">Cardapio online</Badge>
+        <Badge variant="success">Cardápio online</Badge>
       ) : null}
       {isFoodSegment(segment) && menuOnline === "not_detected" ? (
-        <Badge variant="warning">Sem cardapio online</Badge>
+        <Badge variant="warning">Sem cardápio online</Badge>
       ) : null}
     </div>
   );

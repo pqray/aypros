@@ -382,7 +382,7 @@ export function registerAuditRoutes(app: FastifyInstance, options: AuditRoutesOp
   app.get("/v1/businesses/:businessId/audit-summary", async (request, reply) => {
     const params = businessIdParamSchema.safeParse(request.params);
     if (!params.success) {
-      return reply.code(400).send({ error: "Id invalido" } satisfies ApiErrorBody);
+      return reply.code(400).send({ error: "Id inválido" } satisfies ApiErrorBody);
     }
 
     const ctx = await requireOrgContext(request, reply);
@@ -400,7 +400,7 @@ export function registerAuditRoutes(app: FastifyInstance, options: AuditRoutesOp
         throw new Error(error.message);
       }
       if (!data) {
-        return reply.code(404).send({ error: "Empresa nao encontrada" } satisfies ApiErrorBody);
+        return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
 
       const row = data as AuditSummaryRpcRow;
@@ -461,7 +461,7 @@ export function registerAuditRoutes(app: FastifyInstance, options: AuditRoutesOp
   app.post("/v1/businesses/:businessId/audit", async (request, reply) => {
     const params = businessIdParamSchema.safeParse(request.params);
     if (!params.success) {
-      return reply.code(400).send({ error: "Id invalido" } satisfies ApiErrorBody);
+      return reply.code(400).send({ error: "Id inválido" } satisfies ApiErrorBody);
     }
 
     const ctx = await requireOrgContext(request, reply);
@@ -476,7 +476,7 @@ export function registerAuditRoutes(app: FastifyInstance, options: AuditRoutesOp
       });
 
       if (!result) {
-        return reply.code(404).send({ error: "Empresa nao encontrada" } satisfies ApiErrorBody);
+        return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
 
       return reply.code(202).send(result);

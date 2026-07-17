@@ -27,7 +27,7 @@ export function OnboardingClient() {
       <Card className="w-full max-w-lg">
         <CardHeader>
           <CardTitle className="text-xl">Primeira configuracao</CardTitle>
-          <CardDescription>Complete seu perfil e crie a organizacao de trabalho.</CardDescription>
+          <CardDescription>Complete seu perfil e crie a organização de trabalho.</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (

@@ -98,12 +98,12 @@ vi.mock("../queries", () => ({
   useBusinessReport: () => ({
     isLoading: false,
     data: {
-      summary: "Diagnostico consultivo da presenca digital.",
+      summary: "Diagnóstico consultivo da presença digital.",
       httpStatusNote: "Site respondeu com HTTP 200.",
       findings: [
         {
           title: "Metadados incompletos",
-          body: "A pagina nao tem description adequada.",
+          body: "A página não tem description adequada.",
           impact: "Isso pode reduzir a clareza no Google.",
           status: "problem",
         },
@@ -112,7 +112,7 @@ vi.mock("../queries", () => ({
       nextSteps: ["Priorizar SEO local."],
       maturity: [
         { label: "Site", value: 80 },
-        { label: "SEO basico", value: 45 },
+        { label: "SEO básico", value: 45 },
       ],
     },
   }),
@@ -143,14 +143,14 @@ describe("BusinessDetailView", () => {
     expect(screen.getByText("Padaria Central")).toBeTruthy();
     // Visão geral (tab default): presença digital com sinais de segmento.
     expect(screen.getByText("Plataforma de delivery")).toBeTruthy();
-    expect(screen.getByText("Sem cardapio online")).toBeTruthy();
+    expect(screen.getByText("Sem cardápio online")).toBeTruthy();
 
     await user.click(screen.getByRole("tab", { name: "Métricas" }));
 
     expect(await screen.findByText("Potencial da oportunidade")).toBeTruthy();
     expect(screen.getByLabelText(/score 43 de 100/i)).toBeTruthy();
     expect(screen.getByText("Maturidade digital")).toBeTruthy();
-    expect(screen.getByLabelText(/SEO basico: 45 de 100/i)).toBeTruthy();
+    expect(screen.getByLabelText(/SEO básico: 45 de 100/i)).toBeTruthy();
     expect(screen.getByText("Sem title/description adequados")).toBeTruthy();
   });
 

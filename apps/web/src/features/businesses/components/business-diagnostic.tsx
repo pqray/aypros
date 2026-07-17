@@ -62,7 +62,7 @@ export function DiagnosticOverviewCard({
         <div>
           <CardTitle>Resumo da oportunidade</CardTitle>
           <p className="mt-1 text-sm text-muted-foreground">
-            Diagnostico comercial no app; o PDF fica como material opcional.
+            Diagnóstico comercial no app; o PDF fica como material opcional.
           </p>
         </div>
         <Button variant="outline" size="sm" loading={downloading} onClick={onDownloadPdf}>
@@ -79,7 +79,7 @@ export function DiagnosticOverviewCard({
             <div className="min-w-0 space-y-2">
               <p className="text-sm leading-6 text-foreground">{summary}</p>
               {httpStatusNote ? (
-                <Badge variant="secondary">Verificacao automatica limitada</Badge>
+                <Badge variant="secondary">Verificação automática limitada</Badge>
               ) : null}
             </div>
           </div>
@@ -88,15 +88,15 @@ export function DiagnosticOverviewCard({
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-lg border p-3">
             <p className="text-2xl font-semibold">{problemCount}</p>
-            <p className="text-xs text-muted-foreground">pontos de atencao</p>
+            <p className="text-xs text-muted-foreground">pontos de atenção</p>
           </div>
           <div className="rounded-lg border p-3">
             <p className="text-2xl font-semibold">{recommendations.length}</p>
-            <p className="text-xs text-muted-foreground">recomendacoes</p>
+            <p className="text-xs text-muted-foreground">recomendações</p>
           </div>
           <div className="rounded-lg border p-3">
             <p className="text-2xl font-semibold">{unknownCount}</p>
-            <p className="text-xs text-muted-foreground">nao verificados</p>
+            <p className="text-xs text-muted-foreground">não verificados</p>
           </div>
         </div>
 
@@ -154,11 +154,11 @@ export function DiagnosticOverviewCard({
 
 function axisTone(value: number | null): { label: string; className: string; color: string } {
   if (value === null) {
-    return { label: "Nao verificado", className: "text-muted-foreground", color: "hsl(var(--muted))" };
+    return { label: "Não verificado", className: "text-muted-foreground", color: "hsl(var(--muted))" };
   }
   if (value >= 70) return { label: "Forte", className: "text-success", color: "hsl(var(--success))" };
-  if (value >= 40) return { label: "Medio", className: "text-warning", color: "hsl(var(--warning))" };
-  return { label: "Critico", className: "text-destructive", color: "hsl(var(--destructive))" };
+  if (value >= 40) return { label: "Médio", className: "text-warning", color: "hsl(var(--warning))" };
+  return { label: "Crítico", className: "text-destructive", color: "hsl(var(--destructive))" };
 }
 
 function AxisGauge({ label, value }: { label: string; value: number | null }) {
@@ -187,7 +187,7 @@ function AxisGauge({ label, value }: { label: string; value: number | null }) {
       <Progress
         className="mt-3"
         value={percent}
-        aria-label={`${label}: ${value === null ? "nao verificado" : `${value} de 100`}`}
+        aria-label={`${label}: ${value === null ? "não verificado" : `${value} de 100`}`}
         indicatorClassName={value === null ? "bg-muted" : barToneClass(value)}
       />
     </div>
@@ -225,7 +225,7 @@ export function MaturityCard({
       </CardHeader>
       <CardContent className="space-y-4">
         {report.data.httpStatusNote ? (
-          <Badge variant="secondary">Verificacao automatica limitada</Badge>
+          <Badge variant="secondary">Verificação automática limitada</Badge>
         ) : null}
 
         <div className="grid gap-3 sm:grid-cols-2">

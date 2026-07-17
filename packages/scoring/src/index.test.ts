@@ -31,7 +31,7 @@ describe("calculateOpportunityScore", () => {
     expect(result.level).toBe("high");
     expect(result.confidence).toBe("low");
     expect(result.reasons.map((reason) => reason.code)).toContain("no_site");
-    expect(result.suggestedServices).toContain("Criacao de site");
+    expect(result.suggestedServices).toContain("Criação de site");
     expect(result.algorithmVersion).toBe("v2");
   });
 
@@ -82,7 +82,7 @@ describe("calculateOpportunityScore", () => {
 
     expect(result.score).toBe(0);
     expect(result.reasons).toEqual([
-      { code: "low_activity", label: "Pouquissima atividade", impact: -10 },
+      { code: "low_activity", label: "Pouquíssima atividade", impact: -10 },
     ]);
   });
 
@@ -164,7 +164,7 @@ describe("calculateOpportunityScore", () => {
       expect.arrayContaining(["link_in_bio_only", "delivery_dependency", "no_menu_online"]),
     );
     expect(result.score).toBe(47);
-    expect(result.suggestedServices).toContain("Cardapio online");
+    expect(result.suggestedServices).toContain("Cardápio online");
   });
 
   it("does not apply menu or delivery reasons outside food segments", () => {

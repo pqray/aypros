@@ -48,17 +48,17 @@ export type OpportunityScoreResult = {
 };
 
 const SERVICES_BY_REASON: Record<string, string[]> = {
-  no_site: ["Criacao de site"],
-  social_only: ["Criacao de site"],
-  site_down: ["Manutencao de site", "Reformulacao"],
-  no_https: ["Seguranca e HTTPS"],
+  no_site: ["Criação de site"],
+  social_only: ["Criação de site"],
+  site_down: ["Manutenção de site", "Reformulação"],
+  no_https: ["Segurança e HTTPS"],
   no_viewport: ["Site responsivo"],
-  outdated: ["Reformulacao"],
+  outdated: ["Reformulação"],
   weak_metadata: ["SEO local"],
-  basic_builder: ["Reformulacao"],
-  link_in_bio_only: ["Criacao de site", "Presenca digital propria"],
-  delivery_dependency: ["Criacao de site", "Cardapio online"],
-  no_menu_online: ["Cardapio online", "SEO local"],
+  basic_builder: ["Reformulação"],
+  link_in_bio_only: ["Criação de site", "Presença digital própria"],
+  delivery_dependency: ["Criação de site", "Cardápio online"],
+  no_menu_online: ["Cardápio online", "SEO local"],
 };
 
 function clampScore(score: number): number {
@@ -105,7 +105,7 @@ export function calculateOpportunityScore(
   const hasWebsite = Boolean(business.websiteUrl?.trim());
 
   if (!hasWebsite && !socialOnly) {
-    addReason(reasons, "no_site", "Nao possui site proprio", 40);
+    addReason(reasons, "no_site", "Não possui site próprio", 40);
   } else if (socialOnly) {
     addReason(reasons, "social_only", "Site e apenas rede social", 35);
   }
@@ -130,21 +130,21 @@ export function calculateOpportunityScore(
       addReason(reasons, "weak_metadata", "Sem title/description adequados", 8);
     }
     if (isDetected(audit.detections.basicBuilder)) {
-      addReason(reasons, "basic_builder", "Builder basico detectado", 6);
+      addReason(reasons, "basic_builder", "Builder básico detectado", 6);
     }
     if (isDetected(audit.detections.linkInBio)) {
-      addReason(reasons, "link_in_bio_only", "Atende so por link-in-bio", 25);
+      addReason(reasons, "link_in_bio_only", "Atende só por link-in-bio", 25);
     }
     if (foodSegment && isDetected(audit.detections.deliveryPlatform)) {
       addReason(
         reasons,
         "delivery_dependency",
-        "Depende de plataforma de delivery sem site proprio",
+        "Depende de plataforma de delivery sem site próprio",
         20,
       );
     }
     if (foodSegment && isNotDetected(audit.detections.menuOnline)) {
-      addReason(reasons, "no_menu_online", "Sem cardapio online detectado", 12);
+      addReason(reasons, "no_menu_online", "Sem cardápio online detectado", 12);
     }
   }
 
@@ -155,7 +155,7 @@ export function calculateOpportunityScore(
     addReason(reasons, "reachable", "Possui telefone/WhatsApp", 5);
   }
   if ((business.reviewCount ?? -1) === 0) {
-    addReason(reasons, "low_activity", "Pouquissima atividade", -10);
+    addReason(reasons, "low_activity", "Pouquíssima atividade", -10);
   }
 
   const healthySite =

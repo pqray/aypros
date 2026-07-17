@@ -179,7 +179,7 @@ describe("emailMessageOutputSchema", () => {
     expect(
       emailMessageOutputSchema.safeParse({
         subject: "Assunto",
-        body: "Um diagnostico comercial detalhado. ".repeat(25),
+        body: "Um diagnóstico comercial detalhado. ".repeat(25),
       }).success,
     ).toBe(false);
   });

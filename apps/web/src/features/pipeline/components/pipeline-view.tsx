@@ -24,7 +24,7 @@ export function PipelineView() {
   function handleMove(leadId: string, stage: LeadStage, position: number) {
     updateLead.mutate(
       { leadId, input: { stage, position } },
-      { onError: () => toast.error("Nao foi possivel mover o lead.") },
+      { onError: () => toast.error("Não foi possível mover o lead.") },
     );
   }
 

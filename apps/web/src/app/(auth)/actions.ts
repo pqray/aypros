@@ -17,7 +17,7 @@ export type AuthActionState = {
   success?: string;
 };
 
-const genericAuthError = "Nao foi possivel concluir. Confira os dados e tente novamente.";
+const genericAuthError = "Não foi possível concluir. Confira os dados e tente novamente.";
 
 function getString(formData: FormData, key: keyof LoginInput | keyof SignupInput | keyof ResetPasswordInput) {
   const value = formData.get(key);

@@ -303,7 +303,7 @@ export function registerBusinessRoutes(app: FastifyInstance, options: BusinessRo
   app.post("/v1/businesses/:businessId/refresh", async (request, reply) => {
     const params = z.object({ businessId: z.string().uuid() }).safeParse(request.params);
     if (!params.success) {
-      return reply.code(400).send({ error: "Id invalido" } satisfies ApiErrorBody);
+      return reply.code(400).send({ error: "Id inválido" } satisfies ApiErrorBody);
     }
 
     const ctx = await requireOrgContext(request, reply);
@@ -311,11 +311,11 @@ export function registerBusinessRoutes(app: FastifyInstance, options: BusinessRo
 
     try {
       if (!detailsProvider) {
-        return reply.code(503).send({ error: "Refresh indisponivel" } satisfies ApiErrorBody);
+        return reply.code(503).send({ error: "Refresh indisponível" } satisfies ApiErrorBody);
       }
 
       if (!(await canAccessBusiness(serviceDb, ctx.orgId, params.data.businessId))) {
-        return reply.code(404).send({ error: "Empresa nao encontrada" } satisfies ApiErrorBody);
+        return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
 
       await ensureManualRefreshRateLimit(serviceDb, ctx.orgId);
@@ -329,7 +329,7 @@ export function registerBusinessRoutes(app: FastifyInstance, options: BusinessRo
       });
 
       if (!result) {
-        return reply.code(404).send({ error: "Empresa nao encontrada" } satisfies ApiErrorBody);
+        return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
 
       return reply.code(202).send(toRefreshResponse(result));

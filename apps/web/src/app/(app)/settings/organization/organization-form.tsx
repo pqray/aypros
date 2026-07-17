@@ -44,13 +44,13 @@ export function OrganizationForm({
     >
       <input type="hidden" name="organizationId" value={organizationId} />
       <div className="space-y-2">
-        <Label htmlFor="name">Nome da organizacao</Label>
+        <Label htmlFor="name">Nome da organização</Label>
         <Input id="name" required {...form.register("name")} />
         {form.formState.errors.name ? (
           <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
         ) : null}
       </div>
-      <SubmitButton loadingText="Salvando...">Salvar organizacao</SubmitButton>
+      <SubmitButton loadingText="Salvando...">Salvar organização</SubmitButton>
     </form>
   );
 }

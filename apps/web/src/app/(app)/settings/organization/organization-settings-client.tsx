@@ -21,8 +21,8 @@ export function OrganizationSettingsClient() {
     <div className="grid w-full max-w-6xl gap-4 xl:grid-cols-[minmax(18rem,0.85fr)_minmax(0,1.35fr)]">
       <Card className="self-start">
         <CardHeader>
-          <CardTitle>Organizacao</CardTitle>
-          <CardDescription>Configuracoes basicas da organizacao ativa.</CardDescription>
+          <CardTitle>Organização</CardTitle>
+          <CardDescription>Configuracoes básicas da organização ativa.</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -31,8 +31,8 @@ export function OrganizationSettingsClient() {
             <OrganizationForm organizationId={organization.id} defaultName={organization.name} />
           ) : (
             <EmptyState
-              title="Nenhuma organizacao encontrada"
-              description="Complete o onboarding para criar sua primeira organizacao."
+              title="Nenhuma organização encontrada"
+              description="Complete o onboarding para criar sua primeira organização."
             />
           )}
         </CardContent>

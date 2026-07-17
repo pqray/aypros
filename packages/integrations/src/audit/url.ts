@@ -15,7 +15,7 @@ export function normalizeAuditUrl(input: string): URL {
   }
 
   if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new AuditError("INVALID_URL", "Esquema nao permitido");
+    throw new AuditError("INVALID_URL", "Esquema não permitido");
   }
   url.hostname = url.hostname.toLowerCase();
   if (

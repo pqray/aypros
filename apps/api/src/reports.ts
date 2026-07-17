@@ -74,9 +74,9 @@ type ReportModel = {
 };
 
 const stateLabels: Record<ReportFinding["status"], string> = {
-  problem: "Ponto de atencao",
+  problem: "Ponto de atenção",
   ok: "Ok",
-  unknown: "Nao verificado",
+  unknown: "Não verificado",
 };
 
 const statusWeight: Record<ReportFinding["status"], number> = {
@@ -103,8 +103,8 @@ export function translateDetection(params: {
     if (audit?.is_https === false) {
       return {
         title: "Site sem acesso seguro",
-        body: "O site analisado nao usa HTTPS como acesso final.",
-        impact: "Navegadores podem exibir avisos e diminuir a confianca do visitante.",
+        body: "O site analisado não usa HTTPS como acesso final.",
+        impact: "Navegadores podem exibir avisos e diminuir a confiança do visitante.",
         status: "problem",
       };
     }
@@ -112,7 +112,7 @@ export function translateDetection(params: {
       return {
         title: "Acesso seguro ativo",
         body: "O site usa HTTPS no acesso final analisado.",
-        impact: "Isso ajuda na confianca e evita alertas basicos no navegador.",
+        impact: "Isso ajuda na confiança e evita alertas básicos no navegador.",
         status: "ok",
       };
     }
@@ -120,18 +120,18 @@ export function translateDetection(params: {
 
   if (!state || state === "inconclusive") {
     const titleByCode: Record<string, string> = {
-      hasViewport: "Adaptacao para celular",
-      hasTitle: "Titulo do site",
-      hasDescription: "Descricao no Google",
-      outdated: "Sinais de atualizacao",
+      hasViewport: "Adaptação para celular",
+      hasTitle: "Título do site",
+      hasDescription: "Descrição no Google",
+      outdated: "Sinais de atualização",
       basicBuilder: "Estrutura do site",
       siteDown: "Disponibilidade do site",
       sslError: "Acesso seguro",
     };
     return {
       title: titleByCode[code] ?? code,
-      body: "Nao foi possivel confirmar este ponto apenas com a leitura tecnica do site.",
-      impact: "Tratamos como nao verificado, nunca como problema confirmado.",
+      body: "Não foi possível confirmar este ponto apenas com a leitura técnica do site.",
+      impact: "Tratamos como não verificado, nunca como problema confirmado.",
       status: "unknown",
     };
   }
@@ -139,15 +139,15 @@ export function translateDetection(params: {
   if (code === "siteDown" || code === "sslError") {
     return state === "detected"
       ? {
-          title: "O site pode estar indisponivel",
-          body: "O cliente pode tentar abrir o site e encontrar erro ou uma pagina que nao carrega.",
-          impact: "Isso reduz confianca e faz contatos interessados desistirem antes de chamar.",
+          title: "O site pode estar indisponível",
+          body: "O cliente pode tentar abrir o site e encontrar erro ou uma página que não carrega.",
+          impact: "Isso reduz confiança e faz contatos interessados desistirem antes de chamar.",
           status: "problem",
         }
       : {
-          title: "Site acessivel",
-          body: "A auditoria conseguiu acessar o site no momento da analise.",
-          impact: "Esse ponto nao parece impedir o cliente de conhecer a empresa.",
+          title: "Site acessível",
+          body: "A auditoria conseguiu acessar o site no momento da análise.",
+          impact: "Esse ponto não parece impedir o cliente de conhecer a empresa.",
           status: "ok",
         };
   }
@@ -155,14 +155,14 @@ export function translateDetection(params: {
   if (code === "hasViewport") {
     return state === "not_detected"
       ? {
-          title: "Site nao se adapta bem ao celular",
-          body: "A pagina nao informa ao navegador como deve se ajustar em telas pequenas.",
-          impact: "A maioria dos clientes pesquisa pelo celular; uma experiencia ruim pode reduzir contatos.",
+          title: "Site não se adapta bem ao celular",
+          body: "A página não informa ao navegador como deve se ajustar em telas pequenas.",
+          impact: "A maioria dos clientes pesquisa pelo celular; uma experiência ruim pode reduzir contatos.",
           status: "problem",
         }
       : {
           title: "Site preparado para celular",
-          body: "O site tem sinal tecnico de adaptacao para telas pequenas.",
+          body: "O site tem sinal técnico de adaptação para telas pequenas.",
           impact: "Isso ajuda quem chega pelo celular a entender a oferta com menos atrito.",
           status: "ok",
         };
@@ -171,18 +171,18 @@ export function translateDetection(params: {
   if (code === "hasTitle" || code === "hasDescription") {
     return state === "not_detected"
       ? {
-          title: code === "hasTitle" ? "Titulo fraco ou ausente" : "Descricao ausente",
+          title: code === "hasTitle" ? "Título fraco ou ausente" : "Descrição ausente",
           body:
             code === "hasTitle"
-              ? "O site nao apresenta um titulo claro para a pagina analisada."
-              : "O site nao apresenta uma descricao clara para buscadores e compartilhamentos.",
+              ? "O site não apresenta um título claro para a página analisada."
+              : "O site não apresenta uma descrição clara para buscadores e compartilhamentos.",
           impact: "Fica mais dificil entender rapidamente o que a empresa oferece.",
           status: "problem",
         }
       : {
-          title: code === "hasTitle" ? "Titulo encontrado" : "Descricao encontrada",
-          body: "A pagina tem informacao basica para contextualizar a empresa.",
-          impact: "Esse ponto ajuda na apresentacao e no compartilhamento do site.",
+          title: code === "hasTitle" ? "Título encontrado" : "Descrição encontrada",
+          body: "A página tem informação básica para contextualizar a empresa.",
+          impact: "Esse ponto ajuda na apresentação e no compartilhamento do site.",
           status: "ok",
         };
   }
@@ -191,14 +191,14 @@ export function translateDetection(params: {
     return state === "detected"
       ? {
           title: "Sinais de site desatualizado",
-          body: "Encontramos indicios de conteudo ou estrutura antiga no site.",
-          impact: "A percepcao de abandono pode reduzir a confianca antes do primeiro contato.",
+          body: "Encontramos indícios de conteúdo ou estrutura antiga no site.",
+          impact: "A percepção de abandono pode reduzir a confiança antes do primeiro contato.",
           status: "problem",
         }
       : {
           title: "Sem sinal claro de abandono",
-          body: "Nao encontramos indicios fortes de site desatualizado.",
-          impact: "Ainda vale revisar conteudo, mas este ponto nao apareceu como problema.",
+          body: "Não encontramos indícios fortes de site desatualizado.",
+          impact: "Ainda vale revisar conteúdo, mas este ponto não apareceu como problema.",
           status: "ok",
         };
   }
@@ -206,26 +206,26 @@ export function translateDetection(params: {
   if (code === "basicBuilder") {
     return state === "detected"
       ? {
-          title: "Site com estrutura muito basica",
-          body: "A estrutura encontrada sugere um site simples ou feito em plataforma basica.",
-          impact: "Pode limitar personalizacao, velocidade e capacidade de conversao.",
+          title: "Site com estrutura muito básica",
+          body: "A estrutura encontrada sugere um site simples ou feito em plataforma básica.",
+          impact: "Pode limitar personalização, velocidade e capacidade de conversão.",
           status: "problem",
         }
       : {
-          title: "Estrutura sem alerta basico",
-          body: "Nao encontramos sinal forte de estrutura muito limitada.",
-          impact: "Esse ponto nao apareceu como obstaculo nesta analise.",
+          title: "Estrutura sem alerta básico",
+          body: "Não encontramos sinal forte de estrutura muito limitada.",
+          impact: "Esse ponto não apareceu como obstáculo nesta análise.",
           status: "ok",
         };
   }
 
-  // Sinais sociais/segmento (fase 15) — so entram no relatorio quando detectados;
-  // ausencia de sinal nao vira afirmacao (fase 17).
+  // Sinais sociais/segmento (fase 15) — só entram no relatório quando detectados;
+  // ausência de sinal não vira afirmação (fase 17).
   if (code === "linkInBio" && state === "detected") {
     return {
-      title: "Presenca concentrada em link-in-bio",
-      body: "O endereco divulgado aponta para uma pagina de links (ex.: Linktree), nao para um site proprio.",
-      impact: "A apresentacao da empresa fica dependente de uma pagina generica de terceiros.",
+      title: "Presença concentrada em link-in-bio",
+      body: "O endereço divulgado aponta para uma página de links (ex.: Linktree), não para um site próprio.",
+      impact: "A apresentação da empresa fica dependente dé uma página genérica de terceiros.",
       status: "problem",
     };
   }
@@ -233,17 +233,17 @@ export function translateDetection(params: {
   if (code === "deliveryPlatform" && state === "detected") {
     return {
       title: "Vendas dependem de plataforma de delivery",
-      body: "O canal digital encontrado e uma plataforma de delivery de terceiros.",
-      impact: "Cada pedido paga comissao e o relacionamento com o cliente fica com a plataforma.",
+      body: "O canal digital encontrado é uma plataforma de delivery de terceiros.",
+      impact: "Cada pedido paga comissão e o relacionamento com o cliente fica com a plataforma.",
       status: "problem",
     };
   }
 
   if (code === "menuOnline" && state === "not_detected") {
     return {
-      title: "Sem cardapio online proprio",
-      body: "Nao encontramos cardapio online proprio vinculado a presenca digital da empresa.",
-      impact: "Clientes que pesquisam antes de pedir nao encontram os produtos direto da empresa.",
+      title: "Sem cardápio online próprio",
+      body: "Não encontramos cardápio online próprio vinculado a presença digital da empresa.",
+      impact: "Clientes que pesquisam antes de pedir não encontram os produtos direto da empresa.",
       status: "problem",
     };
   }
@@ -253,13 +253,13 @@ export function translateDetection(params: {
 
 export type MaturityAxis = {
   label: string;
-  /** 0-100; null = nao verificado (nunca desenhado como zero). */
+  /** 0-100; null = não verificado (nunca desenhado como zero). */
   value: number | null;
 };
 
 /**
  * Eixos de maturidade digital do PDF v2 — derivados só de fatos auditados;
- * eixo sem evidencia vira "nao verificado" em vez de nota baixa.
+ * eixo sem evidência vira "não verificado" em vez de nota baixa.
  */
 export function buildMaturityAxes(params: {
   business: Pick<BusinessReportRow, "website_url">;
@@ -290,10 +290,10 @@ export function buildMaturityAxes(params: {
   if (detectionState(audit, "sslError") === "detected") trust = 15;
 
   return [
-    { label: "Site proprio", value: hasSite ? 90 : 10 },
-    { label: "Adaptacao para celular", value: hasSite ? fromDetection("hasViewport") : 10 },
+    { label: "Site próprio", value: hasSite ? 90 : 10 },
+    { label: "Adaptação para celular", value: hasSite ? fromDetection("hasViewport") : 10 },
     {
-      label: "SEO basico",
+      label: "SEO básico",
       value: hasSite
         ? seoSignals.length > 0
           ? Math.round(seoSignals.reduce((sum, value) => sum + value, 0) / seoSignals.length)
@@ -301,7 +301,7 @@ export function buildMaturityAxes(params: {
         : 10,
     },
     { label: "Velocidade", value: hasSite ? performance : null },
-    { label: "Confianca (HTTPS)", value: hasSite ? trust : null },
+    { label: "Confiança (HTTPS)", value: hasSite ? trust : null },
   ];
 }
 
@@ -309,21 +309,21 @@ function businessSummary(business: BusinessReportRow): string {
   const parts = [
     business.city && business.state ? `${business.city}/${business.state}` : business.city,
     business.rating !== null ? `nota ${Number(business.rating).toFixed(1)}` : null,
-    business.review_count !== null ? `${business.review_count} avaliacoes` : null,
+    business.review_count !== null ? `${business.review_count} avaliações` : null,
   ].filter(Boolean);
-  return parts.length > 0 ? parts.join(" - ") : "Dados publicos do perfil da empresa";
+  return parts.length > 0 ? parts.join(" - ") : "Dados públicos do perfil da empresa";
 }
 
 function noSiteFindings(business: BusinessReportRow): ReportFinding[] {
   const socialOnly = business.raw?.socialOnly === true || business.raw?.social_only === true;
   return [
     {
-      title: socialOnly ? "Presenca depende de rede social" : "Empresa sem site proprio",
+      title: socialOnly ? "Presença depende de rede social" : "Empresa sem site próprio",
       body: socialOnly
-        ? "O endereco encontrado aponta para uma rede social, nao para um site proprio."
-        : "Nao encontramos site proprio vinculado ao perfil publico desta empresa.",
+        ? "O endereço encontrado aponta para uma rede social, não para um site próprio."
+        : "Não encontramos site próprio vinculado ao perfil público desta empresa.",
       impact:
-        "Um site proprio ajuda a apresentar servicos, diferenciais, localizacao e formas de contato em um lugar controlado pela empresa.",
+        "Um site próprio ajuda a apresentar serviços, diferenciais, localização e formas de contato em um lugar controlado pela empresa.",
       status: "problem",
     },
   ];
@@ -341,14 +341,14 @@ export function friendlyHttpStatusNote(audit: AuditReportRow | null): string | n
   if (!audit) return null;
   const status = audit.http_status;
   if (status === null) {
-    return audit.error_code ? "O site nao respondeu a verificacao automatica." : null;
+    return audit.error_code ? "O site não respondeu a verificação automática." : null;
   }
   if (botBlockedByStatus(audit)) {
-    return "O site bloqueou a verificacao automatica; isso costuma acontecer por protecao contra robos/CDN e nao significa, por si so, que esteja fora do ar para visitantes.";
+    return "O site bloqueou a verificação automática; isso costuma acontecer por proteção contra robôs/CDN e não significa, por si só, que esteja fora do ar para visitantes.";
   }
   if (status >= 200 && status < 300) return "Site no ar e respondendo normalmente.";
-  if (status >= 300 && status < 400) return "O site redireciona para outro endereco.";
-  if (status === 404) return "O endereco analisado nao foi encontrado (HTTP 404).";
+  if (status >= 300 && status < 400) return "O site redireciona para outro endereço.";
+  if (status === 404) return "O endereço analisado não foi encontrado (HTTP 404).";
   if (status >= 500) return `O servidor do site respondeu com erro (HTTP ${status}).`;
   return `O site respondeu com HTTP ${status}.`;
 }
@@ -363,9 +363,9 @@ export function buildReportModel(params: {
 }): ReportModel {
   const botBlocked = botBlockedByStatus(params.audit);
   const botBlockedNote: ReportFinding = {
-    title: "Site com protecao contra acesso automatico",
-    body: "O site respondeu com bloqueio para a verificacao automatica — comum em sites atras de firewall/CDN.",
-    impact: "A leitura tecnica fica limitada; os pontos marcados como nao verificados nao sao problemas confirmados.",
+    title: "Site com proteção contra acesso automático",
+    body: "O site respondeu com bloqueio para a verificação automática — comum em sites atrás de firewall/CDN.",
+    impact: "A leitura técnica fica limitada; os pontos marcados como não verificados não são problemas confirmados.",
     status: "unknown",
   };
   const sortedFindings = params.business.website_url
@@ -394,7 +394,7 @@ export function buildReportModel(params: {
         .sort((a, b) => statusWeight[a.status] - statusWeight[b.status])
     : noSiteFindings(params.business);
 
-  // A nota de bloqueio contextualiza os "nao verificados" — vem antes de tudo.
+  // A nota de bloqueio contextualiza os "não verificados" — vem antes de tudo.
   const findings =
     botBlocked && params.business.website_url ? [botBlockedNote, ...sortedFindings] : sortedFindings;
 
@@ -402,8 +402,8 @@ export function buildReportModel(params: {
     params.score?.suggested_services && params.score.suggested_services.length > 0
       ? params.score.suggested_services
       : params.business.website_url
-        ? ["Revisao da presenca digital", "Melhorias de conversao"]
-        : ["Criacao de site", "SEO local"];
+        ? ["Revisão da presença digital", "Melhorias de conversão"]
+        : ["Criação de site", "SEO local"];
 
   const problems = findings.filter((finding) => finding.status === "problem");
   const recommendations: ReportRecommendation[] = [
@@ -415,11 +415,11 @@ export function buildReportModel(params: {
   ];
 
   const nextSteps = [
-    "Validar este diagnostico em uma conversa rapida com a empresa.",
+    "Validar este diagnóstico em uma conversa rápida com a empresa.",
     problems.length > 0
       ? `Priorizar o ponto de maior impacto: ${problems[0]!.title.toLowerCase()}.`
-      : "Aprofundar a analise nos pontos marcados como nao verificados.",
-    `Apresentar uma proposta de ${suggestions[0]?.toLowerCase() ?? "presenca digital"} com escopo e prazo.`,
+      : "Aprofundar a análise nos pontos marcados como não verificados.",
+    `Apresentar uma proposta de ${suggestions[0]?.toLowerCase() ?? "presença digital"} com escopo e prazo.`,
   ];
 
   return {
@@ -440,8 +440,8 @@ export function buildReportModel(params: {
 export function executiveSummary(model: ReportModel): string {
   const problemCount = model.findings.filter((finding) => finding.status === "problem").length;
   return model.business.website_url
-    ? `Analisamos a presenca digital de ${model.business.name} e encontramos ${problemCount} ponto(s) de atencao com impacto direto em confianca e conversao.`
-    : `${model.business.name} ainda nao tem site proprio identificado. O diagnostico foca no potencial de construir uma presenca digital controlada pela empresa, aproveitando a reputacao ja existente.`;
+    ? `Analisamos a presença digital de ${model.business.name} e encontramos ${problemCount} ponto(s) de atenção com impacto direto em confiança e conversão.`
+    : `${model.business.name} ainda não tem site próprio identificado. O diagnóstico foca no potencial de construir uma presença digital controlada pela empresa, aproveitando a reputação já existente.`;
 }
 
 export function buildReportResponse(model: ReportModel): BusinessReportResponse {
@@ -487,7 +487,7 @@ function drawBar(
 
 export function renderPdf(model: ReportModel): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: "A4", margin: 48, info: { Title: `Diagnostico - ${model.business.name}` } });
+    const doc = new PDFDocument({ size: "A4", margin: 48, info: { Title: `Diagnóstico - ${model.business.name}` } });
     const chunks: Buffer[] = [];
 
     doc.on("data", (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
@@ -495,7 +495,7 @@ export function renderPdf(model: ReportModel): Promise<Buffer> {
     doc.on("error", reject);
 
     doc.rect(0, 0, doc.page.width, 92).fill("#111827");
-    doc.fillColor("#ffffff").fontSize(22).text("Diagnostico de presenca digital", 48, 34);
+    doc.fillColor("#ffffff").fontSize(22).text("Diagnóstico de presença digital", 48, 34);
     doc.fontSize(11).text(model.organizationName, 48, 62);
 
     doc.y = 120;
@@ -523,16 +523,16 @@ export function renderPdf(model: ReportModel): Promise<Buffer> {
         color: scoreBarColor(model.score.score),
       });
       doc.y += 20;
-      addMuted(doc, `Confianca da analise: ${model.score.confidence === "high" ? "alta" : model.score.confidence === "medium" ? "media" : "baixa"}.`);
+      addMuted(doc, `Confiança da análise: ${model.score.confidence === "high" ? "alta" : model.score.confidence === "medium" ? "média" : "baixa"}.`);
     } else {
-      addMuted(doc, "Score de oportunidade ainda nao calculado.");
+      addMuted(doc, "Score de oportunidade ainda não calculado.");
     }
 
     addSectionTitle(doc, "Maturidade digital por eixo");
     for (const axis of model.maturity) {
       doc.fontSize(10).fillColor("#374151").text(axis.label, 48, doc.y, { continued: false });
       if (axis.value === null) {
-        addMuted(doc, "Nao verificado nesta analise");
+        addMuted(doc, "Não verificado nesta análise");
         doc.moveDown(0.35);
       } else {
         drawBar(doc, {
@@ -556,7 +556,7 @@ export function renderPdf(model: ReportModel): Promise<Buffer> {
       doc.moveDown(0.45);
     }
 
-    addSectionTitle(doc, "Recomendacoes por prioridade");
+    addSectionTitle(doc, "Recomendações por prioridade");
     for (const recommendation of model.recommendations.slice(0, 6)) {
       doc
         .fontSize(9)
@@ -567,20 +567,20 @@ export function renderPdf(model: ReportModel): Promise<Buffer> {
     }
 
     if (model.score?.reasons?.length) {
-      addSectionTitle(doc, "Por que esta oportunidade apareceu");
+      addSectionTitle(doc, "Por que está oportunidade apareceu");
       for (const reason of model.score.reasons.slice(0, 6)) {
         doc.fontSize(10).fillColor("#374151").text(`- ${reason.label} (${reason.impact > 0 ? "+" : ""}${reason.impact})`);
       }
     }
 
-    addSectionTitle(doc, "Proximos passos sugeridos");
+    addSectionTitle(doc, "Próximos passos sugeridos");
     model.nextSteps.forEach((step, index) => {
       doc.fontSize(11).fillColor("#374151").text(`${index + 1}. ${step}`, { lineGap: 2 });
     });
 
     doc.moveDown(1.2);
     doc.fontSize(9).fillColor("#6b7280").text(
-      `Relatorio gerado por ${model.organizationName}${model.senderName ? ` - ${model.senderName}` : ""}. Conteudo baseado somente em dados salvos no Aypros.`,
+      `Relatório gerado por ${model.organizationName}${model.senderName ? ` - ${model.senderName}` : ""}. Conteúdo baseado somente em dados salvos no Aypros.`,
       { align: "center" },
     );
 
@@ -616,7 +616,7 @@ function filenameForBusiness(name: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
-  return `diagnostico-${slug || "empresa"}.pdf`;
+  return `diagnóstico-${slug || "empresa"}.pdf`;
 }
 
 export type ReportRoutesOptions = {
@@ -676,7 +676,7 @@ export function registerReportRoutes(app: FastifyInstance, options: ReportRoutes
   app.get("/v1/businesses/:businessId/report", async (request, reply) => {
     const params = businessIdParamSchema.safeParse(request.params);
     if (!params.success) {
-      return reply.code(400).send({ error: "Id invalido" } satisfies ApiErrorBody);
+      return reply.code(400).send({ error: "Id inválido" } satisfies ApiErrorBody);
     }
 
     const ctx = await requireOrgContext(request, reply);
@@ -685,19 +685,19 @@ export function registerReportRoutes(app: FastifyInstance, options: ReportRoutes
     try {
       const model = await loadModel(ctx.orgId, ctx.userId, params.data.businessId);
       if (!model) {
-        return reply.code(404).send({ error: "Empresa nao encontrada" } satisfies ApiErrorBody);
+        return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
       return reply.send(buildReportResponse(model));
     } catch (error) {
       request.log.error({ err: error }, "business report json failed");
-      return reply.code(500).send({ error: "Erro ao carregar diagnostico" } satisfies ApiErrorBody);
+      return reply.code(500).send({ error: "Erro ao carregar diagnóstico" } satisfies ApiErrorBody);
     }
   });
 
   app.get("/v1/businesses/:businessId/report.pdf", async (request, reply) => {
     const params = businessIdParamSchema.safeParse(request.params);
     if (!params.success) {
-      return reply.code(400).send({ error: "Id invalido" } satisfies ApiErrorBody);
+      return reply.code(400).send({ error: "Id inválido" } satisfies ApiErrorBody);
     }
 
     const ctx = await requireOrgContext(request, reply);
@@ -707,7 +707,7 @@ export function registerReportRoutes(app: FastifyInstance, options: ReportRoutes
       await ensureReportRateLimit(serviceDb, ctx.orgId);
       const model = await loadModel(ctx.orgId, ctx.userId, params.data.businessId);
       if (!model) {
-        return reply.code(404).send({ error: "Empresa nao encontrada" } satisfies ApiErrorBody);
+        return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
       const pdf = await renderPdf(model);
 
@@ -726,12 +726,12 @@ export function registerReportRoutes(app: FastifyInstance, options: ReportRoutes
     } catch (error) {
       if (error instanceof Error && error.name === "RateLimitError") {
         return reply.code(429).send({
-          error: "Limite de relatorios por hora atingido",
+          error: "Limite de relatórios por hora atingido",
           code: "RATE_LIMITED",
         } satisfies ApiErrorBody);
       }
       request.log.error({ err: error }, "business report failed");
-      return reply.code(500).send({ error: "Erro ao gerar relatorio" } satisfies ApiErrorBody);
+      return reply.code(500).send({ error: "Erro ao gerar relatório" } satisfies ApiErrorBody);
     }
   });
 }

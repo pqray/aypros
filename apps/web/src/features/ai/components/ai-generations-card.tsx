@@ -38,7 +38,7 @@ const kindLabels: Record<AiKind, string> = {
 const kindEmptyHints: Record<AiKind, string> = {
   commercial_summary:
     "Gere um resumo comercial da oportunidade: situação digital, dores prováveis e ângulo de venda.",
-  whatsapp_message: "Gere uma mensagem curta de primeira abordagem para enviar no WhatsApp.",
+  whatsapp_message: "Geré uma mensagem curta de primeira abordagem para enviar no WhatsApp.",
   email_message: "Gere um e-mail de prospecção com assunto e corpo prontos para revisar.",
 };
 
@@ -118,7 +118,7 @@ export function AiGenerationsCard({
       latestByKind[item.kind] = item;
     }
   }
-  // Items are newest-first; capture ids in a stable string so the effect below
+  // Items are newest-first; capture ids in a stable string só the effect below
   // only rewrites a draft when a *new* generation lands (user edits survive).
   const latestIds = AI_KINDS.map((kind) => latestByKind[kind]?.id ?? "").join("|");
 
@@ -189,7 +189,7 @@ export function AiGenerationsCard({
       { channel, note: channel === "whatsapp" ? "Rascunho de WhatsApp marcado como enviado." : "Rascunho de e-mail marcado como enviado." },
       {
         onSuccess: () => toast.success("Contato registrado."),
-        onError: () => toast.error("Nao foi possivel registrar o contato."),
+        onError: () => toast.error("Não foi possível registrar o contato."),
       },
     );
   }

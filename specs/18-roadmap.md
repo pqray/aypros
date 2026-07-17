@@ -20,6 +20,7 @@ Nada daqui entra no MVP. Ordem indicativa, não compromisso. Cada item, ao ser i
 - **White label**: relatórios/domínio com marca da agência.
 - **Monitoramento contínuo + alertas**: ~~reauditar sites periodicamente~~ (promovido: Fase 12 / `20-data-refresh.md`); resta a parte de alertas de mudanças (site caiu, concorrente lançou site).
 - **Extensão de navegador**: capturar empresa/lead navegando no Google Maps.
+- **Métricas de Instagram**: seguidores/frequência de posts via serviço externo pago (Apify ou similar) — a detecção de presença social/link-in-bio sem scraping foi promovida para a Fase 15.
 - **Geração de mockups**: prévia de site proposto para usar na abordagem.
 - **CRM avançado**: estágios customizáveis, automações, campos personalizados, múltiplos pipelines.
 

@@ -43,3 +43,4 @@ Efeitos positivos e negativos, migrações necessárias, o que fica mais difíci
 | 6 | ~~Backend Node separado~~ - **resolvida**: Fastify em `apps/api` com Docker local ([ADR 005](005-node-api-docker.md)) | 4 |
 | 7 | Mecanismo de agendamento do refresh (in-process vs fila externa) — ADR 008 | 12 |
 | 8 | Biblioteca de geração de PDF do diagnóstico — ADR 009 | 14 |
+| 9 | Scoring v2 (motivos por segmento e pesos revisados) — ADR obrigatório por `specs/10` | 15 |

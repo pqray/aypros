@@ -2,6 +2,7 @@
 
 import type { BusinessListQuery } from "@aypros/types";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError } from "@/lib/api";
 import {
   batchAuditBusinesses,
   batchFavoriteBusinesses,
@@ -28,6 +29,8 @@ export function useBusinessAuditSummary(businessId: string) {
     queryFn: () => getBusinessAuditSummary(businessId),
     enabled: Boolean(businessId),
     staleTime: 120_000,
+    retry: (failureCount, error) =>
+      !(error instanceof ApiError && error.status === 404) && failureCount < 2,
   });
 }
 
@@ -39,6 +42,7 @@ export function usePrefetchBusinessAuditSummary() {
       queryKey: businessAuditSummaryKey(businessId),
       queryFn: () => getBusinessAuditSummary(businessId),
       staleTime: 120_000,
+      retry: false,
     });
   };
 }
@@ -54,6 +58,8 @@ export function useBusinessReport(businessId: string) {
     queryFn: () => getBusinessReport(businessId),
     enabled: Boolean(businessId),
     staleTime: 120_000,
+    retry: (failureCount, error) =>
+      !(error instanceof ApiError && error.status === 404) && failureCount < 2,
   });
 }
 

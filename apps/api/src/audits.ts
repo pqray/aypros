@@ -287,6 +287,166 @@ export async function canAccessBusiness(db: SupabaseClient, orgId: string, busin
   return (data ?? []).length > 0;
 }
 
+async function loadBusinessAuditSummaryFallback(
+  db: SupabaseClient,
+  orgId: string,
+  businessId: string,
+): Promise<AuditSummaryRpcRow | null> {
+  if (!(await canAccessBusiness(db, orgId, businessId))) {
+    return null;
+  }
+
+  const [businessResult, auditResult, scoreResult, favoriteResult, leadResult] = await Promise.all([
+    db
+      .from("businesses")
+      .select(
+        "id, name, address, city, state, phone, website_url, rating, review_count, categories, refreshed_at, provider_status, raw",
+      )
+      .eq("id", businessId)
+      .maybeSingle(),
+    db
+      .from("website_audits")
+      .select(
+        "id, status, final_url, http_status, response_time_ms, redirect_count, is_https, detections, evidence, error_code, created_at, completed_at",
+      )
+      .eq("organization_id", orgId)
+      .eq("business_id", businessId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    db
+      .from("opportunity_scores")
+      .select("id, audit_id, score, level, confidence, reasons, suggested_services, algorithm_version, created_at")
+      .eq("business_id", businessId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    db
+      .from("favorites")
+      .select("business_id")
+      .eq("organization_id", orgId)
+      .eq("business_id", businessId)
+      .maybeSingle(),
+    db
+      .from("leads")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("business_id", businessId)
+      .maybeSingle(),
+  ]);
+
+  const error =
+    businessResult.error ??
+    auditResult.error ??
+    scoreResult.error ??
+    favoriteResult.error ??
+    leadResult.error;
+  if (error) {
+    throw new Error(`business audit summary fallback failed: ${error.message}`);
+  }
+  if (!businessResult.data) {
+    return null;
+  }
+
+  const business = businessResult.data as BusinessAuditRow & {
+    address: string | null;
+    city: string | null;
+    state: string | null;
+  };
+  const audit = auditResult.data as AuditSummaryRow | null;
+  const score = scoreResult.data as ScoreSummaryRow | null;
+
+  return {
+    business_id: business.id,
+    business_name: business.name,
+    address: business.address,
+    city: business.city,
+    state: business.state,
+    phone: business.phone,
+    website_url: business.website_url,
+    rating: business.rating,
+    review_count: business.review_count,
+    categories: business.categories ?? [],
+    refreshed_at: business.refreshed_at ?? null,
+    provider_status: business.provider_status ?? null,
+    raw: business.raw,
+    audit_id: audit?.id ?? null,
+    audit_status: audit?.status ?? null,
+    final_url: audit?.final_url ?? null,
+    http_status: audit?.http_status ?? null,
+    response_time_ms: audit?.response_time_ms ?? null,
+    redirect_count: audit?.redirect_count ?? null,
+    is_https: audit?.is_https ?? null,
+    detections: audit?.detections ?? null,
+    evidence: audit?.evidence ?? null,
+    error_code: audit?.error_code ?? null,
+    audit_created_at: audit?.created_at ?? null,
+    audit_completed_at: audit?.completed_at ?? null,
+    score_id: score?.id ?? null,
+    score_audit_id: score?.audit_id ?? null,
+    score: score?.score ?? null,
+    score_level: score?.level ?? null,
+    score_confidence: score?.confidence ?? null,
+    reasons: score?.reasons ?? null,
+    suggested_services: score?.suggested_services ?? null,
+    algorithm_version: score?.algorithm_version ?? null,
+    score_created_at: score?.created_at ?? null,
+    favorited: Boolean(favoriteResult.data),
+    lead_id: (leadResult.data as { id: string } | null)?.id ?? null,
+  };
+}
+
+function auditSummaryResponseFromRow(row: AuditSummaryRpcRow): BusinessAuditSummaryResponse {
+  return {
+    business: toBusinessDetail({
+      id: row.business_id,
+      name: row.business_name,
+      address: row.address,
+      city: row.city,
+      state: row.state,
+      phone: row.phone,
+      website_url: row.website_url,
+      rating: row.rating,
+      review_count: row.review_count,
+      categories: row.categories,
+      raw: row.raw,
+    } as BusinessAuditRow),
+    latestAudit: row.audit_id
+      ? {
+          id: row.audit_id,
+          status: row.audit_status ?? "completed",
+          finalUrl: row.final_url,
+          httpStatus: row.http_status,
+          responseTimeMs: row.response_time_ms,
+          redirectCount: row.redirect_count,
+          isHttps: row.is_https,
+          detections: row.detections ?? {},
+          evidence: row.evidence ?? {},
+          errorCode: row.error_code,
+          createdAt: row.audit_created_at ?? new Date(0).toISOString(),
+          completedAt: row.audit_completed_at,
+        }
+      : null,
+    latestScore: row.score_id
+      ? {
+          id: row.score_id,
+          auditId: row.score_audit_id,
+          score: row.score ?? 0,
+          level: row.score_level ?? "low",
+          confidence: row.score_confidence ?? "low",
+          reasons: row.reasons ?? [],
+          suggestedServices: row.suggested_services ?? [],
+          algorithmVersion: row.algorithm_version ?? "unknown",
+          createdAt: row.score_created_at ?? new Date(0).toISOString(),
+        }
+      : null,
+    refreshedAt: row.refreshed_at,
+    providerStatus: row.provider_status ?? "active",
+    favorited: row.favorited,
+    leadId: row.lead_id,
+  };
+}
+
 export async function auditBusiness(params: {
   db: SupabaseClient;
   orgId: string;
@@ -399,60 +559,14 @@ export function registerAuditRoutes(app: FastifyInstance, options: AuditRoutesOp
       if (error) {
         throw new Error(error.message);
       }
-      if (!data) {
+      const row =
+        (data as AuditSummaryRpcRow | null) ??
+        (await loadBusinessAuditSummaryFallback(serviceDb, ctx.orgId, params.data.businessId));
+      if (!row) {
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
 
-      const row = data as AuditSummaryRpcRow;
-      return reply.send({
-        business: toBusinessDetail({
-          id: row.business_id,
-          name: row.business_name,
-          address: row.address,
-          city: row.city,
-          state: row.state,
-          phone: row.phone,
-          website_url: row.website_url,
-          rating: row.rating,
-          review_count: row.review_count,
-          categories: row.categories,
-          raw: row.raw,
-        } as BusinessAuditRow),
-        latestAudit: row.audit_id
-          ? {
-              id: row.audit_id,
-              status: row.audit_status ?? "completed",
-              finalUrl: row.final_url,
-              httpStatus: row.http_status,
-              responseTimeMs: row.response_time_ms,
-              redirectCount: row.redirect_count,
-              isHttps: row.is_https,
-              detections: row.detections ?? {},
-              evidence: row.evidence ?? {},
-              errorCode: row.error_code,
-              createdAt: row.audit_created_at ?? new Date(0).toISOString(),
-              completedAt: row.audit_completed_at,
-            }
-          : null,
-        latestScore: row.score_id
-          ? {
-              id: row.score_id,
-              auditId: row.score_audit_id,
-              score: row.score ?? 0,
-              level: row.score_level ?? "low",
-              confidence: row.score_confidence ?? "low",
-              reasons: row.reasons ?? [],
-              suggestedServices: row.suggested_services ?? [],
-              algorithmVersion: row.algorithm_version ?? "unknown",
-              createdAt: row.score_created_at ?? new Date(0).toISOString(),
-            }
-          : null,
-        refreshedAt: row.refreshed_at,
-        providerStatus: row.provider_status ?? "active",
-        favorited: row.favorited,
-        leadId: row.lead_id,
-      } satisfies BusinessAuditSummaryResponse);
-    } catch (error) {
+      return reply.send(auditSummaryResponseFromRow(row));    } catch (error) {
       request.log.error({ err: error }, "business audit summary failed");
       return reply.code(500).send({ error: "Erro ao carregar auditoria" } satisfies ApiErrorBody);
     }

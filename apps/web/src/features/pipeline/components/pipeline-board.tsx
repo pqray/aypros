@@ -7,9 +7,11 @@ import {
   DragOverlay,
   KeyboardSensor,
   PointerSensor,
-  closestCorners,
+  pointerWithin,
+  rectIntersection,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
@@ -29,6 +31,11 @@ type PendingMove = {
 type PendingRemoval = {
   leadId: string;
   businessName: string;
+};
+
+const pipelineCollisionDetection: CollisionDetection = (args) => {
+  const pointerCollisions = pointerWithin(args);
+  return pointerCollisions.length > 0 ? pointerCollisions : rectIntersection(args);
 };
 
 export function PipelineBoard({
@@ -61,8 +68,8 @@ export function PipelineBoard({
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? null : undefined;
   }, []);
 
-  const columns = groupByStage(leads);
-  const leadsById = new Map(leads.map((lead) => [lead.id, lead]));
+  const columns = useMemo(() => groupByStage(leads), [leads]);
+  const leadsById = useMemo(() => new Map(leads.map((lead) => [lead.id, lead])), [leads]);
 
   function requestMove(leadId: string, stage: LeadStage, position: number) {
     const lead = leadsById.get(leadId);
@@ -126,7 +133,7 @@ export function PipelineBoard({
     <>
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={pipelineCollisionDetection}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveLead(null)}

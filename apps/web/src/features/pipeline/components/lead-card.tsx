@@ -16,6 +16,7 @@ import {
 import type { LeadSummary } from "@aypros/types";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import type { CSSProperties } from "react";
 import { PiArrowSquareOut, PiClockCountdown, PiDotsSixVertical, PiPhoneCall, PiTrash } from "react-icons/pi";
 import { formatRelativeTime } from "@/lib/format";
 import { isOverdue } from "../board";
@@ -133,16 +134,17 @@ export function SortableLeadCard({
     data: { stage: lead.stage },
   });
 
-  const style = {
+  const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: isDragging ? undefined : transition,
+    willChange: isDragging ? "transform" : undefined,
   };
 
   return (
     <div ref={setNodeRef} style={style}>
       <Card
         className={cn(
-          "shadow-none transition-shadow",
+          "shadow-none",
           // While dragging, the original stays as a dimmed placeholder; the
           // DragOverlay renders the floating copy.
           isDragging && "border-dashed opacity-40",
@@ -210,7 +212,7 @@ export function LeadCardPreview({
   onPrefetchDetail?: (leadId: string) => void;
 }) {
   return (
-    <Card className="rotate-2 scale-[1.03] shadow-xl ring-2 ring-ring">
+    <Card className="scale-[1.01] shadow-lg ring-2 ring-ring">
       <CardContent className="flex items-start gap-2 p-3">
         <LeadCardBody lead={lead} onPrefetchDetail={onPrefetchDetail} />
       </CardContent>

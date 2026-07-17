@@ -10,13 +10,15 @@ import type {
   SavedFilter,
   SavedFilterListResponse,
 } from "@aypros/types";
+import type { PlaceDetailsProvider } from "@aypros/integrations";
 import { businessIdsSchema, businessListQuerySchema, savedFilterCreateSchema } from "@aypros/validation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { auditBusiness } from "./audits";
+import { auditBusiness, canAccessBusiness } from "./audits";
 import { buildCsv } from "./csv";
 import { requireOrgContext } from "./org-context";
+import { ensureManualRefreshRateLimit, refreshBusiness, toRefreshResponse } from "./refresh";
 import { createServiceRoleClient } from "./supabase";
 
 const businessListRowSchema = z.object({
@@ -28,6 +30,10 @@ const businessListRowSchema = z.object({
   phone: z.string().nullable(),
   website_url: z.string().nullable(),
   social_only: z.boolean(),
+  segment: z.enum(["restaurant", "food_service", "services", "retail", "other"]).default("other"),
+  link_in_bio: z.boolean().default(false),
+  delivery_platform: z.boolean().default(false),
+  menu_online: z.boolean().default(false),
   rating: z.coerce.number().nullable(),
   review_count: z.coerce.number().int().nullable(),
   categories: z.array(z.string()).default([]),
@@ -50,6 +56,10 @@ function toBusinessListItem(row: z.infer<typeof businessListRowSchema>): Busines
     phone: row.phone,
     websiteUrl: row.website_url,
     socialOnly: row.social_only,
+    segment: row.segment,
+    linkInBio: row.link_in_bio,
+    deliveryPlatform: row.delivery_platform,
+    menuOnline: row.menu_online,
     rating: row.rating,
     reviewCount: row.review_count,
     categories: row.categories,
@@ -79,7 +89,7 @@ type ListParams = {
 };
 
 async function fetchBusinessList(supabase: SupabaseClient, orgId: string, params: ListParams) {
-  const { data, error } = await supabase.rpc("get_org_businesses", {
+  const { data, error } = await supabase.rpc("get_org_businesses_api", {
     org_id: orgId,
     website_filter: params.websiteFilter,
     min_score: params.minScore,
@@ -145,10 +155,12 @@ function toSavedFilter(row: unknown): SavedFilter {
 
 export type BusinessRoutesOptions = {
   serviceDb?: SupabaseClient;
+  detailsProvider?: PlaceDetailsProvider;
 };
 
 export function registerBusinessRoutes(app: FastifyInstance, options: BusinessRoutesOptions = {}) {
   const serviceDb = options.serviceDb ?? createServiceRoleClient();
+  const detailsProvider = options.detailsProvider;
 
   app.get("/v1/businesses", async (request, reply) => {
     const query = businessListQuerySchema.safeParse(request.query ?? {});
@@ -160,7 +172,7 @@ export function registerBusinessRoutes(app: FastifyInstance, options: BusinessRo
     if (!ctx) return;
 
     try {
-      const { items, total } = await fetchBusinessList(ctx.supabase, ctx.orgId, query.data);
+      const { items, total } = await fetchBusinessList(serviceDb, ctx.orgId, query.data);
       return reply.send({
         items,
         page: query.data.page,
@@ -190,7 +202,7 @@ export function registerBusinessRoutes(app: FastifyInstance, options: BusinessRo
         } satisfies ApiErrorBody);
       }
 
-      const { items } = await fetchBusinessList(ctx.supabase, ctx.orgId, {
+      const { items } = await fetchBusinessList(serviceDb, ctx.orgId, {
         ...query.data,
         page: 1,
         pageSize: businessesConfig.maxExportRows,
@@ -236,7 +248,7 @@ export function registerBusinessRoutes(app: FastifyInstance, options: BusinessRo
     const ctx = await requireOrgContext(request, reply);
     if (!ctx) return;
 
-    const { error } = await ctx.supabase.from("favorites").upsert(
+    const { error } = await serviceDb.from("favorites").upsert(
       {
         organization_id: ctx.orgId,
         business_id: params.data.businessId,
@@ -272,7 +284,7 @@ export function registerBusinessRoutes(app: FastifyInstance, options: BusinessRo
     const ctx = await requireOrgContext(request, reply);
     if (!ctx) return;
 
-    const { error } = await ctx.supabase
+    const { error } = await serviceDb
       .from("favorites")
       .delete()
       .eq("organization_id", ctx.orgId)
@@ -288,11 +300,57 @@ export function registerBusinessRoutes(app: FastifyInstance, options: BusinessRo
     } satisfies FavoriteToggleResponse);
   });
 
+  app.post("/v1/businesses/:businessId/refresh", async (request, reply) => {
+    const params = z.object({ businessId: z.string().uuid() }).safeParse(request.params);
+    if (!params.success) {
+      return reply.code(400).send({ error: "Id invalido" } satisfies ApiErrorBody);
+    }
+
+    const ctx = await requireOrgContext(request, reply);
+    if (!ctx) return;
+
+    try {
+      if (!detailsProvider) {
+        return reply.code(503).send({ error: "Refresh indisponivel" } satisfies ApiErrorBody);
+      }
+
+      if (!(await canAccessBusiness(serviceDb, ctx.orgId, params.data.businessId))) {
+        return reply.code(404).send({ error: "Empresa nao encontrada" } satisfies ApiErrorBody);
+      }
+
+      await ensureManualRefreshRateLimit(serviceDb, ctx.orgId);
+      const result = await refreshBusiness({
+        db: serviceDb,
+        provider: detailsProvider,
+        businessId: params.data.businessId,
+        orgId: ctx.orgId,
+        userId: ctx.userId,
+        force: true,
+      });
+
+      if (!result) {
+        return reply.code(404).send({ error: "Empresa nao encontrada" } satisfies ApiErrorBody);
+      }
+
+      return reply.code(202).send(toRefreshResponse(result));
+    } catch (error) {
+      if (error instanceof Error && error.name === "RateLimitError") {
+        return reply.code(429).send({
+          error: "Limite de atualizacoes atingido",
+          code: "RATE_LIMITED",
+        } satisfies ApiErrorBody);
+      }
+
+      request.log.error({ err: error }, "business refresh failed");
+      return reply.code(500).send({ error: "Erro ao atualizar dados" } satisfies ApiErrorBody);
+    }
+  });
+
   app.get("/v1/saved-filters", async (request, reply) => {
     const ctx = await requireOrgContext(request, reply);
     if (!ctx) return;
 
-    const { data, error } = await ctx.supabase
+    const { data, error } = await serviceDb
       .from("saved_filters")
       .select("id, name, filters, created_at")
       .eq("organization_id", ctx.orgId)
@@ -316,7 +374,7 @@ export function registerBusinessRoutes(app: FastifyInstance, options: BusinessRo
     const ctx = await requireOrgContext(request, reply);
     if (!ctx) return;
 
-    const { data, error } = await ctx.supabase
+    const { data, error } = await serviceDb
       .from("saved_filters")
       .insert({
         organization_id: ctx.orgId,
@@ -343,7 +401,7 @@ export function registerBusinessRoutes(app: FastifyInstance, options: BusinessRo
     const ctx = await requireOrgContext(request, reply);
     if (!ctx) return;
 
-    const { error } = await ctx.supabase
+    const { error } = await serviceDb
       .from("saved_filters")
       .delete()
       .eq("organization_id", ctx.orgId)
@@ -371,7 +429,7 @@ export function registerBusinessRoutes(app: FastifyInstance, options: BusinessRo
       created_by: ctx.userId,
     }));
 
-    const { error } = await ctx.supabase
+    const { error } = await serviceDb
       .from("favorites")
       .upsert(rows, { onConflict: "organization_id,business_id", ignoreDuplicates: true });
 

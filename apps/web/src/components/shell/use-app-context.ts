@@ -28,7 +28,7 @@ export function useAppContext() {
   return useQuery({
     queryKey: ["app-context"],
     queryFn: fetchAppContext,
-    staleTime: 30_000,
+    staleTime: 120_000,
     retry: false,
   });
 }

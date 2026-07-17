@@ -1,9 +1,10 @@
 "use client";
 
 import { Sheet, SheetContent, SheetDescription, SheetTitle, cn } from "@aypros/ui";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
+import { PiCircleNotch } from "react-icons/pi";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import type { ShellOrganization, ShellUser } from "./app-shell";
 import { isActiveRoute, primaryNavItems, secondaryNavItems, type ShellNavItem } from "./navigation";
@@ -17,10 +18,23 @@ function labelClasses(expanded: boolean): string {
     : "opacity-0 transition-opacity duration-100 ease-in";
 }
 
+/**
+ * Feedback imediato no clique: enquanto o App Router busca a rota, o ícone do
+ * item clicado vira spinner (useLinkStatus). Sem isso o clique parece morto
+ * até a página nova chegar.
+ */
+function NavLinkIcon({ icon: Icon }: { icon: ComponentType<{ className?: string }> }) {
+  const { pending } = useLinkStatus();
+  return pending ? (
+    <PiCircleNotch className="size-[18px] shrink-0 animate-spin" aria-hidden />
+  ) : (
+    <Icon className="size-[18px] shrink-0" aria-hidden />
+  );
+}
+
 function NavLink({ item, expanded, onNavigate }: { item: ShellNavItem; expanded: boolean; onNavigate?: () => void }) {
   const pathname = usePathname();
   const active = isActiveRoute(pathname, item);
-  const Icon = item.icon;
 
   return (
     <Link
@@ -39,7 +53,7 @@ function NavLink({ item, expanded, onNavigate }: { item: ShellNavItem; expanded:
         <span className="absolute bottom-2 left-0 top-2 w-0.5 rounded-r-full bg-sidebar-primary" aria-hidden />
       ) : null}
       <span className="flex w-12 shrink-0 items-center justify-center">
-        <Icon className="size-[18px] shrink-0" aria-hidden />
+        <NavLinkIcon icon={item.icon} />
       </span>
       <span
         className={cn("min-w-0 flex-1 overflow-hidden whitespace-nowrap", labelClasses(expanded))}

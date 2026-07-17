@@ -162,6 +162,7 @@
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-nav-progress: nav-progress 1.1s ease-in-out infinite;
 
   @keyframes accordion-down {
     from {
@@ -177,6 +178,15 @@
     }
     to {
       height: 0;
+    }
+  }
+  /* Barra de progresso de navegação (shell): trilho de 1/3 varrendo o topo */
+  @keyframes nav-progress {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(400%);
     }
   }
 }

@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import React, { useEffect } from "react";
 import { PiMagnifyingGlass, PiMoon, PiPlus, PiSun } from "react-icons/pi";
 import { useCommandPaletteStore } from "@/stores/command-palette-store";
+import { notifyNavigationStart } from "./navigation-progress";
 import { primaryNavItems, secondaryNavItems } from "./navigation";
 
 export function CommandPalette() {
@@ -40,6 +41,14 @@ export function CommandPalette() {
     command();
   }
 
+  function navigate(href: string) {
+    run(() => {
+      // router.push não passa por <a>, então a barra de progresso precisa do aviso manual.
+      notifyNavigationStart();
+      router.push(href);
+    });
+  }
+
   return (
     <CommandDialog open={open} onOpenChange={setOpen} title="Command palette" description="Navegue pelo app">
       <CommandInput placeholder="Buscar página ou ação..." />
@@ -49,7 +58,7 @@ export function CommandPalette() {
           {[...primaryNavItems, ...secondaryNavItems].map((item) => {
             const Icon = item.icon;
             return (
-              <CommandItem key={item.href} value={item.label} onSelect={() => run(() => router.push(item.href))}>
+              <CommandItem key={item.href} value={item.label} onSelect={() => navigate(item.href)}>
                 <Icon aria-hidden />
                 {item.label}
               </CommandItem>
@@ -58,7 +67,7 @@ export function CommandPalette() {
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup heading="Ações">
-          <CommandItem value="Nova pesquisa" onSelect={() => run(() => router.push("/discovery"))}>
+          <CommandItem value="Nova pesquisa" onSelect={() => navigate("/discovery")}>
             <PiPlus aria-hidden />
             Nova pesquisa
             <CommandShortcut>G D</CommandShortcut>

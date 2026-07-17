@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { CommandPalette } from "./command-palette";
+import { NavigationProgress } from "./navigation-progress";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { AppContextError, useAppContext } from "./use-app-context";
@@ -41,6 +42,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-svh overflow-hidden bg-background text-foreground">
+      {/* useSearchParams exige boundary própria para não segurar o prerender do shell */}
+      <Suspense fallback={null}>
+        <NavigationProgress />
+      </Suspense>
       <Sidebar user={user} organization={organization} />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <Topbar user={user} organization={organization} />

@@ -130,7 +130,9 @@ export function BusinessesView({
 
   const items = list.data?.items ?? [];
   const total = list.data?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / (query.pageSize ?? 20)));
+  const totalPages = list.data?.totalPages ?? Math.max(1, Math.ceil(total / (query.pageSize ?? 20)));
+  const hasPreviousPage = list.data?.hasPreviousPage ?? (query.page ?? 1) > 1;
+  const hasNextPage = list.data?.hasNextPage ?? (query.page ?? 1) < totalPages;
   const selectedInList = items.filter((item) => selectedIds.has(item.businessId));
 
   return (
@@ -283,7 +285,7 @@ export function BusinessesView({
               <Button
                 variant="outline"
                 size="sm"
-                disabled={(query.page ?? 1) <= 1}
+                disabled={!hasPreviousPage}
                 onClick={() => applyQuery({ page: (query.page ?? 1) - 1 })}
               >
                 Anterior
@@ -291,7 +293,7 @@ export function BusinessesView({
               <Button
                 variant="outline"
                 size="sm"
-                disabled={(query.page ?? 1) >= totalPages}
+                disabled={!hasNextPage}
                 onClick={() => applyQuery({ page: (query.page ?? 1) + 1 })}
               >
                 Próxima

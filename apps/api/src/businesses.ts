@@ -19,6 +19,7 @@ import { auditBusiness, canAccessBusiness } from "./audits";
 import { buildCsv } from "./csv";
 import { requireOrgContext } from "./org-context";
 import { ensureManualRefreshRateLimit, refreshBusiness, toRefreshResponse } from "./refresh";
+import { paginationMeta } from "./pagination";
 import { createServiceRoleClient } from "./supabase";
 
 const businessListRowSchema = z.object({
@@ -183,9 +184,7 @@ export function registerBusinessRoutes(app: FastifyInstance, options: BusinessRo
       const { items, total } = await fetchBusinessList(serviceDb, ctx.orgId, query.data);
       return reply.send({
         items,
-        page: query.data.page,
-        pageSize: query.data.pageSize,
-        total,
+        ...paginationMeta(query.data.page, query.data.pageSize, total),
       } satisfies BusinessListResponse);
     } catch (error) {
       request.log.error({ err: error }, "business list failed");

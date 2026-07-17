@@ -64,6 +64,9 @@ const businessListResponse: BusinessListResponse = {
   page: 1,
   pageSize: 20,
   total: 1,
+  totalPages: 1,
+  hasNextPage: false,
+  hasPreviousPage: false,
 };
 
 const searchResultsResponse: SearchResultsResponse = {
@@ -71,6 +74,9 @@ const searchResultsResponse: SearchResultsResponse = {
   page: 1,
   pageSize: 20,
   total: 1,
+  totalPages: 1,
+  hasNextPage: false,
+  hasPreviousPage: false,
 };
 
 function createWrapper(queryClient: QueryClient) {

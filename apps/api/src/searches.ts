@@ -19,6 +19,7 @@ import type { FastifyBaseLogger, FastifyInstance } from "fastify";
 import { z } from "zod";
 import { auditSearchResults } from "./audits";
 import { requireOrgContext } from "./org-context";
+import { paginationMeta } from "./pagination";
 import { createServiceRoleClient } from "./supabase";
 
 const SEARCH_FIELDS =
@@ -440,9 +441,7 @@ export function registerSearchRoutes(app: FastifyInstance, options: SearchRoutes
 
     return reply.send({
       items: (data ?? []).map(toSearchSummary),
-      page,
-      pageSize,
-      total: count ?? 0,
+      ...paginationMeta(page, pageSize, count ?? 0),
     } satisfies SearchListResponse);
   });
 
@@ -514,9 +513,7 @@ export function registerSearchRoutes(app: FastifyInstance, options: SearchRoutes
 
     return reply.send({
       items: rows.map(toSearchResultItem),
-      page,
-      pageSize,
-      total: rows[0]?.total_count ?? 0,
+      ...paginationMeta(page, pageSize, rows[0]?.total_count ?? 0),
     } satisfies SearchResultsResponse);
   });
 

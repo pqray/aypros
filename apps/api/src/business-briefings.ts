@@ -334,6 +334,13 @@ export function registerBusinessBriefingRoutes(
       if (!(await canAccessBusiness(serviceDb, ctx.orgId, params.data.businessId))) {
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
+      const row = await latestBriefing(serviceDb, ctx.orgId, params.data.businessId);
+      if (!row) {
+        return reply.send({
+          briefing: null,
+          sourceHash: "",
+        } satisfies BusinessBriefingResponse);
+      }
       const input = await buildBriefingInput({
         db: serviceDb,
         orgId: ctx.orgId,
@@ -344,9 +351,8 @@ export function registerBusinessBriefingRoutes(
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
       const hash = sourceHash(input);
-      const row = await latestBriefing(serviceDb, ctx.orgId, params.data.businessId);
       return reply.send({
-        briefing: row ? toBriefing(row, hash) : null,
+        briefing: toBriefing(row, hash),
         sourceHash: hash,
       } satisfies BusinessBriefingResponse);
     } catch (error) {

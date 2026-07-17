@@ -42,11 +42,17 @@ export type CreateSearchResponse = {
   reused: boolean;
 };
 
-export type SearchListResponse = {
-  items: SearchSummary[];
+export type PaginationMeta = {
   page: number;
   pageSize: number;
   total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+};
+
+export type SearchListResponse = PaginationMeta & {
+  items: SearchSummary[];
 };
 
 export type SearchResultItem = {
@@ -64,11 +70,8 @@ export type SearchResultItem = {
   favorited: boolean;
 };
 
-export type SearchResultsResponse = {
+export type SearchResultsResponse = PaginationMeta & {
   items: SearchResultItem[];
-  page: number;
-  pageSize: number;
-  total: number;
 };
 
 export type ApiErrorBody = {
@@ -192,11 +195,8 @@ export type BusinessListQuery = {
   sortDir?: BusinessSortDir;
 };
 
-export type BusinessListResponse = {
+export type BusinessListResponse = PaginationMeta & {
   items: BusinessListItem[];
-  page: number;
-  pageSize: number;
-  total: number;
 };
 
 export type SavedFilter = {

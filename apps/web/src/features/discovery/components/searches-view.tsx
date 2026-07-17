@@ -26,7 +26,9 @@ export function SearchesView() {
   const page = Number.isInteger(pageParam) && pageParam >= 1 ? pageParam : 1;
 
   const { data, isLoading } = useSearches(orgId, page);
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
+  const totalPages = data?.totalPages ?? (data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1);
+  const hasPreviousPage = data?.hasPreviousPage ?? page > 1;
+  const hasNextPage = data?.hasNextPage ?? page < totalPages;
 
   function goToPage(nextPage: number) {
     const params = new URLSearchParams(searchParams.toString());
@@ -109,7 +111,7 @@ export function SearchesView() {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={page <= 1}
+                  disabled={!hasPreviousPage}
                   onClick={() => goToPage(page - 1)}
                 >
                   Anterior
@@ -117,7 +119,7 @@ export function SearchesView() {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={page >= totalPages}
+                  disabled={!hasNextPage}
                   onClick={() => goToPage(page + 1)}
                 >
                   Proxima

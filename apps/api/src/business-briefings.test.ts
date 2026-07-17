@@ -140,7 +140,7 @@ describe("business briefing routes", () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({ briefing: null });
-    expect(response.json().sourceHash).toHaveLength(64);
+    expect(response.json().sourceHash).toBe("");
 
     await app.close();
   });

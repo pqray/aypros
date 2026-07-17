@@ -161,7 +161,9 @@ export function SearchResultsList({
   onToggleFavorite: (item: SearchResultItem) => void;
 }) {
   const items = applyWebsiteFilter(results?.items ?? [], filter);
-  const totalPages = results ? Math.max(1, Math.ceil(results.total / results.pageSize)) : 1;
+  const totalPages = results?.totalPages ?? (results ? Math.max(1, Math.ceil(results.total / results.pageSize)) : 1);
+  const hasPreviousPage = results?.hasPreviousPage ?? page > 1;
+  const hasNextPage = results?.hasNextPage ?? page < totalPages;
   const firstItem = results && results.total > 0 ? (results.page - 1) * results.pageSize + 1 : 0;
   const lastItem = results ? Math.min(results.page * results.pageSize, results.total) : 0;
 
@@ -360,7 +362,7 @@ export function SearchResultsList({
               <Button
                 variant="outline"
                 size="sm"
-                disabled={page <= 1 || isUpdating}
+                disabled={!hasPreviousPage || isUpdating}
                 onClick={() => onPageChange(page - 1)}
               >
                 Anterior
@@ -368,7 +370,7 @@ export function SearchResultsList({
               <Button
                 variant="outline"
                 size="sm"
-                disabled={page >= totalPages || isUpdating}
+                disabled={!hasNextPage || isUpdating}
                 onClick={() => onPageChange(page + 1)}
               >
                 Proxima

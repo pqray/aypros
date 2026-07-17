@@ -56,7 +56,19 @@ describe("SearchResultsList", () => {
     onToggleFavorite: vi.fn(),
   };
 
-  const results: SearchResultsResponse = {
+  function withPagination(
+    response: Omit<SearchResultsResponse, "totalPages" | "hasNextPage" | "hasPreviousPage">,
+  ): SearchResultsResponse {
+    const totalPages = Math.max(1, Math.ceil(response.total / response.pageSize));
+    return {
+      ...response,
+      totalPages,
+      hasNextPage: response.page < totalPages,
+      hasPreviousPage: response.page > 1,
+    };
+  }
+
+  const results: SearchResultsResponse = withPagination({
     page: 1,
     pageSize: 10,
     total: 2,
@@ -90,7 +102,7 @@ describe("SearchResultsList", () => {
         favorited: true,
       },
     ],
-  };
+  });
 
   function renderResults(props: Partial<ComponentProps<typeof SearchResultsList>> = {}) {
     const handlers = {
@@ -171,7 +183,7 @@ describe("SearchResultsList", () => {
 
     rerender(
       <SearchResultsList
-        results={{ ...results, page: 2, total: 12 }}
+        results={withPagination({ ...results, page: 2, total: 12 })}
         status="completed"
         isLoading={false}
         page={2}
@@ -222,7 +234,7 @@ describe("SearchResultsList", () => {
   });
 
   it("shows a subtle updating state while a new page is loading", () => {
-    renderResults({ isUpdating: true, results: { ...results, total: 12 } });
+    renderResults({ isUpdating: true, results: withPagination({ ...results, total: 12 }) });
 
     expect(screen.getByText("Atualizando resultados...")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Proxima" })).toBeDisabled();
@@ -231,7 +243,7 @@ describe("SearchResultsList", () => {
   it("shows searching empty state while the search is running", () => {
     render(
       <SearchResultsList
-        results={{ page: 1, pageSize: 60, total: 0, items: [] }}
+        results={withPagination({ page: 1, pageSize: 60, total: 0, items: [] })}
         status="processing"
         isLoading={false}
         page={1}
@@ -249,7 +261,7 @@ describe("SearchResultsList", () => {
   it("shows honest empty state when a finished search found nothing", () => {
     render(
       <SearchResultsList
-        results={{ page: 1, pageSize: 60, total: 0, items: [] }}
+        results={withPagination({ page: 1, pageSize: 60, total: 0, items: [] })}
         status="completed"
         isLoading={false}
         page={1}
@@ -266,7 +278,7 @@ describe("SearchResultsList", () => {
 
   it("keeps filter controls visible when the active filter has no results", () => {
     renderResults({
-      results: { page: 1, pageSize: 10, total: 0, items: [] },
+      results: withPagination({ page: 1, pageSize: 10, total: 0, items: [] }),
       filter: "without_site",
     });
 

@@ -137,6 +137,12 @@ export const updateNoteSchema = z.object({
   content: noteContentSchema,
 });
 
+export const aiKindSchema = z.enum(["commercial_summary", "whatsapp_message", "email_message"]);
+
+export const generateAiSchema = z.object({
+  kind: aiKindSchema,
+});
+
 export const onboardingSchema = z.object({
   fullName: requiredText("Nome"),
   organizationName: requiredText("Organizacao"),
@@ -158,4 +164,5 @@ export type BusinessIdsInput = z.infer<typeof businessIdsSchema>;
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;
 export type UpdateLeadInputSchema = z.infer<typeof updateLeadSchema>;
 export type CreateNoteInput = z.infer<typeof createNoteSchema>;
+export type GenerateAiInput = z.infer<typeof generateAiSchema>;
 export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;

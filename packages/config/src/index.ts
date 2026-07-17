@@ -18,6 +18,22 @@ export const auditConfig = {
   maxBatchAuditsPerSearch: 20,
 } as const;
 
+export const aiConfig = {
+  /** Groq default model (pt-BR quality) and cheaper fallback if it is unavailable. */
+  model: "llama-3.3-70b-versatile",
+  fallbackModel: "llama-3.1-8b-instant",
+  /** Rate limit: AI generations per organization per day (rolling 24h). */
+  maxGenerationsPerOrgPerDay: 50,
+  /** Provider call timeout. */
+  timeoutMs: 30_000,
+  /** Output budget per kind — messages are short by design. */
+  maxTokensByKind: {
+    commercial_summary: 1024,
+    whatsapp_message: 512,
+    email_message: 1024,
+  },
+} as const;
+
 export const businessesConfig = {
   /** Server-side page size options for the businesses table. */
   pageSizes: [10, 20, 50] as const,

@@ -1,0 +1,137 @@
+import Groq from "groq-sdk";
+import { aiOutputSchemas } from "./schemas";
+import { buildCorrectiveMessages, buildPromptMessages, promptVersions } from "./prompts";
+import { AiError, type AiInput, type AiKind, type AiOutput, type AiProvider } from "./types";
+
+export type ChatCompletionParams = {
+  model: string;
+  messages: Array<{ role: "system" | "user"; content: string }>;
+  response_format: { type: "json_object" };
+  max_tokens: number;
+  temperature: number;
+};
+
+export type ChatCompletionResult = {
+  content: string;
+  tokensUsed: number | null;
+};
+
+/** Boundary kept minimal so tests stub it without groq-sdk internals. */
+export interface ChatCompletionClient {
+  complete(params: ChatCompletionParams): Promise<ChatCompletionResult>;
+}
+
+export type GroqAiProviderOptions = {
+  apiKey: string;
+  model: string;
+  fallbackModel?: string;
+  timeoutMs: number;
+  maxTokensByKind: Record<AiKind, number>;
+  client?: ChatCompletionClient;
+};
+
+function createSdkClient(apiKey: string, timeoutMs: number): ChatCompletionClient {
+  const groq = new Groq({ apiKey, timeout: timeoutMs, maxRetries: 0 });
+  return {
+    async complete(params) {
+      const response = await groq.chat.completions.create(params);
+      return {
+        content: response.choices[0]?.message?.content ?? "",
+        tokensUsed: response.usage?.total_tokens ?? null,
+      };
+    },
+  };
+}
+
+export function mapProviderError(error: unknown): AiError {
+  if (error instanceof AiError) return error;
+  const err = error as { status?: number; name?: string; message?: string };
+  if (err?.name === "APIConnectionTimeoutError" || /time(d\s?)?out/i.test(err?.message ?? "")) {
+    return new AiError("TIMEOUT", "A geração demorou demais e foi cancelada.");
+  }
+  if (err?.status === 429) {
+    return new AiError("RATE_LIMITED", "O provedor de IA está sobrecarregado no momento.");
+  }
+  return new AiError("PROVIDER_ERROR", "O provedor de IA retornou um erro.");
+}
+
+function parseOutput(kind: AiKind, content: string): AiOutput | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return null;
+  }
+  const result = aiOutputSchemas[kind].safeParse(parsed);
+  return result.success ? (result.data as AiOutput) : null;
+}
+
+export function createGroqAiProvider(options: GroqAiProviderOptions): AiProvider {
+  const client = options.client ?? createSdkClient(options.apiKey, options.timeoutMs);
+
+  async function callModel(
+    model: string,
+    kind: AiKind,
+    messages: ChatCompletionParams["messages"],
+  ): Promise<ChatCompletionResult> {
+    try {
+      return await client.complete({
+        model,
+        messages,
+        response_format: { type: "json_object" },
+        max_tokens: options.maxTokensByKind[kind],
+        temperature: 0.4,
+      });
+    } catch (error) {
+      throw mapProviderError(error);
+    }
+  }
+
+  return {
+    async generate(kind, input: AiInput) {
+      const messages = buildPromptMessages(kind, input);
+
+      let activeModel = options.model;
+      let first: ChatCompletionResult;
+      try {
+        first = await callModel(activeModel, kind, messages);
+      } catch (error) {
+        const aiError = error as AiError;
+        const canFallback =
+          options.fallbackModel &&
+          options.fallbackModel !== activeModel &&
+          (aiError.code === "PROVIDER_ERROR" || aiError.code === "RATE_LIMITED");
+        if (!canFallback) throw aiError;
+        activeModel = options.fallbackModel as string;
+        first = await callModel(activeModel, kind, messages);
+      }
+
+      let tokensUsed = first.tokensUsed;
+      let output = parseOutput(kind, first.content);
+
+      if (!output) {
+        // Single corrective retry with the invalid answer echoed back (specs/13).
+        const retry = await callModel(
+          activeModel,
+          kind,
+          buildCorrectiveMessages(kind, input, first.content),
+        );
+        tokensUsed =
+          retry.tokensUsed === null && tokensUsed === null
+            ? null
+            : (tokensUsed ?? 0) + (retry.tokensUsed ?? 0);
+        output = parseOutput(kind, retry.content);
+        if (!output) {
+          throw new AiError("INVALID_OUTPUT", "A IA não retornou o formato esperado.");
+        }
+      }
+
+      return {
+        output,
+        model: activeModel,
+        tokensUsed,
+        promptVersion: promptVersions[kind],
+      };
+    },
+  };
+}

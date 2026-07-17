@@ -26,6 +26,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PiArrowLeft, PiClockCountdown, PiWarningCircle } from "react-icons/pi";
 import { useAppContext } from "@/components/shell/use-app-context";
+import { AiGenerationsCard } from "@/features/ai/components/ai-generations-card";
 import { LEAD_STAGES, isOverdue, leadStageLabels } from "../board";
 import { useLead, useUpdateLead } from "../queries";
 import { LeadActivityTimeline } from "./lead-activity-timeline";
@@ -248,6 +249,8 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
               </div>
             </CardContent>
           </Card>
+
+          <AiGenerationsCard businessId={business.id} />
 
           <Card>
             <CardHeader>

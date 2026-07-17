@@ -88,6 +88,8 @@ A API escuta em `http://localhost:4000`; o web em `http://localhost:3000`.
 | POST | `/v1/leads/:id/notes` | Cria nota no lead e registra atividade |
 | PATCH | `/v1/notes/:id` | Edita nota |
 | DELETE | `/v1/notes/:id` | Remove nota |
+| GET | `/v1/businesses/:businessId/ai-generations` | Lista geracoes de IA da empresa na organizacao (rascunhos recentes por kind) |
+| POST | `/v1/businesses/:businessId/ai-generations` | Gera conteudo com Groq (summary/whatsapp/email): input estruturado do banco, Zod no output, rate limit diario por org, persiste em `ai_generations` e registra atividade; 503 se `GROQ_API_KEY` ausente |
 
 ## Padroes de implementacao
 

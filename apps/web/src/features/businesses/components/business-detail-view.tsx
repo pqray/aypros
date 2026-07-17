@@ -27,6 +27,7 @@ import {
   PiWarningCircle,
 } from "react-icons/pi";
 import { useAppContext } from "@/components/shell/use-app-context";
+import { AiGenerationsCard } from "@/features/ai/components/ai-generations-card";
 import { useCreateLead } from "@/features/pipeline/queries";
 import { useBusinessAuditSummary, useRunBusinessAudit, useToggleFavorite } from "../queries";
 
@@ -326,6 +327,8 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
           </CardContent>
         </Card>
       </div>
+
+      <AiGenerationsCard businessId={businessId} />
     </div>
   );
 }

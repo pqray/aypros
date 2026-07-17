@@ -3,6 +3,7 @@ import { createGooglePlacesProvider } from "@aypros/integrations";
 import Fastify from "fastify";
 import { env } from "./env";
 import { loadAppContext } from "./app-context";
+import { registerAiRoutes, type AiRoutesOptions } from "./ai";
 import { registerAuditRoutes, type AuditRoutesOptions } from "./audits";
 import { registerBusinessRoutes, type BusinessRoutesOptions } from "./businesses";
 import { registerLeadRoutes, type LeadRoutesOptions } from "./leads";
@@ -11,7 +12,7 @@ import { createSupabaseClient } from "./supabase";
 
 export function buildApp(
   overrides: Partial<
-    SearchRoutesOptions & AuditRoutesOptions & BusinessRoutesOptions & LeadRoutesOptions
+    SearchRoutesOptions & AuditRoutesOptions & BusinessRoutesOptions & LeadRoutesOptions & AiRoutesOptions
   > = {},
 ) {
   const app = Fastify({
@@ -73,6 +74,7 @@ export function buildApp(
   registerAuditRoutes(app, { serviceDb: overrides.serviceDb });
   registerBusinessRoutes(app, { serviceDb: overrides.serviceDb });
   registerLeadRoutes(app, { serviceDb: overrides.serviceDb });
+  registerAiRoutes(app, { serviceDb: overrides.serviceDb, aiProvider: overrides.aiProvider });
 
   return app;
 }

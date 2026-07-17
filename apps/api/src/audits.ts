@@ -210,7 +210,7 @@ function failedAudit(error: unknown): AuditResult {
   };
 }
 
-async function canAccessBusiness(db: SupabaseClient, orgId: string, businessId: string) {
+export async function canAccessBusiness(db: SupabaseClient, orgId: string, businessId: string) {
   const { data, error } = await db
     .from("search_results")
     .select("business_id, search:searches!inner(id)")

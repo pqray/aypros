@@ -22,7 +22,8 @@ export type LoadedAppContext = {
   } | null;
 };
 
-export type SearchStatus = "pending" | "processing" | "completed" | "partial" | "failed";
+export type ProcessStatus = "pending" | "processing" | "completed" | "partial" | "failed";
+export type SearchStatus = ProcessStatus;
 
 export type SearchSummary = {
   id: string;
@@ -280,4 +281,42 @@ export type LeadDetailResponse = {
   business: BusinessDetail;
   notes: LeadNote[];
   activities: LeadActivity[];
+};
+
+export type AiKind = "commercial_summary" | "whatsapp_message" | "email_message";
+
+export type CommercialSummaryOutput = {
+  summary: string;
+  painPoints: string[];
+  salesAngle: string;
+};
+
+export type WhatsappMessageOutput = {
+  message: string;
+};
+
+export type EmailMessageOutput = {
+  subject: string;
+  body: string;
+};
+
+export type AiOutput = CommercialSummaryOutput | WhatsappMessageOutput | EmailMessageOutput;
+
+export type AiGenerationSummary = {
+  id: string;
+  kind: AiKind;
+  status: ProcessStatus;
+  output: AiOutput | null;
+  model: string;
+  tokensUsed: number | null;
+  promptVersion: string;
+  createdAt: string;
+};
+
+export type AiGenerationsResponse = {
+  items: AiGenerationSummary[];
+};
+
+export type GenerateAiResponse = {
+  generation: AiGenerationSummary;
 };

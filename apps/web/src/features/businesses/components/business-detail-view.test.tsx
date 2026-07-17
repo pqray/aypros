@@ -23,6 +23,10 @@ vi.mock("@/features/pipeline/queries", () => ({
   useCreateLead: () => ({ mutate: createLeadMutate, isPending: false }),
 }));
 
+vi.mock("@/features/ai/components/ai-generations-card", () => ({
+  AiGenerationsCard: () => <div data-testid="ai-generations-card" />,
+}));
+
 vi.mock("../queries", () => ({
   useBusinessAuditSummary: () => ({
     isLoading: false,

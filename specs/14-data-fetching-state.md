@@ -33,7 +33,8 @@ Dados de produto devem ser buscados em `apps/api` via `NEXT_PUBLIC_API_URL`. Nã
 ### Configuração
 
 - `staleTime` padrão: 30s; listas estáveis (pesquisas antigas): 5min; progressó de processo: 0.
-- **Polling**: apenas em processos com estado não-terminal (`pending`/`processing`): `refetchInterval` 2–3s, parando quando `completed | partial | failed`.
+- **Polling**: apenas em processos com estado não-terminal (`pending`/`processing`), parando quando `completed | partial | failed`. Separar status leve de listas pesadas: status pode usar intervalo curto; resultados/listas devem usar intervalo maior para evitar carga desnecessária.
+- **Paginação**: listas devem consumir `PaginationMeta` do backend (`totalPages`, `hasNextPage`, `hasPreviousPage`) em vez de recalcular esses flags no cliente.
 - **Invalidation** por evento: favoritar → `favorites` + `businesses`; mover lead → `pipeline` + `lead`; nota → `notes` + `activities`; auditoria concluída → `business`, `audits`, `businesses` (score).
 - **Optimistic updates** (favoritar, drag no Kanban, criar nota): `onMutate` atualiza cache + snapshot, `onError` rollback + toast Sonner, `onSettled` invalida.
 

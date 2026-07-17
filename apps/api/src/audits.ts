@@ -573,7 +573,8 @@ export function registerAuditRoutes(app: FastifyInstance, options: AuditRoutesOp
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
 
-      return reply.send(auditSummaryResponseFromRow(row));    } catch (error) {
+      return reply.send(auditSummaryResponseFromRow(row));
+    } catch (error) {
       request.log.error({ err: error }, "business audit summary failed");
       return reply.code(500).send({ error: "Erro ao carregar auditoria" } satisfies ApiErrorBody);
     }

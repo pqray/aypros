@@ -717,7 +717,14 @@ export type ReportRoutesOptions = {
 export function registerReportRoutes(app: FastifyInstance, options: ReportRoutesOptions = {}) {
   const serviceDb = options.serviceDb ?? createServiceRoleClient();
 
-  async function loadModel(orgId: string, userId: string, businessId: string) {
+  async function loadModel(params: {
+    orgId: string;
+    userId: string;
+    businessId: string;
+    organizationName?: string;
+    senderName?: string | null;
+  }) {
+    const { orgId, businessId } = params;
     if (!(await canAccessBusiness(serviceDb, orgId, businessId))) {
       return null;
     }
@@ -743,23 +750,30 @@ export function registerReportRoutes(app: FastifyInstance, options: ReportRoutes
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      serviceDb.from("organizations").select("name").eq("id", orgId).single(),
-      serviceDb.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
+      params.organizationName ? null : serviceDb.from("organizations").select("name").eq("id", orgId).single(),
+      params.senderName !== undefined
+        ? null
+        : serviceDb.from("profiles").select("full_name").eq("id", params.userId).maybeSingle(),
     ]);
 
     if (businessResult.error || !businessResult.data) {
       return null;
     }
-    if (auditResult.error || scoreResult.error || orgResult.error) {
-      throw new Error(auditResult.error?.message ?? scoreResult.error?.message ?? orgResult.error?.message);
+    const orgError = orgResult && "error" in orgResult ? orgResult.error : null;
+    if (auditResult.error || scoreResult.error || orgError) {
+      throw new Error(auditResult.error?.message ?? scoreResult.error?.message ?? orgError?.message);
     }
 
     return buildReportModel({
       business: businessResult.data as BusinessReportRow,
       audit: (auditResult.data as AuditReportRow | null) ?? null,
       score: (scoreResult.data as ScoreReportRow | null) ?? null,
-      organizationName: (orgResult.data as { name: string }).name,
-      senderName: (profileResult.data as { full_name: string | null } | null)?.full_name ?? null,
+      organizationName:
+        params.organizationName ??
+        ((orgResult as { data: { name: string } | null } | null)?.data?.name ?? "Aypros"),
+      senderName:
+        params.senderName ??
+        ((profileResult as { data: { full_name: string | null } | null } | null)?.data?.full_name ?? null),
     });
   }
 
@@ -774,7 +788,13 @@ export function registerReportRoutes(app: FastifyInstance, options: ReportRoutes
     if (!ctx) return;
 
     try {
-      const model = await loadModel(ctx.orgId, ctx.userId, params.data.businessId);
+      const model = await loadModel({
+        orgId: ctx.orgId,
+        userId: ctx.userId,
+        businessId: params.data.businessId,
+        organizationName: ctx.organizationName,
+        senderName: ctx.userName,
+      });
       if (!model) {
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
@@ -796,7 +816,13 @@ export function registerReportRoutes(app: FastifyInstance, options: ReportRoutes
 
     try {
       await ensureReportRateLimit(serviceDb, ctx.orgId);
-      const model = await loadModel(ctx.orgId, ctx.userId, params.data.businessId);
+      const model = await loadModel({
+        orgId: ctx.orgId,
+        userId: ctx.userId,
+        businessId: params.data.businessId,
+        organizationName: ctx.organizationName,
+        senderName: ctx.userName,
+      });
       if (!model) {
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }

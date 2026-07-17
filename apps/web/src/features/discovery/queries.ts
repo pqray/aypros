@@ -13,6 +13,8 @@ import {
 } from "./api";
 
 const TERMINAL_STATUSES: SearchStatus[] = ["completed", "partial", "failed"];
+const SEARCH_STATUS_POLL_MS = 1500;
+const SEARCH_RESULTS_POLL_MS = 3500;
 
 export function isTerminalStatus(status: SearchStatus | undefined): boolean {
   return status !== undefined && TERMINAL_STATUSES.includes(status);
@@ -24,7 +26,8 @@ export function useSearch(orgId: string | undefined, searchId: string | null) {
     queryFn: () => getSearch(searchId as string),
     enabled: Boolean(orgId && searchId),
     staleTime: 0,
-    refetchInterval: (query) => (isTerminalStatus(query.state.data?.search.status) ? false : 1500),
+    refetchInterval: (query) =>
+      isTerminalStatus(query.state.data?.search.status) ? false : SEARCH_STATUS_POLL_MS,
   });
 }
 
@@ -40,7 +43,7 @@ export function useSearchResults(
     enabled: Boolean(orgId && searchId),
     // While the search runs, new businesses stream in every poll; keeping the
     // previous page avoids the list blinking between refetches.
-    refetchInterval: isTerminalStatus(searchStatus) ? false : 1500,
+    refetchInterval: isTerminalStatus(searchStatus) ? false : SEARCH_RESULTS_POLL_MS,
     placeholderData: keepPreviousData,
   });
 }

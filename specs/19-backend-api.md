@@ -107,6 +107,8 @@ A API escuta em `http://localhost:4000`; o web em `http://localhost:3000`.
 - Contratos compartilhados em `packages/types`.
 - Schemas de entrada em `packages/validation` quando também forem usados pelo web; schemas internos podem ficar na API.
 - Respostas devem ser pequenas, agregadas e pensadas para cache no TanStack Query.
+- Toda rota paginada deve retornar o contrato compartilhado `PaginationMeta`: `page`, `pageSize`, `total`, `totalPages`, `hasNextPage` e `hasPreviousPage`.
+- Telas paginadas devem consumir os flags do backend em vez de recalcular paginaÃ§Ã£o no cliente.
 
 ## Performance
 
@@ -116,6 +118,8 @@ Separar a API não e, por si so, otimização. Os ganhos vem de:
 - indices e RPCs quando fizer sentido;
 - cache HTTP/TanStack Query;
 - evitar fetch duplicado no frontend;
+- reaproveitar o contexto autenticado (`orgId`, `userId`, nome da organizaÃ§Ã£o e nome do usuÃ¡rio) quando a rota jÃ¡ chamou `requireOrgContext`;
+- polling somente para processos nÃ£o-terminais, com intervalos diferentes para status leve e listas pesadas;
 - logs de tempo por request e metricas futuras.
 
 ## Seguranca

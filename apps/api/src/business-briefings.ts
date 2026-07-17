@@ -141,6 +141,8 @@ async function buildBriefingInput(params: {
   orgId: string;
   userId: string;
   businessId: string;
+  organizationName?: string;
+  senderName?: string | null;
 }): Promise<BusinessBriefingInput | null> {
   const { db, orgId, userId, businessId } = params;
   const [businessResult, auditResult, scoreResult, profileResult, orgResult, leadResult] =
@@ -165,8 +167,10 @@ async function buildBriefingInput(params: {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      db.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
-      db.from("organizations").select("name").eq("id", orgId).maybeSingle(),
+      params.senderName !== undefined
+        ? null
+        : db.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
+      params.organizationName ? null : db.from("organizations").select("name").eq("id", orgId).maybeSingle(),
       db
         .from("leads")
         .select("id, stage, status, assigned_to, last_contact_at, next_action, next_action_at")
@@ -180,8 +184,12 @@ async function buildBriefingInput(params: {
   const business = businessResult.data as BusinessRow;
   const audit = (auditResult.data as AuditRow | null) ?? null;
   const score = (scoreResult.data as ScoreRow | null) ?? null;
-  const senderName = (profileResult.data as { full_name: string | null } | null)?.full_name ?? null;
-  const organizationName = (orgResult.data as { name: string } | null)?.name ?? null;
+  const senderName =
+    params.senderName ??
+    ((profileResult as { data: { full_name: string | null } | null } | null)?.data?.full_name ?? null);
+  const organizationName =
+    params.organizationName ??
+    ((orgResult as { data: { name: string } | null } | null)?.data?.name ?? null);
   const lead = (leadResult.data as LeadRow | null) ?? null;
 
   const reportModel = buildReportModel({
@@ -346,6 +354,8 @@ export function registerBusinessBriefingRoutes(
         orgId: ctx.orgId,
         userId: ctx.userId,
         businessId: params.data.businessId,
+        organizationName: ctx.organizationName,
+        senderName: ctx.userName,
       });
       if (!input) {
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
@@ -384,6 +394,8 @@ export function registerBusinessBriefingRoutes(
         orgId: ctx.orgId,
         userId: ctx.userId,
         businessId: params.data.businessId,
+        organizationName: ctx.organizationName,
+        senderName: ctx.userName,
       });
       if (!input) {
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);

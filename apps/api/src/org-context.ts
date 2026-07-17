@@ -8,6 +8,8 @@ export type OrgRequestContext = {
   supabase: SupabaseClient;
   orgId: string;
   userId: string;
+  organizationName: string;
+  userName: string | null;
   role: "owner" | "admin" | "member";
 };
 
@@ -32,6 +34,8 @@ export async function requireOrgContext(
     supabase,
     orgId: context.organization.id,
     userId: context.user.id,
+    organizationName: context.organization.name,
+    userName: context.profile.full_name,
     role: context.organization.role,
   };
 }

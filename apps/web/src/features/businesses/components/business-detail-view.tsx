@@ -8,15 +8,24 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   EmptyState,
   ScoreBadge,
   Skeleton,
   toast,
 } from "@aypros/ui";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   PiArrowLeft,
+  PiArrowsClockwise,
+  PiDownloadSimple,
+  PiDotsThreeVertical,
   PiGlobe,
   PiHeart,
   PiHeartFill,
@@ -29,7 +38,15 @@ import {
 import { useAppContext } from "@/components/shell/use-app-context";
 import { AiGenerationsCard } from "@/features/ai/components/ai-generations-card";
 import { useCreateLead } from "@/features/pipeline/queries";
-import { useBusinessAuditSummary, useRunBusinessAudit, useToggleFavorite } from "../queries";
+import { formatRelativeTime } from "@/lib/format";
+import { downloadBusinessReportPdf } from "../api";
+import {
+  useBusinessAuditSummary,
+  useRefreshBusinessData,
+  useRunBusinessAudit,
+  useToggleFavorite,
+} from "../queries";
+import { SegmentAuditDetailBadges } from "./segment-audit-badges";
 
 const confidenceLabels = {
   low: "Baixa",
@@ -68,13 +85,22 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
   const orgId = context?.organization?.id;
   const summary = useBusinessAuditSummary(businessId);
   const audit = useRunBusinessAudit(businessId);
+  const refresh = useRefreshBusinessData(businessId);
   const toggleFavorite = useToggleFavorite(orgId);
   const createLead = useCreateLead(orgId);
+  const [reportDownloading, setReportDownloading] = useState(false);
 
   function handleAudit() {
     audit.mutate(undefined, {
       onSuccess: () => toast.success("Auditoria concluida."),
       onError: () => toast.error("Nao foi possivel auditar o site."),
+    });
+  }
+
+  function handleRefresh() {
+    refresh.mutate(undefined, {
+      onSuccess: () => toast.success("Dados atualizados."),
+      onError: () => toast.error("Nao foi possivel atualizar os dados."),
     });
   }
 
@@ -93,6 +119,19 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
       },
       onError: () => toast.error("Nao foi possivel adicionar ao pipeline."),
     });
+  }
+
+  async function handleDownloadReport() {
+    if (!summary.data) return;
+    setReportDownloading(true);
+    try {
+      await downloadBusinessReportPdf(businessId, summary.data.business.name);
+      toast.success("Diagnostico baixado.");
+    } catch {
+      toast.error("Nao foi possivel baixar o diagnostico.");
+    } finally {
+      setReportDownloading(false);
+    }
   }
 
   if (summary.isLoading) {
@@ -119,8 +158,10 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
     );
   }
 
-  const { business, latestAudit, latestScore, favorited, leadId } = summary.data;
+  const { business, latestAudit, latestScore, refreshedAt, providerStatus, favorited, leadId } =
+    summary.data;
   const location = business.address ?? [business.city, business.state].filter(Boolean).join("/");
+  const freshnessLabel = refreshedAt ? formatRelativeTime(refreshedAt) : "Nunca atualizado";
 
   return (
     <div className="space-y-4">
@@ -135,43 +176,97 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
               <p className="text-sm text-muted-foreground">Detalhes, auditoria e score da empresa.</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link href="/businesses">
-                <PiArrowLeft aria-hidden />
-                Voltar
-              </Link>
-            </Button>
+          <div className="flex shrink-0 items-center gap-2 sm:justify-end">
             <Button onClick={handleAudit} loading={audit.isPending} disabled={!business.websiteUrl}>
               <PiMagnifyingGlass aria-hidden />
               Reanalisar
             </Button>
-            <Button
-              variant="outline"
-              aria-pressed={favorited}
-              loading={toggleFavorite.isPending}
-              onClick={handleToggleFavorite}
-            >
-              {favorited ? <PiHeartFill className="text-destructive" aria-hidden /> : <PiHeart aria-hidden />}
-              {favorited ? "Favoritado" : "Favoritar"}
-            </Button>
-            {leadId ? (
-              <Button asChild variant="outline">
-                <Link href={`/pipeline/${leadId}`}>
-                  <PiKanban aria-hidden />
-                  Ver no pipeline
-                </Link>
-              </Button>
-            ) : (
-              <Button variant="outline" loading={createLead.isPending} onClick={handleAddToPipeline}>
-                <PiKanban aria-hidden />
-                Adicionar ao pipeline
-              </Button>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" aria-label="Mais acoes">
+                  <PiDotsThreeVertical aria-hidden />
+                  Mais
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Acoes da empresa</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {leadId ? (
+                  <DropdownMenuItem asChild>
+                    <Link href={`/pipeline/${leadId}`}>
+                      <PiKanban aria-hidden />
+                      Ver no pipeline
+                    </Link>
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    disabled={createLead.isPending}
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      handleAddToPipeline();
+                    }}
+                  >
+                    <PiKanban aria-hidden />
+                    Adicionar ao pipeline
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  disabled={toggleFavorite.isPending}
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    handleToggleFavorite();
+                  }}
+                >
+                  {favorited ? (
+                    <PiHeartFill className="text-destructive" aria-hidden />
+                  ) : (
+                    <PiHeart aria-hidden />
+                  )}
+                  {favorited ? "Favoritado" : "Favoritar"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  disabled={refresh.isPending}
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    handleRefresh();
+                  }}
+                >
+                  <PiArrowsClockwise aria-hidden />
+                  Atualizar dados
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={reportDownloading}
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    void handleDownloadReport();
+                  }}
+                >
+                  <PiDownloadSimple aria-hidden />
+                  Baixar diagnostico (PDF)
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/businesses">
+                    <PiArrowLeft aria-hidden />
+                    Voltar para empresas
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
         <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          <BusinessMetaItem
+            icon={<PiArrowsClockwise className="size-4" aria-hidden />}
+            label="Dados"
+            value={
+              providerStatus === "removed"
+                ? "Place removido pelo provedor"
+                : `Atualizados ${freshnessLabel}`
+            }
+          />
           {location ? (
             <BusinessMetaItem
               icon={<PiMapPin className="size-4" aria-hidden />}
@@ -262,6 +357,10 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
             )}
 
             {latestAudit ? (
+              <SegmentAuditDetailBadges segment={business.segment} detections={latestAudit.detections} />
+            ) : null}
+
+            {latestAudit ? (
               <div className="grid gap-2 sm:grid-cols-2">
                 {(
                   [
@@ -271,6 +370,9 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
                     ["outdated", "Desatualizado"],
                     ["siteDown", "Fora do ar"],
                     ["basicBuilder", "Builder basico"],
+                    ["linkInBio", "Link-in-bio"],
+                    ["deliveryPlatform", "Delivery"],
+                    ["menuOnline", "Cardapio online"],
                   ] as const
                 ).map(([key, label]) => (
                   <div key={key} className="rounded-md border px-3 py-2 text-sm">
@@ -328,7 +430,7 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
         </Card>
       </div>
 
-      <AiGenerationsCard businessId={businessId} />
+      <AiGenerationsCard businessId={businessId} leadId={leadId} phone={business.phone} />
     </div>
   );
 }

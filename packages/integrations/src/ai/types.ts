@@ -1,6 +1,7 @@
 export type AiKind = "commercial_summary" | "whatsapp_message" | "email_message";
 
 export type AiDetectionState = "detected" | "not_detected" | "inconclusive";
+export type AiBusinessSegment = "restaurant" | "food_service" | "services" | "retail" | "other";
 
 /**
  * Structured generation input assembled server-side from the database
@@ -18,12 +19,14 @@ export type AiInput = {
     hasWebsite: boolean;
     websiteUrl: string | null;
     phone: string | null;
+    segment: AiBusinessSegment;
   };
   audit: {
     status: string;
     isHttps: boolean | null;
     responseTimeMs: number | null;
     findings: Array<{ code: string; state: AiDetectionState }>;
+    platforms: Array<{ code: string; state: AiDetectionState; evidence?: Record<string, unknown> }>;
   } | null;
   score: {
     score: number;

@@ -17,7 +17,12 @@ import { useCreateLead } from "@/features/pipeline/queries";
 import { useBusinessSelectionStore } from "@/stores/business-selection-store";
 import { exportBusinessesCsv } from "../api";
 import { applyBusinessListQuery, hasActiveFilters, parseBusinessListQuery, PAGE_SIZES } from "../filters";
-import { useAuditBusiness, useBusinessList, useToggleFavorite } from "../queries";
+import {
+  useAuditBusiness,
+  useBusinessList,
+  usePrefetchBusinessAuditSummary,
+  useToggleFavorite,
+} from "../queries";
 import { BatchActionBar } from "./batch-action-bar";
 import { BusinessesCards } from "./businesses-cards";
 import { BusinessesTable } from "./businesses-table";
@@ -48,6 +53,7 @@ export function BusinessesView({
   const toggleFavorite = useToggleFavorite(orgId);
   const auditBusiness = useAuditBusiness(orgId);
   const createLead = useCreateLead(orgId);
+  const prefetchBusinessDetail = usePrefetchBusinessAuditSummary();
 
   const selectedIds = useBusinessSelectionStore((state) => state.selectedIds);
   const setMany = useBusinessSelectionStore((state) => state.setMany);
@@ -214,6 +220,7 @@ export function BusinessesView({
               onAudit={handleAudit}
               pipelinePendingId={createLead.isPending ? (createLead.variables ?? null) : null}
               onAddToPipeline={handleAddToPipeline}
+              onPrefetchDetail={prefetchBusinessDetail}
               sortBy={query.sortBy ?? "name"}
               sortDir={query.sortDir ?? "asc"}
               onSortChange={handleSortChange}
@@ -233,6 +240,7 @@ export function BusinessesView({
               onAudit={handleAudit}
               pipelinePendingId={createLead.isPending ? (createLead.variables ?? null) : null}
               onAddToPipeline={handleAddToPipeline}
+              onPrefetchDetail={prefetchBusinessDetail}
             />
           )}
 

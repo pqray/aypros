@@ -13,6 +13,7 @@ const input: AiInput = {
     hasWebsite: false,
     websiteUrl: null,
     phone: null,
+    segment: "other",
   },
   audit: null,
   score: null,

@@ -1,6 +1,7 @@
 export type OpportunityLevel = "low" | "medium" | "high" | "very_high";
 export type ConfidenceLevel = "low" | "medium" | "high";
 export type DetectionState = "detected" | "not_detected" | "inconclusive";
+export type BusinessSegment = "restaurant" | "food_service" | "services" | "retail" | "other";
 
 export type ScoreBusinessInput = {
   websiteUrl: string | null;
@@ -9,6 +10,7 @@ export type ScoreBusinessInput = {
   reviewCount: number | null;
   raw?: {
     socialOnly?: boolean;
+    segment?: BusinessSegment;
   };
 };
 
@@ -24,6 +26,9 @@ export type ScoreAuditInput = {
     hasDescription?: DetectionState;
     outdated?: DetectionState;
     basicBuilder?: DetectionState;
+    linkInBio?: DetectionState;
+    deliveryPlatform?: DetectionState;
+    menuOnline?: DetectionState;
   };
 } | null;
 
@@ -39,7 +44,7 @@ export type OpportunityScoreResult = {
   confidence: ConfidenceLevel;
   reasons: ScoreReason[];
   suggestedServices: string[];
-  algorithmVersion: "v1";
+  algorithmVersion: "v1" | "v2";
 };
 
 const SERVICES_BY_REASON: Record<string, string[]> = {
@@ -51,6 +56,9 @@ const SERVICES_BY_REASON: Record<string, string[]> = {
   outdated: ["Reformulacao"],
   weak_metadata: ["SEO local"],
   basic_builder: ["Reformulacao"],
+  link_in_bio_only: ["Criacao de site", "Presenca digital propria"],
+  delivery_dependency: ["Criacao de site", "Cardapio online"],
+  no_menu_online: ["Cardapio online", "SEO local"],
 };
 
 function clampScore(score: number): number {
@@ -92,6 +100,8 @@ export function calculateOpportunityScore(
 ): OpportunityScoreResult {
   const reasons: ScoreReason[] = [];
   const socialOnly = business.raw?.socialOnly === true;
+  const segment = business.raw?.segment ?? "other";
+  const foodSegment = segment === "restaurant" || segment === "food_service";
   const hasWebsite = Boolean(business.websiteUrl?.trim());
 
   if (!hasWebsite && !socialOnly) {
@@ -121,6 +131,20 @@ export function calculateOpportunityScore(
     }
     if (isDetected(audit.detections.basicBuilder)) {
       addReason(reasons, "basic_builder", "Builder basico detectado", 6);
+    }
+    if (isDetected(audit.detections.linkInBio)) {
+      addReason(reasons, "link_in_bio_only", "Atende so por link-in-bio", 25);
+    }
+    if (foodSegment && isDetected(audit.detections.deliveryPlatform)) {
+      addReason(
+        reasons,
+        "delivery_dependency",
+        "Depende de plataforma de delivery sem site proprio",
+        20,
+      );
+    }
+    if (foodSegment && isNotDetected(audit.detections.menuOnline)) {
+      addReason(reasons, "no_menu_online", "Sem cardapio online detectado", 12);
     }
   }
 
@@ -156,6 +180,6 @@ export function calculateOpportunityScore(
     confidence,
     reasons: reasons.sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact)),
     suggestedServices: uniqueServices(reasons),
-    algorithmVersion: "v1",
+    algorithmVersion: "v2",
   };
 }

@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { detectSegmentPlatforms } from "./segment-platforms";
 import type { AuditDetection, AuditDetections } from "./types";
 
 function detected(evidence?: Record<string, unknown>): AuditDetection {
@@ -63,6 +64,7 @@ export function parseHtmlAudit(input: {
     SOCIAL_PATTERNS.some((pattern) => href.toLowerCase().includes(pattern)),
   );
   const whatsappLinks = links.filter((href) => /wa\.me|whatsapp\.com/i.test(href));
+  const segmentPlatforms = detectSegmentPlatforms({ $, html: input.html, finalUrl: input.finalUrl, links });
   const years = Array.from(input.html.matchAll(/\b(19\d{2}|20\d{2})\b/g), (match) =>
     Number(match[1]),
   );
@@ -93,6 +95,9 @@ export function parseHtmlAudit(input: {
       platform === "wix" || platform === "squarespace"
         ? detected({ platform })
         : notDetected({ platform: platform ?? null }),
+    linkInBio: segmentPlatforms.linkInBio,
+    deliveryPlatform: segmentPlatforms.deliveryPlatform,
+    menuOnline: segmentPlatforms.menuOnline,
     nonHtml: notDetected(),
   };
 

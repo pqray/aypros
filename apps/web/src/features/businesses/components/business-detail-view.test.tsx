@@ -1,5 +1,6 @@
 import { TooltipProvider } from "@aypros/ui";
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BusinessDetailView } from "./business-detail-view";
 
@@ -12,6 +13,7 @@ function renderView(businessId: string) {
 }
 
 const mutate = vi.fn();
+const refreshMutate = vi.fn();
 const toggleFavoriteMutate = vi.fn();
 const createLeadMutate = vi.fn();
 
@@ -42,6 +44,7 @@ vi.mock("../queries", () => ({
         rating: 4.6,
         reviewCount: 120,
         categories: [],
+        segment: "food_service",
       },
       latestAudit: {
         id: "a1",
@@ -58,6 +61,9 @@ vi.mock("../queries", () => ({
           outdated: { state: "not_detected" },
           siteDown: { state: "not_detected" },
           basicBuilder: { state: "not_detected" },
+          linkInBio: { state: "not_detected" },
+          deliveryPlatform: { state: "detected", evidence: { id: "ifood" } },
+          menuOnline: { state: "not_detected" },
         },
         evidence: {},
         errorCode: null,
@@ -75,19 +81,33 @@ vi.mock("../queries", () => ({
         algorithmVersion: "v1",
         createdAt: "2026-07-16T12:00:01Z",
       },
+      refreshedAt: "2026-07-16T12:00:01Z",
+      providerStatus: "active",
       favorited: false,
       leadId: null,
     },
   }),
   useRunBusinessAudit: () => ({ mutate, isPending: false }),
+  useRefreshBusinessData: () => ({ mutate: refreshMutate, isPending: false }),
   useToggleFavorite: () => ({ mutate: toggleFavoriteMutate, isPending: false }),
 }));
 
 describe("BusinessDetailView", () => {
   beforeEach(() => {
     mutate.mockClear();
+    refreshMutate.mockClear();
     toggleFavoriteMutate.mockClear();
     createLeadMutate.mockClear();
+  });
+
+  it("runs a data refresh from the action menu", async () => {
+    const user = userEvent.setup();
+    renderView("b1");
+
+    await user.click(screen.getByRole("button", { name: /mais/i }));
+    await user.click(screen.getByRole("menuitem", { name: /atualizar dados/i }));
+
+    expect(refreshMutate).toHaveBeenCalled();
   });
 
   it("renders latest audit and score summary", () => {
@@ -97,6 +117,8 @@ describe("BusinessDetailView", () => {
     expect(screen.getByText("Auditoria HTTP")).toBeTruthy();
     expect(screen.getByLabelText(/oportunidade.*score 43/i)).toBeTruthy();
     expect(screen.getByText("Sem title/description adequados")).toBeTruthy();
+    expect(screen.getByText("Plataforma de delivery")).toBeTruthy();
+    expect(screen.getByText("Sem cardapio online")).toBeTruthy();
   });
 
   it("runs a new audit from the action button", () => {
@@ -107,10 +129,12 @@ describe("BusinessDetailView", () => {
     expect(mutate).toHaveBeenCalled();
   });
 
-  it("favorites the business from the action button", () => {
+  it("favorites the business from the action menu", async () => {
+    const user = userEvent.setup();
     renderView("b1");
 
-    fireEvent.click(screen.getByRole("button", { name: /^favoritar$/i }));
+    await user.click(screen.getByRole("button", { name: /mais/i }));
+    await user.click(screen.getByRole("menuitem", { name: /^favoritar$/i }));
 
     expect(toggleFavoriteMutate).toHaveBeenCalledWith(
       { businessId: "b1", favorited: true },
@@ -118,10 +142,12 @@ describe("BusinessDetailView", () => {
     );
   });
 
-  it("adds the business to the pipeline from the action button", () => {
+  it("adds the business to the pipeline from the action menu", async () => {
+    const user = userEvent.setup();
     renderView("b1");
 
-    fireEvent.click(screen.getByRole("button", { name: /adicionar ao pipeline/i }));
+    await user.click(screen.getByRole("button", { name: /mais/i }));
+    await user.click(screen.getByRole("menuitem", { name: /adicionar ao pipeline/i }));
 
     expect(createLeadMutate).toHaveBeenCalledWith("b1", expect.anything());
   });

@@ -50,6 +50,8 @@ import {
   PiStar,
 } from "react-icons/pi";
 import { SiWhatsapp } from "react-icons/si";
+import { BusinessDetailLink } from "./business-detail-link";
+import { SegmentAuditBadges } from "./segment-audit-badges";
 import { WebsiteBadge } from "./website-badge";
 
 const columnHelper = createColumnHelper<BusinessListItem>();
@@ -146,6 +148,7 @@ export function BusinessesTable({
   onAudit,
   pipelinePendingId,
   onAddToPipeline,
+  onPrefetchDetail,
   sortBy,
   sortDir,
   onSortChange,
@@ -161,6 +164,7 @@ export function BusinessesTable({
   onAudit: (businessId: string) => void;
   pipelinePendingId: string | null;
   onAddToPipeline: (businessId: string) => void;
+  onPrefetchDetail?: (businessId: string) => void;
   sortBy: BusinessSortBy;
   sortDir: BusinessSortDir;
   onSortChange: (sortBy: BusinessSortBy, sortDir: BusinessSortDir) => void;
@@ -216,13 +220,14 @@ export function BusinessesTable({
           />
         ),
         cell: ({ row }) => (
-          <Link
-            href={`/businesses/${row.original.businessId}`}
+          <BusinessDetailLink
+            businessId={row.original.businessId}
+            onPrefetch={onPrefetchDetail}
             className="flex items-center gap-2 font-medium text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <BusinessLogo name={row.original.name} websiteUrl={row.original.websiteUrl} className="size-7" />
-            {row.original.name}
-          </Link>
+            <span className="truncate">{row.original.name}</span>
+          </BusinessDetailLink>
         ),
       }),
       columnHelper.display({
@@ -280,6 +285,20 @@ export function BusinessesTable({
           <WebsiteFilterHeader websiteFilter={websiteFilter} onWebsiteFilterChange={onWebsiteFilterChange} />
         ),
         cell: ({ row }) => <WebsiteBadge {...row.original} />,
+      }),
+      columnHelper.display({
+        id: "signals",
+        header: "Sinais",
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1">
+            <SegmentAuditBadges
+              segment={row.original.segment}
+              linkInBio={row.original.linkInBio}
+              deliveryPlatform={row.original.deliveryPlatform}
+              menuOnline={row.original.menuOnline}
+            />
+          </div>
+        ),
       }),
       columnHelper.display({
         id: "rating",
@@ -411,6 +430,7 @@ export function BusinessesTable({
       onAudit,
       pipelinePendingId,
       onAddToPipeline,
+      onPrefetchDetail,
       sortBy,
       sortDir,
       onSortChange,

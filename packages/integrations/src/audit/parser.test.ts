@@ -65,4 +65,25 @@ describe("parseHtmlAudit", () => {
 
     expect(result.detections.outdated.state).toBe("detected");
   });
+
+  it("detects segment platforms with evidence", () => {
+    const result = parseHtmlAudit({
+      finalUrl: "https://restaurante.example",
+      status: 200,
+      html: `
+        <html>
+          <head><title>Restaurante Exemplo</title></head>
+          <body>
+            <a href="https://linktr.ee/restaurante">Links</a>
+            <a href="https://www.ifood.com.br/delivery/restaurante">Pedir no iFood</a>
+            <a href="/cardapio">Cardapio</a>
+          </body>
+        </html>
+      `,
+    });
+
+    expect(result.detections.linkInBio.evidence).toMatchObject({ id: "linktree" });
+    expect(result.detections.deliveryPlatform.evidence).toMatchObject({ id: "ifood" });
+    expect(result.detections.menuOnline.state).toBe("detected");
+  });
 });

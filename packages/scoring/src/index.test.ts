@@ -6,6 +6,7 @@ const activeBusiness: ScoreBusinessInput = {
   phone: "+558532241234",
   rating: 4.6,
   reviewCount: 120,
+  raw: { segment: "services" },
 };
 
 const healthyAudit: ScoreAuditInput = {
@@ -31,6 +32,7 @@ describe("calculateOpportunityScore", () => {
     expect(result.confidence).toBe("low");
     expect(result.reasons.map((reason) => reason.code)).toContain("no_site");
     expect(result.suggestedServices).toContain("Criacao de site");
+    expect(result.algorithmVersion).toBe("v2");
   });
 
   it("scores social-only presence below no-site", () => {
@@ -135,5 +137,54 @@ describe("calculateOpportunityScore", () => {
     );
 
     expect(result.score).toBe(100);
+  });
+
+  it("adds food-service opportunities from platform detections", () => {
+    const result = calculateOpportunityScore(
+      { ...activeBusiness, raw: { segment: "restaurant" } },
+      {
+        status: "completed",
+        isHttps: true,
+        detections: {
+          siteDown: "not_detected",
+          sslError: "not_detected",
+          hasViewport: "detected",
+          hasTitle: "detected",
+          hasDescription: "detected",
+          outdated: "not_detected",
+          basicBuilder: "not_detected",
+          linkInBio: "detected",
+          deliveryPlatform: "detected",
+          menuOnline: "not_detected",
+        },
+      },
+    );
+
+    expect(result.reasons.map((reason) => reason.code)).toEqual(
+      expect.arrayContaining(["link_in_bio_only", "delivery_dependency", "no_menu_online"]),
+    );
+    expect(result.score).toBe(47);
+    expect(result.suggestedServices).toContain("Cardapio online");
+  });
+
+  it("does not apply menu or delivery reasons outside food segments", () => {
+    const result = calculateOpportunityScore(activeBusiness, {
+      status: "completed",
+      isHttps: true,
+      detections: {
+        siteDown: "not_detected",
+        sslError: "not_detected",
+        hasViewport: "detected",
+        hasTitle: "detected",
+        hasDescription: "detected",
+        outdated: "not_detected",
+        basicBuilder: "not_detected",
+        deliveryPlatform: "detected",
+        menuOnline: "not_detected",
+      },
+    });
+
+    expect(result.reasons.map((reason) => reason.code)).not.toContain("delivery_dependency");
+    expect(result.reasons.map((reason) => reason.code)).not.toContain("no_menu_online");
   });
 });

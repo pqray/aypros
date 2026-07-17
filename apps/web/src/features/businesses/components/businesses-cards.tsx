@@ -12,6 +12,8 @@ import {
 import type { BusinessListItem } from "@aypros/types";
 import Link from "next/link";
 import { PiHeart, PiHeartFill, PiKanban, PiMagnifyingGlass } from "react-icons/pi";
+import { BusinessDetailLink } from "./business-detail-link";
+import { SegmentAuditBadges } from "./segment-audit-badges";
 import { WebsiteBadge } from "./website-badge";
 
 function locationLine(item: BusinessListItem): string {
@@ -30,6 +32,7 @@ export function BusinessesCards({
   onAudit,
   pipelinePendingId,
   onAddToPipeline,
+  onPrefetchDetail,
 }: {
   items: BusinessListItem[];
   selectedIds: Set<string>;
@@ -40,6 +43,7 @@ export function BusinessesCards({
   onAudit: (businessId: string) => void;
   pipelinePendingId: string | null;
   onAddToPipeline: (businessId: string) => void;
+  onPrefetchDetail?: (businessId: string) => void;
 }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -57,12 +61,13 @@ export function BusinessesCards({
             />
           }
           title={
-            <Link
-              href={`/businesses/${item.businessId}`}
+            <BusinessDetailLink
+              businessId={item.businessId}
+              onPrefetch={onPrefetchDetail}
               className="line-clamp-2 text-sm font-medium text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {item.name}
-            </Link>
+            </BusinessDetailLink>
           }
           meta={
             <p className="line-clamp-2 whitespace-normal text-xs text-muted-foreground">
@@ -90,6 +95,13 @@ export function BusinessesCards({
           badges={
             <>
               <WebsiteBadge {...item} />
+              <SegmentAuditBadges
+                segment={item.segment}
+                linkInBio={item.linkInBio}
+                deliveryPlatform={item.deliveryPlatform}
+                menuOnline={item.menuOnline}
+                compact
+              />
               {item.score !== null && item.scoreLevel !== null ? (
                 <ScoreBadge level={item.scoreLevel} score={item.score} />
               ) : null}

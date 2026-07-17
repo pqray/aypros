@@ -2,9 +2,11 @@ import { aiConfig } from "@aypros/config";
 import {
   AiError,
   createGroqAiProvider,
+  mapCategoriesToSegment,
   type AiDetectionState,
   type AiInput,
   type AiProvider,
+  type BusinessSegment,
 } from "@aypros/integrations";
 import type {
   AiGenerationsResponse,
@@ -33,13 +35,14 @@ type BusinessRow = {
   review_count: number | null;
   website_url: string | null;
   phone: string | null;
+  raw?: Record<string, unknown> | null;
 };
 
 type AuditRow = {
   status: string;
   is_https: boolean | null;
   response_time_ms: number | null;
-  detections: Record<string, { state?: string }> | null;
+  detections: Record<string, { state?: string; evidence?: Record<string, unknown> }> | null;
 };
 
 type ScoreRow = {
@@ -62,6 +65,11 @@ type GenerationRow = {
 };
 
 const VALID_STATES = new Set(["detected", "not_detected", "inconclusive"]);
+const PLATFORM_CODES = new Set(["linkInBio", "deliveryPlatform", "menuOnline"]);
+
+function toDetectionState(value: string | undefined): AiDetectionState {
+  return (VALID_STATES.has(value ?? "") ? value : "inconclusive") as AiDetectionState;
+}
 
 /** Pure assembly of the structured prompt input from DB rows (specs/13). */
 export function toAiInput(params: {
@@ -84,6 +92,9 @@ export function toAiInput(params: {
       hasWebsite: Boolean(business.website_url?.trim()),
       websiteUrl: business.website_url,
       phone: business.phone,
+      segment:
+        ((business.raw?.segment ?? business.raw?.business_segment) as BusinessSegment | undefined) ??
+        mapCategoriesToSegment(business.categories ?? []),
     },
     audit: audit
       ? {
@@ -92,10 +103,15 @@ export function toAiInput(params: {
           responseTimeMs: audit.response_time_ms,
           findings: Object.entries(audit.detections ?? {}).map(([code, value]) => ({
             code,
-            state: (VALID_STATES.has(value?.state ?? "")
-              ? value.state
-              : "inconclusive") as AiDetectionState,
+            state: toDetectionState(value?.state),
           })),
+          platforms: Object.entries(audit.detections ?? {})
+            .filter(([code]) => PLATFORM_CODES.has(code))
+            .map(([code, value]) => ({
+              code,
+              state: toDetectionState(value?.state),
+              evidence: value?.evidence,
+            })),
         }
       : null,
     score: score
@@ -194,17 +210,11 @@ export function registerAiRoutes(app: FastifyInstance, options: AiRoutesOptions 
     if (!ctx) return;
 
     try {
-      if (!(await canAccessBusiness(serviceDb, ctx.orgId, params.data.businessId))) {
-        return reply.code(404).send({ error: "Empresa nao encontrada" } satisfies ApiErrorBody);
-      }
-
-      const { data, error } = await serviceDb
-        .from("ai_generations")
-        .select("id, kind, status, output, model, tokens_used, prompt_version, created_at")
-        .eq("organization_id", ctx.orgId)
-        .eq("business_id", params.data.businessId)
-        .order("created_at", { ascending: false })
-        .limit(12);
+      const { data, error } = await serviceDb.rpc("get_business_ai_generations_api", {
+        target_business_id: params.data.businessId,
+        org_id: ctx.orgId,
+        result_limit: 12,
+      });
 
       if (error) throw new Error(error.message);
 
@@ -247,7 +257,7 @@ export function registerAiRoutes(app: FastifyInstance, options: AiRoutesOptions 
         await Promise.all([
           serviceDb
             .from("businesses")
-            .select("id, name, city, state, categories, rating, review_count, website_url, phone")
+            .select("id, name, city, state, categories, rating, review_count, website_url, phone, raw")
             .eq("id", params.data.businessId)
             .single(),
           serviceDb

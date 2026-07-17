@@ -19,6 +19,9 @@ export type AuditDetections = {
   whatsapp: AuditDetection;
   outdated: AuditDetection;
   basicBuilder: AuditDetection;
+  linkInBio: AuditDetection;
+  deliveryPlatform: AuditDetection;
+  menuOnline: AuditDetection;
   nonHtml: AuditDetection;
 };
 

@@ -11,6 +11,7 @@ const business = {
   review_count: 120,
   website_url: "https://padariacentral.com.br",
   phone: "+5585999990000",
+  raw: { segment: "food_service" },
 };
 
 describe("toAiInput", () => {
@@ -24,6 +25,7 @@ describe("toAiInput", () => {
         detections: {
           hasViewport: { state: "detected" },
           outdated: { state: "inconclusive" },
+          deliveryPlatform: { state: "detected", evidence: { id: "ifood" } },
         },
       },
       score: {
@@ -47,6 +49,7 @@ describe("toAiInput", () => {
       hasWebsite: true,
       websiteUrl: "https://padariacentral.com.br",
       phone: "+5585999990000",
+      segment: "food_service",
     });
     expect(input.audit).toEqual({
       status: "completed",
@@ -55,7 +58,9 @@ describe("toAiInput", () => {
       findings: [
         { code: "hasViewport", state: "detected" },
         { code: "outdated", state: "inconclusive" },
+        { code: "deliveryPlatform", state: "detected" },
       ],
+      platforms: [{ code: "deliveryPlatform", state: "detected", evidence: { id: "ifood" } }],
     });
     expect(input.score?.reasons).toEqual([{ code: "slow_site", label: "Site lento", impact: 15 }]);
     expect(input.sender).toEqual({ name: "Rayssa", organization: "Aypros" });
@@ -73,6 +78,7 @@ describe("toAiInput", () => {
     expect(input.business.hasWebsite).toBe(false);
     expect(input.business.rating).toBeNull();
     expect(input.business.categories).toEqual([]);
+    expect(input.business.segment).toBe("food_service");
     expect(input.audit).toBeNull();
     expect(input.score).toBeNull();
     expect(input.sender).toEqual({ name: null, organization: null });
@@ -96,5 +102,6 @@ describe("toAiInput", () => {
       { code: "weird", state: "inconclusive" },
       { code: "missing", state: "inconclusive" },
     ]);
+    expect(input.audit?.platforms).toEqual([]);
   });
 });

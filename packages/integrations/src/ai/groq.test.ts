@@ -18,6 +18,7 @@ const input: AiInput = {
     hasWebsite: false,
     websiteUrl: null,
     phone: "+5585999990000",
+    segment: "food_service",
   },
   audit: null,
   score: {

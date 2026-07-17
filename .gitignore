@@ -12,13 +12,16 @@ node_modules/
 out/
 dist/
 .turbo/
+*.tsbuildinfo
 
 # Testing
 coverage/
 
-# Supabase local
+# Supabase local (CLI writes this relative to cwd, so it can land nested too)
 supabase/.temp/
 supabase/.branches/
+**/supabase/.temp/
+**/supabase/.branches/
 
 # Misc
 .DS_Store

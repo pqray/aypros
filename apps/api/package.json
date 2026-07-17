@@ -5,7 +5,7 @@
   "type": "commonjs",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsup src/server.ts --format cjs --platform node --target node20 --out-dir dist --clean --sourcemap",
+    "build": "tsup",
     "start": "node dist/server.js",
     "lint": "eslint .",
     "test": "vitest run",
@@ -13,16 +13,19 @@
   },
   "dependencies": {
     "@aypros/types": "workspace:*",
+    "@aypros/scoring": "workspace:*",
     "@fastify/cors": "^11.3.0",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.5",
     "cookie": "^2.0.1",
     "dotenv": "^17.4.2",
     "fastify": "^5.10.0",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "@aypros/integrations": "workspace:*",
+    "@aypros/validation": "workspace:*",
+    "@aypros/config": "workspace:*"
   },
   "devDependencies": {
-    "@aypros/config": "workspace:*",
     "@aypros/eslint-config": "workspace:*",
     "@types/node": "^22.10.0",
     "eslint": "^9.17.0",

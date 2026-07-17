@@ -11,14 +11,20 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY packages/config/package.json packages/config/package.json
 COPY packages/eslint-config/package.json packages/eslint-config/package.json
+COPY packages/integrations/package.json packages/integrations/package.json
+COPY packages/scoring/package.json packages/scoring/package.json
 COPY packages/types/package.json packages/types/package.json
+COPY packages/validation/package.json packages/validation/package.json
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS builder
 COPY apps/api apps/api
 COPY packages/config packages/config
 COPY packages/eslint-config packages/eslint-config
+COPY packages/integrations packages/integrations
+COPY packages/scoring packages/scoring
 COPY packages/types packages/types
+COPY packages/validation packages/validation
 RUN pnpm --filter api build
 RUN pnpm --filter api deploy --prod --legacy /prod/api
 

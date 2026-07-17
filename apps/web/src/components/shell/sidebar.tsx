@@ -8,17 +8,13 @@ import { useSidebarStore } from "@/stores/sidebar-store";
 import type { ShellOrganization, ShellUser } from "./app-shell";
 import { isActiveRoute, primaryNavItems, secondaryNavItems, type ShellNavItem } from "./navigation";
 
-const EASE = "cubic-bezier(0.32,0.72,0,1)";
-
 // Labels ficam sempre no DOM em largura natural; a propria animacao de largura da
-// sidebar as revela, entao icones nunca mudam de posicao — so fade + slide no texto.
+// sidebar as revela (clip via overflow-hidden). O fade e so para o texto nao vazar
+// no trilho recolhido — sem delay, senao o nome "chega atrasado".
 function labelStyle(expanded: boolean): React.CSSProperties {
   return {
     opacity: expanded ? 1 : 0,
-    transform: expanded ? "translateX(0)" : "translateX(-8px)",
-    transition: expanded
-      ? `opacity 200ms ease 80ms, transform 300ms ${EASE} 40ms`
-      : `opacity 120ms ease, transform 200ms ${EASE}`,
+    transition: expanded ? "opacity 150ms ease-out" : "opacity 100ms ease-in",
   };
 }
 
@@ -144,14 +140,8 @@ export function Sidebar({ user, organization }: { user: ShellUser | null; organi
 
   return (
     <>
-      {/* Spacer que empurra o conteudo em sincronia com a sidebar */}
-      <div
-        className={cn(
-          "hidden shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] lg:block",
-          expanded ? "w-64" : "w-16",
-        )}
-        aria-hidden
-      />
+      {/* Spacer fixo do trilho de icones; a expansao acontece por cima do conteudo */}
+      <div className="hidden w-16 shrink-0 lg:block" aria-hidden />
 
       <aside
         onMouseEnter={() => setExpanded(true)}
@@ -163,8 +153,8 @@ export function Sidebar({ user, organization }: { user: ShellUser | null; organi
           }
         }}
         className={cn(
-          "fixed inset-y-0 left-0 z-40 hidden overflow-hidden border-r border-sidebar-border bg-sidebar transition-[width,box-shadow] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] lg:block",
-          expanded ? "w-64 shadow-xl" : "w-16 shadow-none",
+          "fixed inset-y-0 left-0 z-40 hidden overflow-hidden border-r border-sidebar-border bg-sidebar transition-[width,box-shadow] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] lg:block",
+          expanded ? "w-64 shadow-2xl" : "w-16 shadow-none",
         )}
         aria-label="Navegacao lateral"
       >

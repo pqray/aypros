@@ -40,11 +40,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [context, router]);
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <div className="flex h-svh overflow-hidden bg-background text-foreground">
       <Sidebar user={user} organization={organization} />
-      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <Topbar user={user} organization={organization} />
-        <main className="flex-1 px-4 py-4 sm:px-6 lg:px-8">{children}</main>
+        <main className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 lg:px-8">{children}</main>
       </div>
       <CommandPalette />
     </div>

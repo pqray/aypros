@@ -16,6 +16,13 @@ function labelForSegment(segment: string) {
 export function Breadcrumbs() {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
+
+  // Top-level pages already render their own PageHeader title; a one-segment
+  // breadcrumb would just duplicate it (the topbar shows the org name instead).
+  if (segments.length < 2) {
+    return null;
+  }
+
   const crumbs = segments.map((segment, index) => ({
     label: labelForSegment(segment),
     href: `/${segments.slice(0, index + 1).join("/")}`,

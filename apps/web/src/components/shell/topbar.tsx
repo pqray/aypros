@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@aypros/ui";
+import { usePathname } from "next/navigation";
 import { PiList, PiMagnifyingGlass } from "react-icons/pi";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useCommandPaletteStore } from "@/stores/command-palette-store";
@@ -18,6 +19,8 @@ export function Topbar({
 }) {
   const setMobileOpen = useSidebarStore((state) => state.setMobileOpen);
   const setCommandOpen = useCommandPaletteStore((state) => state.setOpen);
+  const pathname = usePathname();
+  const isNestedRoute = pathname.split("/").filter(Boolean).length >= 2;
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6 lg:px-8">
@@ -33,9 +36,10 @@ export function Topbar({
       </Button>
 
       <div className="min-w-0 flex-1">
-        <Breadcrumbs />
-        {organization ? (
-          <p className="truncate text-xs text-muted-foreground lg:hidden">{organization.name}</p>
+        {isNestedRoute ? (
+          <Breadcrumbs />
+        ) : organization ? (
+          <p className="truncate text-sm font-medium text-muted-foreground">{organization.name}</p>
         ) : null}
       </div>
 

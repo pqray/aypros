@@ -20,8 +20,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
+    <html lang="pt-BR" className="h-svh overflow-hidden" suppressHydrationWarning>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} h-svh overflow-hidden font-sans antialiased`}
+      >
         <Providers>{children}</Providers>
       </body>
     </html>

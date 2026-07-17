@@ -10,7 +10,7 @@ export function AuthShell({
   children: React.ReactNode;
 }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+    <main className="flex h-svh items-center justify-center overflow-y-auto bg-background px-4 py-10">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-xl">{title}</CardTitle>

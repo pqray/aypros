@@ -52,6 +52,11 @@ export const organizationSchema = z.object({
   name: requiredText("Organizacao"),
 });
 
+export const addOrganizationMemberSchema = z.object({
+  email: emailSchema,
+  role: z.enum(["admin", "member"]).default("member"),
+});
+
 export const createSearchSchema = z.object({
   city: requiredText("Cidade"),
   state: z
@@ -111,6 +116,7 @@ export const leadStageSchema = z.enum([
   "lost",
 ]);
 export const leadStatusSchema = z.enum(["active", "won", "lost", "archived"]);
+export const contactChannelSchema = z.enum(["whatsapp", "email", "phone", "other"]);
 
 export const createLeadSchema = z.object({
   businessId: z.string().uuid(),
@@ -124,10 +130,16 @@ export const updateLeadSchema = z
     nextAction: z.string().trim().max(200).nullable().optional(),
     nextActionAt: z.string().datetime({ offset: true }).nullable().optional(),
     position: z.number().int().min(0).optional(),
+    assignedTo: z.string().uuid().nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, { message: "Nada para atualizar" });
 
 export const noteContentSchema = requiredText("Nota", 1);
+
+export const createLeadContactSchema = z.object({
+  channel: contactChannelSchema,
+  note: z.string().trim().max(500).optional().or(z.literal("").transform(() => undefined)),
+});
 
 export const createNoteSchema = z.object({
   content: noteContentSchema,
@@ -155,6 +167,7 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type UpdatePasswordInput = z.infer<typeof updatePasswordSchema>;
 export type ProfileInput = z.infer<typeof profileSchema>;
 export type OrganizationInput = z.infer<typeof organizationSchema>;
+export type AddOrganizationMemberInput = z.infer<typeof addOrganizationMemberSchema>;
 export type OnboardingInput = z.infer<typeof onboardingSchema>;
 export type QuickSearchInput = z.infer<typeof quickSearchSchema>;
 export type CreateSearchInput = z.infer<typeof createSearchSchema>;
@@ -163,6 +176,7 @@ export type SavedFilterCreateInput = z.infer<typeof savedFilterCreateSchema>;
 export type BusinessIdsInput = z.infer<typeof businessIdsSchema>;
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;
 export type UpdateLeadInputSchema = z.infer<typeof updateLeadSchema>;
+export type CreateLeadContactInputSchema = z.infer<typeof createLeadContactSchema>;
 export type CreateNoteInput = z.infer<typeof createNoteSchema>;
 export type GenerateAiInput = z.infer<typeof generateAiSchema>;
 export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;

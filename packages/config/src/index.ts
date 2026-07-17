@@ -45,3 +45,30 @@ export const businessesConfig = {
   /** Max businesses accepted in one batch action (favorite/audit/export selection). */
   maxBatchSize: 100,
 } as const;
+
+export const refreshConfig = {
+  /** Google Places details are paid; keep the MVP daily cap conservative. */
+  maxPlaceDetailsPerDay: 30,
+  /** Small serial batch per scheduler tick. */
+  batchSize: 10,
+  /** Target freshness for provider business data. */
+  placesFreshnessDays: 30,
+  /** Target freshness for our HTTP website audit. */
+  auditFreshnessDays: 7,
+  /** Manual refresh abuse guard per organization. */
+  maxManualRefreshesPerOrgPerHour: 10,
+  /** In-process scheduler cadence for the MVP. */
+  schedulerIntervalMs: 60 * 60 * 1000,
+} as const;
+
+export const outreachConfig = {
+  /** Leads without contact after this window are visually marked as cooling down. */
+  coolingLeadDays: 7,
+  /** Keep wa.me URLs comfortably below common browser/share limits. */
+  maxWhatsappDraftLength: 1200,
+} as const;
+
+export const reportsConfig = {
+  /** Rate limit: diagnostic PDFs generated per organization per hour. */
+  maxReportsPerOrgPerHour: 20,
+} as const;

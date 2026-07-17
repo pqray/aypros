@@ -36,7 +36,10 @@ export const activityType = pgEnum("activity_type", [
   "search_created",
   "business_favorited",
   "audit_completed",
+  "data_refresh_requested",
   "lead_created",
+  "lead_assigned",
+  "lead_contacted",
   "lead_stage_changed",
   "note_created",
   "ai_generated",
@@ -49,6 +52,7 @@ const updatedAt = timestamp("updated_at", { withTimezone: true }).notNull().defa
 
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(),
+  email: text("email"),
   fullName: text("full_name"),
   avatarUrl: text("avatar_url"),
   onboardingCompletedAt: timestamp("onboarding_completed_at", { withTimezone: true }),
@@ -113,6 +117,8 @@ export const businesses = pgTable(
     lat: numeric("lat"),
     lng: numeric("lng"),
     raw: jsonb("raw").notNull().default({}),
+    refreshedAt: timestamp("refreshed_at", { withTimezone: true }),
+    providerStatus: text("provider_status").notNull().default("active"),
     createdAt,
     updatedAt,
   },
@@ -192,12 +198,17 @@ export const leads = pgTable(
     potentialValue: numeric("potential_value"),
     nextAction: text("next_action"),
     nextActionAt: timestamp("next_action_at", { withTimezone: true }),
+    lastContactAt: timestamp("last_contact_at", { withTimezone: true }),
+    assignedTo: uuid("assigned_to"),
     position: integer("position").notNull().default(0),
     createdBy: uuid("created_by").notNull(),
     createdAt,
     updatedAt,
   },
-  (table) => [unique().on(table.organizationId, table.businessId)],
+  (table) => [
+    unique().on(table.organizationId, table.businessId),
+    index("leads_org_assigned_to_idx").on(table.organizationId, table.assignedTo),
+  ],
 );
 
 export const notes = pgTable("notes", {

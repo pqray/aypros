@@ -1,5 +1,6 @@
 import cors from "@fastify/cors";
-import { createGooglePlacesProvider } from "@aypros/integrations";
+import { refreshConfig } from "@aypros/config";
+import { createGooglePlacesProvider, type PlaceDetailsProvider } from "@aypros/integrations";
 import Fastify from "fastify";
 import { env } from "./env";
 import { loadAppContext } from "./app-context";
@@ -7,12 +8,31 @@ import { registerAiRoutes, type AiRoutesOptions } from "./ai";
 import { registerAuditRoutes, type AuditRoutesOptions } from "./audits";
 import { registerBusinessRoutes, type BusinessRoutesOptions } from "./businesses";
 import { registerLeadRoutes, type LeadRoutesOptions } from "./leads";
+import { runRefreshTick } from "./refresh";
+import { registerReportRoutes, type ReportRoutesOptions } from "./reports";
 import { registerSearchRoutes, type SearchRoutesOptions } from "./searches";
-import { createSupabaseClient } from "./supabase";
+import { createServiceRoleClient, createSupabaseClient } from "./supabase";
+
+declare module "fastify" {
+  interface FastifyRequest {
+    startTime?: bigint;
+  }
+}
+
+function hasPlaceDetailsProvider(
+  provider: unknown,
+): provider is SearchRoutesOptions["discoveryProvider"] & PlaceDetailsProvider {
+  return typeof (provider as { getDetails?: unknown }).getDetails === "function";
+}
 
 export function buildApp(
   overrides: Partial<
-    SearchRoutesOptions & AuditRoutesOptions & BusinessRoutesOptions & LeadRoutesOptions & AiRoutesOptions
+    SearchRoutesOptions &
+      AuditRoutesOptions &
+      BusinessRoutesOptions &
+      LeadRoutesOptions &
+      AiRoutesOptions &
+      ReportRoutesOptions
   > = {},
 ) {
   const app = Fastify({
@@ -20,6 +40,37 @@ export function buildApp(
       level: process.env.NODE_ENV === "test" ? "silent" : env.API_LOG_LEVEL,
       redact: ["req.headers.cookie", "res.headers.set-cookie"],
     },
+  });
+
+  app.addHook("onRequest", async (request) => {
+    request.startTime = process.hrtime.bigint();
+  });
+
+  app.addHook("onSend", async (request, reply, payload) => {
+    if (request.startTime) {
+      const durationMs = Number(process.hrtime.bigint() - request.startTime) / 1_000_000;
+      reply.header("server-timing", `app;dur=${durationMs.toFixed(1)}`);
+    }
+
+    return payload;
+  });
+
+  app.addHook("onResponse", async (request, reply) => {
+    if (!request.startTime) return;
+
+    const durationMs = Number(process.hrtime.bigint() - request.startTime) / 1_000_000;
+
+    if (durationMs >= 500) {
+      request.log.warn(
+        {
+          method: request.method,
+          url: request.url,
+          statusCode: reply.statusCode,
+          durationMs: Math.round(durationMs),
+        },
+        "slow api request",
+      );
+    }
   });
 
   const localhostOrigin = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
@@ -65,16 +116,48 @@ export function buildApp(
     }
   });
 
-  registerSearchRoutes(app, {
-    discoveryProvider:
-      overrides.discoveryProvider ??
-      createGooglePlacesProvider({ apiKey: env.GOOGLE_PLACES_API_KEY }),
-    serviceDb: overrides.serviceDb,
-  });
+  const discoveryProvider =
+    overrides.discoveryProvider ?? createGooglePlacesProvider({ apiKey: env.GOOGLE_PLACES_API_KEY });
+  const serviceDb = overrides.serviceDb;
+
+  registerSearchRoutes(app, { discoveryProvider, serviceDb });
   registerAuditRoutes(app, { serviceDb: overrides.serviceDb });
-  registerBusinessRoutes(app, { serviceDb: overrides.serviceDb });
+  registerBusinessRoutes(app, {
+    serviceDb: overrides.serviceDb,
+    detailsProvider: hasPlaceDetailsProvider(discoveryProvider) ? discoveryProvider : undefined,
+  });
   registerLeadRoutes(app, { serviceDb: overrides.serviceDb });
   registerAiRoutes(app, { serviceDb: overrides.serviceDb, aiProvider: overrides.aiProvider });
+  registerReportRoutes(app, { serviceDb: overrides.serviceDb });
+
+  if (process.env.NODE_ENV !== "test" && env.REFRESH_ENABLED) {
+    let timer: NodeJS.Timeout | undefined;
+    let running = false;
+    const refreshDb = serviceDb ?? createServiceRoleClient();
+
+    app.addHook("onReady", async () => {
+      const tick = () => {
+        if (!hasPlaceDetailsProvider(discoveryProvider)) return;
+        if (running) return;
+        running = true;
+        void runRefreshTick({ db: refreshDb, provider: discoveryProvider, log: app.log })
+          .catch((error: unknown) => {
+            app.log.error({ err: error }, "refresh tick failed");
+          })
+          .finally(() => {
+            running = false;
+          });
+      };
+      timer = setInterval(tick, refreshConfig.schedulerIntervalMs);
+      timer.unref();
+      tick();
+    });
+
+    app.addHook("onClose", (_instance, done) => {
+      if (timer) clearInterval(timer);
+      done();
+    });
+  }
 
   return app;
 }

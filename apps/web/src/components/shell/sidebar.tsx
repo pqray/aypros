@@ -87,13 +87,21 @@ function SidebarContent({
   organization: ShellOrganization;
   onNavigate?: () => void;
 }) {
+  const organizationName = organization?.name ?? "Sem organizacao";
+  const organizationInitial = organizationName.slice(0, 1).toUpperCase();
+
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-2">
-        <Link href="/dashboard" onClick={onNavigate} aria-label="Aypros" className="flex w-full min-w-0 items-center">
+        <Link
+          href="/dashboard"
+          onClick={onNavigate}
+          aria-label={organizationName}
+          className="flex w-full min-w-0 items-center"
+        >
           <span className="flex w-12 shrink-0 items-center justify-center">
             <span className="flex size-8 items-center justify-center rounded-md bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
-              A
+              {organizationInitial}
             </span>
           </span>
           <span
@@ -103,7 +111,7 @@ function SidebarContent({
             )}
             aria-hidden={!expanded}
           >
-            Aypros
+            {organizationName}
           </span>
         </Link>
       </div>
@@ -123,14 +131,14 @@ function SidebarContent({
       <div className="flex shrink-0 items-center border-t border-sidebar-border px-2 py-3">
         <span className="flex w-12 shrink-0 items-center justify-center">
           <span className="flex size-8 items-center justify-center rounded-md bg-sidebar-accent text-xs font-semibold text-sidebar-accent-foreground">
-            {(organization?.name ?? user?.email ?? "A").slice(0, 1).toUpperCase()}
+            {organizationInitial}
           </span>
         </span>
         <div
           className={cn("min-w-0 flex-1 overflow-hidden", labelClasses(expanded))}
           aria-hidden={!expanded}
         >
-          <p className="truncate text-xs font-medium">{organization?.name ?? "Sem organizacao"}</p>
+          <p className="truncate text-xs font-medium">{organizationName}</p>
           <p className="truncate text-xs text-sidebar-foreground/60">
             {user?.fullName || user?.email || "Carregando"}
           </p>

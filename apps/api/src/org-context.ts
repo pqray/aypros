@@ -8,6 +8,7 @@ export type OrgRequestContext = {
   supabase: SupabaseClient;
   orgId: string;
   userId: string;
+  role: "owner" | "admin" | "member";
 };
 
 /** Shared by every route module: session + active-org guard (specs/17 — never trust a client-supplied org id). */
@@ -27,5 +28,10 @@ export async function requireOrgContext(
     return null;
   }
 
-  return { supabase, orgId: context.organization.id, userId: context.user.id };
+  return {
+    supabase,
+    orgId: context.organization.id,
+    userId: context.user.id,
+    role: context.organization.role,
+  };
 }

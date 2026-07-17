@@ -80,6 +80,7 @@ export type ApiErrorBody = {
 export type OpportunityLevel = "low" | "medium" | "high" | "very_high";
 export type ConfidenceLevel = "low" | "medium" | "high";
 export type DetectionState = "detected" | "not_detected" | "inconclusive";
+export type BusinessSegment = "restaurant" | "food_service" | "services" | "retail" | "other";
 
 export type BusinessDetail = {
   id: string;
@@ -92,6 +93,7 @@ export type BusinessDetail = {
   rating: number | null;
   reviewCount: number | null;
   categories: string[];
+  segment: BusinessSegment;
 };
 
 export type WebsiteAuditSummary = {
@@ -125,8 +127,19 @@ export type BusinessAuditSummaryResponse = {
   business: BusinessDetail;
   latestAudit: WebsiteAuditSummary | null;
   latestScore: OpportunityScoreSummary | null;
+  refreshedAt: string | null;
+  providerStatus: "active" | "removed" | "error";
   favorited: boolean;
   leadId: string | null;
+};
+
+export type BusinessRefreshResponse = {
+  businessId: string;
+  refreshedAt: string | null;
+  providerStatus: "active" | "removed" | "error";
+  placesRefreshed: boolean;
+  auditRefreshed: boolean;
+  scoreRecalculated: boolean;
 };
 
 export type BusinessListItem = {
@@ -141,6 +154,10 @@ export type BusinessListItem = {
   rating: number | null;
   reviewCount: number | null;
   categories: string[];
+  segment: BusinessSegment;
+  linkInBio: boolean;
+  deliveryPlatform: boolean;
+  menuOnline: boolean;
   score: number | null;
   scoreLevel: OpportunityLevel | null;
   audited: boolean;
@@ -207,6 +224,7 @@ export type BatchAuditResponse = {
 
 export type LeadStage = "new" | "contacted" | "in_conversation" | "proposal_sent" | "won" | "lost";
 export type LeadStatus = "active" | "won" | "lost" | "archived";
+export type ContactChannel = "whatsapp" | "email" | "phone" | "other";
 
 export type LeadSummary = {
   id: string;
@@ -220,14 +238,30 @@ export type LeadSummary = {
   potentialValue: number | null;
   nextAction: string | null;
   nextActionAt: string | null;
+  lastContactAt: string | null;
   position: number;
   score: number | null;
   scoreLevel: OpportunityLevel | null;
+  assignedTo: string | null;
+  assignedToName: string | null;
+  assignedToAvatarUrl: string | null;
   createdAt: string;
 };
 
 export type PipelineResponse = {
   items: LeadSummary[];
+};
+
+export type OrganizationMemberSummary = {
+  userId: string;
+  fullName: string | null;
+  email: string | null;
+  avatarUrl: string | null;
+  role: OrganizationRole;
+};
+
+export type OrganizationMembersResponse = {
+  items: OrganizationMemberSummary[];
 };
 
 export type CreateLeadResponse = {
@@ -247,6 +281,17 @@ export type UpdateLeadInput = {
   nextActionAt?: string | null;
   /** Target index within the destination stage's column; only meaningful together with `stage`. */
   position?: number;
+  assignedTo?: string | null;
+};
+
+export type CreateLeadContactInput = {
+  channel: ContactChannel;
+  note?: string;
+};
+
+export type LeadContactResponse = {
+  lead: LeadSummary;
+  activity: LeadActivity;
 };
 
 export type LeadNote = {
@@ -270,7 +315,10 @@ export type ActivityType =
   | "search_created"
   | "business_favorited"
   | "audit_completed"
+  | "data_refresh_requested"
   | "lead_created"
+  | "lead_assigned"
+  | "lead_contacted"
   | "lead_stage_changed"
   | "note_created"
   | "ai_generated"

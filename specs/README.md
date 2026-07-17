@@ -60,6 +60,7 @@ Exemplo — Fase 5 (Dashboard) lê: `00`, `phases/phase-05-dashboard.md`, `03`, 
 | [14 — Diagnostic Report](phases/phase-14-diagnostic-report.md) | PDF de diagnóstico apresentável ao cliente |
 | [15 — Segment Audit](phases/phase-15-segment-audit.md) | Detecções por segmento (cardápio, delivery, link-in-bio) + score v2 |
 | [16 — Lead Owner](phases/phase-16-lead-owner.md) | Responsável pelo lead, filtro "meus", avatar no Kanban |
+| [17 — Insights + Pipeline UX](phases/phase-17-insights-pipeline-ux.md) | IA consultiva v2, PDF v2, métricas da empresa e UX do pipeline |
 
 ## Decisões
 

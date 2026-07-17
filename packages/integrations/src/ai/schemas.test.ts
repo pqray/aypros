@@ -149,12 +149,30 @@ describe("whatsappMessageOutputSchema", () => {
 });
 
 describe("emailMessageOutputSchema", () => {
-  it("accepts subject and body", () => {
+  const richBody = [
+    "Olá, equipe da Padaria Central! Vi a nota 4.7 de vocês no Google e fiquei impressionada com a reputação que construíram em Fortaleza.",
+    "Ao analisar a presença digital de vocês, notei que ainda não há um site próprio — hoje quem procura a padaria encontra apenas o perfil no Google, sem um lugar que apresente o cardápio e os diferenciais de vocês.",
+    "Na prática, isso significa que clientes novos podem acabar indo para concorrentes que aparecem com site completo na busca.",
+    "Nós criamos sites simples e rápidos para negócios locais, com cardápio e botão de pedido direto pelo WhatsApp — vocês passam a controlar o próprio canal.",
+    "Que tal uma conversa rápida de 15 minutos para eu mostrar uma análise gratuita que preparei?",
+    "Abraços,\nRayssa\nAypros",
+  ].join("\n\n");
+
+  it("accepts a structured multi-paragraph body (email-v3)", () => {
     const result = emailMessageOutputSchema.safeParse({
       subject: "Uma ideia para a Padaria Central",
-      body: "Olá, vi que vocês ainda não têm site...",
+      body: richBody,
     });
     expect(result.success).toBe(true);
+  });
+
+  it("rejects a shallow one-liner body", () => {
+    expect(
+      emailMessageOutputSchema.safeParse({
+        subject: "Assunto",
+        body: "Olá, vi que vocês ainda não têm site...",
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects a partial output with only the subject", () => {

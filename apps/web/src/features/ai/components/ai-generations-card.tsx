@@ -22,6 +22,7 @@ import { PiCheckCircle, PiCopy, PiSparkle, PiWhatsappLogo } from "react-icons/pi
 import { useAppContext } from "@/components/shell/use-app-context";
 import { useCreateLeadContact } from "@/features/pipeline/queries";
 import { formatRelativeTime } from "@/lib/format";
+import { useTabParam } from "@/lib/use-tab-param";
 import { ApiError } from "../api";
 import { buildWhatsappUrl } from "../outreach";
 import { useAiGenerations, useGenerateAi } from "../queries";
@@ -106,6 +107,8 @@ export function AiGenerationsCard({
   const generations = useAiGenerations(orgId, businessId);
   const generate = useGenerateAi(orgId, businessId);
   const createContact = useCreateLeadContact(orgId, leadId ?? undefined);
+  // Kind ativo na URL: gerar/invalidar/remontar nunca volta a aba pro Resumo.
+  const [activeKind, setActiveKind] = useTabParam<AiKind>("ai", "commercial_summary", AI_KINDS);
 
   const [drafts, setDrafts] = useState<Partial<Record<AiKind, Draft>>>({});
 
@@ -202,7 +205,7 @@ export function AiGenerationsCard({
             <Skeleton className="h-40" />
           </div>
         ) : (
-          <Tabs defaultValue="commercial_summary">
+          <Tabs value={activeKind} onValueChange={(value) => setActiveKind(value as AiKind)}>
             <TabsList>
               {AI_KINDS.map((kind) => (
                 <TabsTrigger key={kind} value={kind}>

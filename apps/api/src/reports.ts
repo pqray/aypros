@@ -1,5 +1,5 @@
 import { reportsConfig } from "@aypros/config";
-import type { ApiErrorBody } from "@aypros/types";
+import type { ApiErrorBody, BusinessReportResponse } from "@aypros/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
 import PDFDocument from "pdfkit";
@@ -329,6 +329,30 @@ function noSiteFindings(business: BusinessReportRow): ReportFinding[] {
   ];
 }
 
+/**
+ * 401/403/429 no acesso final significam "o site bloqueia robôs", não "o site
+ * está fora do ar" — vira nota informativa, nunca problema (fase 17 follow-up).
+ */
+export function botBlockedByStatus(audit: AuditReportRow | null): boolean {
+  return audit?.http_status === 401 || audit?.http_status === 403 || audit?.http_status === 429;
+}
+
+export function friendlyHttpStatusNote(audit: AuditReportRow | null): string | null {
+  if (!audit) return null;
+  const status = audit.http_status;
+  if (status === null) {
+    return audit.error_code ? "O site nao respondeu a verificacao automatica." : null;
+  }
+  if (botBlockedByStatus(audit)) {
+    return `O site bloqueia verificacoes automaticas (HTTP ${status}) — provavelmente esta no ar normalmente para visitantes.`;
+  }
+  if (status >= 200 && status < 300) return "Site no ar e respondendo normalmente.";
+  if (status >= 300 && status < 400) return "O site redireciona para outro endereco.";
+  if (status === 404) return "O endereco analisado nao foi encontrado (HTTP 404).";
+  if (status >= 500) return `O servidor do site respondeu com erro (HTTP ${status}).`;
+  return `O site respondeu com HTTP ${status}.`;
+}
+
 export function buildReportModel(params: {
   business: BusinessReportRow;
   audit: AuditReportRow | null;
@@ -337,9 +361,21 @@ export function buildReportModel(params: {
   senderName: string | null;
   generatedAt?: string;
 }): ReportModel {
-  const findings = params.business.website_url
+  const botBlocked = botBlockedByStatus(params.audit);
+  const botBlockedNote: ReportFinding = {
+    title: "Site com protecao contra acesso automatico",
+    body: "O site respondeu com bloqueio para a verificacao automatica — comum em sites atras de firewall/CDN.",
+    impact: "A leitura tecnica fica limitada; os pontos marcados como nao verificados nao sao problemas confirmados.",
+    status: "unknown",
+  };
+  const sortedFindings = params.business.website_url
     ? [
-        translateDetection({ code: "siteDown", state: detectionState(params.audit, "siteDown"), audit: params.audit }),
+        translateDetection({
+          code: "siteDown",
+          // Bloqueio de robô não é site fora do ar — nunca afirmar indisponibilidade.
+          state: botBlocked ? "inconclusive" : detectionState(params.audit, "siteDown"),
+          audit: params.audit,
+        }),
         translateDetection({ code: "sslError", state: detectionState(params.audit, "sslError"), audit: params.audit }),
         translateDetection({ code: "https", state: undefined, audit: params.audit }),
         translateDetection({ code: "hasViewport", state: detectionState(params.audit, "hasViewport"), audit: params.audit }),
@@ -357,6 +393,10 @@ export function buildReportModel(params: {
         // chegar depois dos "Ok".
         .sort((a, b) => statusWeight[a.status] - statusWeight[b.status])
     : noSiteFindings(params.business);
+
+  // A nota de bloqueio contextualiza os "nao verificados" — vem antes de tudo.
+  const findings =
+    botBlocked && params.business.website_url ? [botBlockedNote, ...sortedFindings] : sortedFindings;
 
   const suggestions =
     params.score?.suggested_services && params.score.suggested_services.length > 0
@@ -394,6 +434,28 @@ export function buildReportModel(params: {
     maturity: buildMaturityAxes({ business: params.business, audit: params.audit }),
     recommendations,
     nextSteps,
+  };
+}
+
+export function executiveSummary(model: ReportModel): string {
+  const problemCount = model.findings.filter((finding) => finding.status === "problem").length;
+  return model.business.website_url
+    ? `Analisamos a presenca digital de ${model.business.name} e encontramos ${problemCount} ponto(s) de atencao com impacto direto em confianca e conversao.`
+    : `${model.business.name} ainda nao tem site proprio identificado. O diagnostico foca no potencial de construir uma presenca digital controlada pela empresa, aproveitando a reputacao ja existente.`;
+}
+
+export function buildReportResponse(model: ReportModel): BusinessReportResponse {
+  return {
+    summary: executiveSummary(model),
+    score: model.score
+      ? { score: model.score.score, level: model.score.level, confidence: model.score.confidence }
+      : null,
+    httpStatusNote: friendlyHttpStatusNote(model.audit),
+    findings: model.findings,
+    maturity: model.maturity,
+    recommendations: model.recommendations,
+    nextSteps: model.nextSteps,
+    generatedAt: model.generatedAt,
   };
 }
 
@@ -443,16 +505,11 @@ export function renderPdf(model: ReportModel): Promise<Buffer> {
     addMuted(doc, `Gerado em ${new Date(model.generatedAt).toLocaleDateString("pt-BR")}`);
 
     addSectionTitle(doc, "Resumo executivo");
-    const problemCount = model.findings.filter((finding) => finding.status === "problem").length;
-    doc
-      .fontSize(11)
-      .fillColor("#374151")
-      .text(
-        model.business.website_url
-          ? `Analisamos a presenca digital de ${model.business.name} e encontramos ${problemCount} ponto(s) de atencao com impacto direto em confianca e conversao. A leitura abaixo traduz sinais tecnicos em decisoes praticas.`
-          : `${model.business.name} ainda nao tem site proprio identificado. O diagnostico foca no potencial de construir uma presenca digital controlada pela empresa, aproveitando a reputacao ja existente.`,
-        { lineGap: 3 },
-      );
+    doc.fontSize(11).fillColor("#374151").text(executiveSummary(model), { lineGap: 3 });
+    const statusNote = friendlyHttpStatusNote(model.audit);
+    if (statusNote) {
+      addMuted(doc, statusNote);
+    }
 
     if (model.score) {
       doc.moveDown(0.6);
@@ -569,6 +626,74 @@ export type ReportRoutesOptions = {
 export function registerReportRoutes(app: FastifyInstance, options: ReportRoutesOptions = {}) {
   const serviceDb = options.serviceDb ?? createServiceRoleClient();
 
+  async function loadModel(orgId: string, userId: string, businessId: string) {
+    if (!(await canAccessBusiness(serviceDb, orgId, businessId))) {
+      return null;
+    }
+
+    const [businessResult, auditResult, scoreResult, orgResult, profileResult] = await Promise.all([
+      serviceDb
+        .from("businesses")
+        .select("id, name, address, city, state, phone, website_url, rating, review_count, categories, raw")
+        .eq("id", businessId)
+        .single(),
+      serviceDb
+        .from("website_audits")
+        .select("id, status, final_url, http_status, response_time_ms, is_https, detections, error_code, created_at")
+        .eq("organization_id", orgId)
+        .eq("business_id", businessId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      serviceDb
+        .from("opportunity_scores")
+        .select("score, level, confidence, reasons, suggested_services, created_at")
+        .eq("business_id", businessId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      serviceDb.from("organizations").select("name").eq("id", orgId).single(),
+      serviceDb.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
+    ]);
+
+    if (businessResult.error || !businessResult.data) {
+      return null;
+    }
+    if (auditResult.error || scoreResult.error || orgResult.error) {
+      throw new Error(auditResult.error?.message ?? scoreResult.error?.message ?? orgResult.error?.message);
+    }
+
+    return buildReportModel({
+      business: businessResult.data as BusinessReportRow,
+      audit: (auditResult.data as AuditReportRow | null) ?? null,
+      score: (scoreResult.data as ScoreReportRow | null) ?? null,
+      organizationName: (orgResult.data as { name: string }).name,
+      senderName: (profileResult.data as { full_name: string | null } | null)?.full_name ?? null,
+    });
+  }
+
+  // Diagnóstico como JSON — mesma fonte do PDF, para render direto na UI.
+  app.get("/v1/businesses/:businessId/report", async (request, reply) => {
+    const params = businessIdParamSchema.safeParse(request.params);
+    if (!params.success) {
+      return reply.code(400).send({ error: "Id invalido" } satisfies ApiErrorBody);
+    }
+
+    const ctx = await requireOrgContext(request, reply);
+    if (!ctx) return;
+
+    try {
+      const model = await loadModel(ctx.orgId, ctx.userId, params.data.businessId);
+      if (!model) {
+        return reply.code(404).send({ error: "Empresa nao encontrada" } satisfies ApiErrorBody);
+      }
+      return reply.send(buildReportResponse(model));
+    } catch (error) {
+      request.log.error({ err: error }, "business report json failed");
+      return reply.code(500).send({ error: "Erro ao carregar diagnostico" } satisfies ApiErrorBody);
+    }
+  });
+
   app.get("/v1/businesses/:businessId/report.pdf", async (request, reply) => {
     const params = businessIdParamSchema.safeParse(request.params);
     if (!params.success) {
@@ -579,50 +704,11 @@ export function registerReportRoutes(app: FastifyInstance, options: ReportRoutes
     if (!ctx) return;
 
     try {
-      if (!(await canAccessBusiness(serviceDb, ctx.orgId, params.data.businessId))) {
-        return reply.code(404).send({ error: "Empresa nao encontrada" } satisfies ApiErrorBody);
-      }
       await ensureReportRateLimit(serviceDb, ctx.orgId);
-
-      const [businessResult, auditResult, scoreResult, orgResult, profileResult] = await Promise.all([
-        serviceDb
-          .from("businesses")
-          .select("id, name, address, city, state, phone, website_url, rating, review_count, categories, raw")
-          .eq("id", params.data.businessId)
-          .single(),
-        serviceDb
-          .from("website_audits")
-          .select("id, status, final_url, http_status, response_time_ms, is_https, detections, error_code, created_at")
-          .eq("organization_id", ctx.orgId)
-          .eq("business_id", params.data.businessId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        serviceDb
-          .from("opportunity_scores")
-          .select("score, level, confidence, reasons, suggested_services, created_at")
-          .eq("business_id", params.data.businessId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        serviceDb.from("organizations").select("name").eq("id", ctx.orgId).single(),
-        serviceDb.from("profiles").select("full_name").eq("id", ctx.userId).maybeSingle(),
-      ]);
-
-      if (businessResult.error || !businessResult.data) {
+      const model = await loadModel(ctx.orgId, ctx.userId, params.data.businessId);
+      if (!model) {
         return reply.code(404).send({ error: "Empresa nao encontrada" } satisfies ApiErrorBody);
       }
-      if (auditResult.error || scoreResult.error || orgResult.error) {
-        throw new Error(auditResult.error?.message ?? scoreResult.error?.message ?? orgResult.error?.message);
-      }
-
-      const model = buildReportModel({
-        business: businessResult.data as BusinessReportRow,
-        audit: (auditResult.data as AuditReportRow | null) ?? null,
-        score: (scoreResult.data as ScoreReportRow | null) ?? null,
-        organizationName: (orgResult.data as { name: string }).name,
-        senderName: (profileResult.data as { full_name: string | null } | null)?.full_name ?? null,
-      });
       const pdf = await renderPdf(model);
 
       await serviceDb.from("activities").insert({

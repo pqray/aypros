@@ -4,6 +4,7 @@ import type {
   BatchFavoriteResponse,
   BusinessAuditSummaryResponse,
   BusinessRefreshResponse,
+  BusinessReportResponse,
   BusinessListQuery,
   BusinessListResponse,
   SavedFilter,
@@ -21,6 +22,10 @@ export function runBusinessAudit(businessId: string): Promise<unknown> {
   return apiFetch<unknown>(`/v1/businesses/${businessId}/audit`, {
     method: "POST",
   });
+}
+
+export function getBusinessReport(businessId: string): Promise<BusinessReportResponse> {
+  return apiFetch<BusinessReportResponse>(`/v1/businesses/${businessId}/report`);
 }
 
 export function refreshBusinessData(businessId: string): Promise<BusinessRefreshResponse> {

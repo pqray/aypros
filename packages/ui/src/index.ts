@@ -16,6 +16,7 @@ export * from "./components/empty-state";
 export * from "./components/input";
 export * from "./components/label";
 export * from "./components/page-header";
+export * from "./components/progress";
 export * from "./components/score-badge";
 export * from "./components/select";
 export * from "./components/sheet";

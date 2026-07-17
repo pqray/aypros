@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildMaturityAxes, buildReportModel, translateDetection } from "./reports";
+import {
+  buildMaturityAxes,
+  buildReportModel,
+  buildReportResponse,
+  friendlyHttpStatusNote,
+  translateDetection,
+} from "./reports";
 
 const baseAudit = {
   id: "a1",
@@ -165,6 +171,59 @@ describe("buildReportModel", () => {
     expect(model.recommendations.findIndex((rec) => rec.priority === "media")).toBeGreaterThan(
       model.recommendations.findIndex((rec) => rec.priority === "alta"),
     );
+  });
+});
+
+describe("bot-blocked sites (HTTP 401/403/429)", () => {
+  const blockedModel = () =>
+    buildReportModel({
+      business: {
+        id: "b1",
+        name: "Loja Protegida",
+        address: null,
+        city: null,
+        state: null,
+        phone: null,
+        website_url: "https://lojaprotegida.com.br",
+        rating: null,
+        review_count: null,
+        categories: [],
+        raw: {},
+      },
+      audit: {
+        ...baseAudit,
+        http_status: 403,
+        detections: { siteDown: { state: "detected" } },
+      },
+      score: null,
+      organizationName: "Agencia",
+      senderName: null,
+      generatedAt: "2026-07-17T12:00:00Z",
+    });
+
+  it("explains the block instead of showing a raw status", () => {
+    expect(friendlyHttpStatusNote({ ...baseAudit, http_status: 403 })).toContain(
+      "bloqueia verificacoes automaticas",
+    );
+    expect(friendlyHttpStatusNote({ ...baseAudit, http_status: 200 })).toContain("no ar");
+  });
+
+  it("never claims the site is down when it just blocks bots", () => {
+    const model = blockedModel();
+    const titles = model.findings.map((finding) => finding.title);
+    expect(titles).not.toContain("O site pode estar indisponivel");
+    expect(model.findings[0]).toMatchObject({
+      title: "Site com protecao contra acesso automatico",
+      status: "unknown",
+    });
+  });
+
+  it("exposes the friendly note in the JSON response", () => {
+    const response = buildReportResponse(blockedModel());
+    expect(response.httpStatusNote).toContain("bloqueia verificacoes automaticas");
+    expect(response.summary).toContain("Loja Protegida");
+    expect(response.maturity.length).toBeGreaterThan(0);
+    expect(response.nextSteps).toHaveLength(3);
   });
 });
 

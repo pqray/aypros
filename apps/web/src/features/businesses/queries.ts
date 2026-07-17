@@ -8,6 +8,7 @@ import {
   createSavedFilter,
   deleteSavedFilter,
   getBusinessAuditSummary,
+  getBusinessReport,
   listBusinesses,
   listSavedFilters,
   refreshBusinessData,
@@ -42,6 +43,20 @@ export function usePrefetchBusinessAuditSummary() {
   };
 }
 
+export function businessReportKey(businessId: string) {
+  return ["business", businessId, "report"] as const;
+}
+
+/** Diagnóstico traduzido (mesma fonte do PDF) para render na UI. */
+export function useBusinessReport(businessId: string) {
+  return useQuery({
+    queryKey: businessReportKey(businessId),
+    queryFn: () => getBusinessReport(businessId),
+    enabled: Boolean(businessId),
+    staleTime: 120_000,
+  });
+}
+
 export function useRunBusinessAudit(businessId: string) {
   const queryClient = useQueryClient();
 
@@ -49,6 +64,7 @@ export function useRunBusinessAudit(businessId: string) {
     mutationFn: () => runBusinessAudit(businessId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: businessAuditSummaryKey(businessId) });
+      void queryClient.invalidateQueries({ queryKey: businessReportKey(businessId) });
     },
   });
 }
@@ -60,6 +76,7 @@ export function useRefreshBusinessData(businessId: string) {
     mutationFn: () => refreshBusinessData(businessId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: businessAuditSummaryKey(businessId) });
+      void queryClient.invalidateQueries({ queryKey: businessReportKey(businessId) });
     },
   });
 }

@@ -9,7 +9,8 @@ import type { AiInput, AiKind } from "./types";
 export const promptVersions: Record<AiKind, string> = {
   commercial_summary: "summary-v2",
   whatsapp_message: "whatsapp-v2",
-  email_message: "email-v2",
+  // v3: corpo estruturado em parágrafos reais (o v2 saía raso, tudo num bloco só)
+  email_message: "email-v3",
 };
 
 const FACTS_RULES = `REGRAS OBRIGATÓRIAS:
@@ -44,20 +45,23 @@ ${FACTS_RULES}
 Formato exato da resposta:
 {"message": "texto da mensagem"}`,
   email_message: `Você escreve e-mails consultivos de prospecção para uma agência que vende serviços digitais (sites, presença online) para pequenos negócios locais.
-Gere um e-mail de primeira abordagem para esta empresa.
+Gere um e-mail de primeira abordagem para esta empresa. O e-mail deve parecer escrito por um consultor que estudou a empresa — nunca um template raso.
 
 ${FACTS_RULES}
-Estrutura do corpo (sem títulos, texto corrido em parágrafos curtos):
-1. Abertura contextual curta e específica da empresa (1 frase).
-2. 2 a 3 achados objetivos do input, em linguagem de dono de negócio.
-3. Proposta de valor concreta ligada aos achados (sem preço, sem promessa de resultado).
-4. CTA leve (ex.: oferecer uma análise/conversa rápida), nunca agressivo.
+
+ESTRUTURA OBRIGATÓRIA DO CORPO — 5 a 6 parágrafos curtos, cada um separado por UMA LINHA EM BRANCO (\\n\\n). Nunca junte tudo num bloco só:
+1. Saudação + abertura contextual específica da empresa (cite um fato real: reputação, cidade, segmento).
+2. O que você observou da presença digital dela — 2 a 3 achados objetivos do input, em linguagem de dono de negócio, cada um com o porquê de importar.
+3. O custo prático de deixar como está (sem alarmismo, sem inventar números).
+4. Proposta de valor concreta ligada aos achados: o que a agência faria e o que muda no dia a dia do negócio (sem preço, sem promessa de resultado).
+5. CTA leve: oferecer uma análise gratuita ou uma conversa de 15 minutos.
+6. Despedida cordial + assinatura com sender.name e sender.organization em linhas separadas.
+
 - Assunto consultivo e específico para a empresa (nunca "Proposta comercial").
-- Tom profissional e cordial, sem parecer disparo em massa.
-- Se sender.name/sender.organization existirem, use na assinatura.
+- Tom profissional e próximo, sem parecer disparo em massa.
 
 Formato exato da resposta:
-{"subject": "assunto do e-mail", "body": "corpo do e-mail em texto puro"}`,
+{"subject": "assunto do e-mail", "body": "corpo do e-mail em texto puro com \\n\\n entre parágrafos"}`,
 };
 
 export type AiPromptMessages = Array<{ role: "system" | "user"; content: string }>;

@@ -332,6 +332,42 @@ export type LeadDetailResponse = {
   activities: LeadActivity[];
 };
 
+export type BusinessReportFindingStatus = "problem" | "ok" | "unknown";
+
+export type BusinessReportFinding = {
+  title: string;
+  body: string;
+  impact: string;
+  status: BusinessReportFindingStatus;
+};
+
+export type BusinessReportMaturityAxis = {
+  label: string;
+  /** 0-100; null = não verificado. */
+  value: number | null;
+};
+
+export type BusinessReportRecommendation = {
+  priority: "alta" | "media";
+  text: string;
+};
+
+/** Modelo do diagnóstico (mesma fonte do PDF), para render na própria UI. */
+export type BusinessReportResponse = {
+  summary: string;
+  score: {
+    score: number;
+    level: "low" | "medium" | "high" | "very_high";
+    confidence: "low" | "medium" | "high";
+  } | null;
+  httpStatusNote: string | null;
+  findings: BusinessReportFinding[];
+  maturity: BusinessReportMaturityAxis[];
+  recommendations: BusinessReportRecommendation[];
+  nextSteps: string[];
+  generatedAt: string;
+};
+
 export type AiKind = "commercial_summary" | "whatsapp_message" | "email_message";
 
 export type CommercialSummaryOutput = {

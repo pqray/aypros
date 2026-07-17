@@ -41,7 +41,8 @@ export const whatsappMessageOutputSchema = z.object({
 
 export const emailMessageOutputSchema = z.object({
   subject: line(200),
-  body: line(4000),
+  // email-v3 exige corpo estruturado — um bloco raso de 1 frase não passa.
+  body: z.string().trim().min(300).max(4000),
 });
 
 export const aiOutputSchemas: Record<AiKind, z.ZodType> = {

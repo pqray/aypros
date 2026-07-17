@@ -1,6 +1,7 @@
 import type { AiGenerationSummary } from "@aypros/types";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AiGenerationsCard } from "./ai-generations-card";
 
@@ -18,6 +19,10 @@ vi.mock("../queries", () => ({
 
 vi.mock("@/features/pipeline/queries", () => ({
   useCreateLeadContact: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+
+vi.mock("@/lib/use-tab-param", () => ({
+  useTabParam: (_param: string, defaultValue: string) => useState(defaultValue),
 }));
 
 function makeGeneration(overrides: Partial<AiGenerationSummary> = {}): AiGenerationSummary {

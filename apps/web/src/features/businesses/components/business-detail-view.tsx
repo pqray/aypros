@@ -14,12 +14,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   EmptyState,
+  Progress,
   ScoreBadge,
   Skeleton,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
+  cn,
   toast,
 } from "@aypros/ui";
 import Link from "next/link";
@@ -42,7 +44,9 @@ import { useAppContext } from "@/components/shell/use-app-context";
 import { AiGenerationsCard } from "@/features/ai/components/ai-generations-card";
 import { useCreateLead } from "@/features/pipeline/queries";
 import { formatRelativeTime } from "@/lib/format";
+import { useTabParam } from "@/lib/use-tab-param";
 import { downloadBusinessReportPdf } from "../api";
+import { barToneClass, DiagnosticOverviewCard, MaturityCard } from "./business-diagnostic";
 import {
   useBusinessAuditSummary,
   useRefreshBusinessData,
@@ -57,11 +61,8 @@ const confidenceLabels = {
   high: "Alta",
 } as const;
 
-function detectionLabel(state: string | undefined) {
-  if (state === "detected") return "Detectado";
-  if (state === "not_detected") return "Nao detectado";
-  return "Inconclusivo";
-}
+const BUSINESS_TABS = ["overview", "metrics", "ai"] as const;
+type BusinessTab = (typeof BUSINESS_TABS)[number];
 
 function BusinessMetaItem({
   icon,
@@ -92,6 +93,7 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
   const toggleFavorite = useToggleFavorite(orgId);
   const createLead = useCreateLead(orgId);
   const [reportDownloading, setReportDownloading] = useState(false);
+  const [activeTab, setActiveTab] = useTabParam<BusinessTab>("tab", "overview", BUSINESS_TABS);
 
   function handleAudit() {
     audit.mutate(undefined, {
@@ -305,15 +307,20 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
         </div>
       </div>
 
-      <Tabs defaultValue="overview">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as BusinessTab)}>
         <TabsList>
           <TabsTrigger value="overview">Visão geral</TabsTrigger>
           <TabsTrigger value="metrics">Métricas</TabsTrigger>
           <TabsTrigger value="ai">Abordagem IA</TabsTrigger>
-          <TabsTrigger value="report">Relatório</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
+          <DiagnosticOverviewCard
+            businessId={businessId}
+            onDownloadPdf={() => void handleDownloadReport()}
+            downloading={reportDownloading}
+          />
+
           <Card>
             <CardHeader>
               <CardTitle>Presença digital</CardTitle>
@@ -348,89 +355,41 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
         </TabsContent>
 
         <TabsContent value="metrics">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
+          <div className="grid items-start gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Auditoria HTTP</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {!latestAudit ? (
-                  <p className="text-sm text-muted-foreground">
-                    Nenhuma auditoria registrada ainda. Empresas sem site ja recebem score com baixa
-                    confianca.
-                  </p>
-                ) : (
-                  <dl className="grid gap-3 text-sm sm:grid-cols-2">
-                    <div>
-                      <dt className="text-muted-foreground">Status HTTP</dt>
-                      <dd className="font-medium">
-                        {latestAudit.httpStatus ?? latestAudit.errorCode ?? "N/A"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">HTTPS</dt>
-                      <dd className="font-medium">{latestAudit.isHttps ? "Sim" : "Nao"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">Tempo de resposta</dt>
-                      <dd className="font-medium">
-                        {latestAudit.responseTimeMs !== null
-                          ? `${latestAudit.responseTimeMs} ms`
-                          : "N/A"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">Redirecionamentos</dt>
-                      <dd className="font-medium">{latestAudit.redirectCount ?? 0}</dd>
-                    </div>
-                  </dl>
-                )}
-
-                {latestAudit ? (
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {(
-                      [
-                        ["hasViewport", "Responsivo"],
-                        ["hasTitle", "Title"],
-                        ["hasDescription", "Description"],
-                        ["outdated", "Desatualizado"],
-                        ["siteDown", "Fora do ar"],
-                        ["basicBuilder", "Builder basico"],
-                        ["linkInBio", "Link-in-bio"],
-                        ["deliveryPlatform", "Delivery"],
-                        ["menuOnline", "Cardapio online"],
-                      ] as const
-                    ).map(([key, label]) => (
-                      <div key={key} className="rounded-md border px-3 py-2 text-sm">
-                        <p className="font-medium">{label}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {detectionLabel(latestAudit.detections[key]?.state)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Score</CardTitle>
+                <CardTitle>Potencial da oportunidade</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {latestScore ? (
                   <>
-                    <div className="flex items-center justify-between gap-3">
-                      <ScoreBadge level={latestScore.level} score={latestScore.score} />
-                      <Badge variant="secondary">
-                        Confianca {confidenceLabels[latestScore.confidence]}
-                      </Badge>
+                    <div className="flex items-end justify-between gap-3">
+                      <p className="text-4xl font-semibold tabular-nums">
+                        {latestScore.score}
+                        <span className="text-base font-normal text-muted-foreground">/100</span>
+                      </p>
+                      <div className="flex flex-col items-end gap-1">
+                        <ScoreBadge level={latestScore.level} score={latestScore.score} />
+                        <Badge variant="secondary">
+                          Confiança {confidenceLabels[latestScore.confidence]}
+                        </Badge>
+                      </div>
                     </div>
-                    <div className="space-y-2">
+                    <Progress
+                      value={latestScore.score}
+                      aria-label={`Score ${latestScore.score} de 100`}
+                      indicatorClassName={barToneClass(latestScore.score)}
+                    />
+                    <div className="space-y-2 border-t pt-3">
                       {latestScore.reasons.map((reason) => (
                         <div key={reason.code} className="flex justify-between gap-3 text-sm">
-                          <span>{reason.label}</span>
-                          <span className="font-medium tabular-nums">
+                          <span className="min-w-0">{reason.label}</span>
+                          <span
+                            className={cn(
+                              "shrink-0 font-medium tabular-nums",
+                              reason.impact > 0 ? "text-success" : "text-muted-foreground",
+                            )}
+                          >
                             {reason.impact > 0 ? `+${reason.impact}` : reason.impact}
                           </span>
                         </div>
@@ -448,36 +407,23 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
                   </>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    O score sera calculado apos a primeira auditoria ou automaticamente para empresas
+                    O score será calculado após a primeira análise ou automaticamente para empresas
                     sem site.
                   </p>
                 )}
               </CardContent>
             </Card>
+
+            <MaturityCard
+              businessId={businessId}
+              responseTimeMs={latestAudit?.responseTimeMs ?? null}
+              redirectCount={latestAudit?.redirectCount ?? null}
+            />
           </div>
         </TabsContent>
 
         <TabsContent value="ai">
           <AiGenerationsCard businessId={businessId} leadId={leadId} phone={business.phone} />
-        </TabsContent>
-
-        <TabsContent value="report">
-          <Card>
-            <CardHeader>
-              <CardTitle>Relatório de diagnóstico</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                PDF pronto para anexar em proposta ou enviar como análise gratuita: resumo
-                executivo, potencial da oportunidade, presença digital e recomendações priorizadas —
-                tudo em linguagem de dono de negócio, só com fatos detectados.
-              </p>
-              <Button loading={reportDownloading} onClick={handleDownloadReport}>
-                <PiDownloadSimple aria-hidden />
-                Baixar diagnóstico (PDF)
-              </Button>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

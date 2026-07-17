@@ -1,6 +1,7 @@
 import { TooltipProvider } from "@aypros/ui";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BusinessDetailView } from "./business-detail-view";
 
@@ -27,6 +28,10 @@ vi.mock("@/features/pipeline/queries", () => ({
 
 vi.mock("@/features/ai/components/ai-generations-card", () => ({
   AiGenerationsCard: () => <div data-testid="ai-generations-card" />,
+}));
+
+vi.mock("@/lib/use-tab-param", () => ({
+  useTabParam: (_param: string, defaultValue: string) => useState(defaultValue),
 }));
 
 vi.mock("../queries", () => ({
@@ -90,6 +95,27 @@ vi.mock("../queries", () => ({
   useRunBusinessAudit: () => ({ mutate, isPending: false }),
   useRefreshBusinessData: () => ({ mutate: refreshMutate, isPending: false }),
   useToggleFavorite: () => ({ mutate: toggleFavoriteMutate, isPending: false }),
+  useBusinessReport: () => ({
+    isLoading: false,
+    data: {
+      summary: "Diagnostico consultivo da presenca digital.",
+      httpStatusNote: "Site respondeu com HTTP 200.",
+      findings: [
+        {
+          title: "Metadados incompletos",
+          body: "A pagina nao tem description adequada.",
+          impact: "Isso pode reduzir a clareza no Google.",
+          status: "problem",
+        },
+      ],
+      recommendations: [{ priority: "alta", text: "Revisar title e description." }],
+      nextSteps: ["Priorizar SEO local."],
+      maturity: [
+        { label: "Site", value: 80 },
+        { label: "SEO basico", value: 45 },
+      ],
+    },
+  }),
 }));
 
 describe("BusinessDetailView", () => {
@@ -121,8 +147,10 @@ describe("BusinessDetailView", () => {
 
     await user.click(screen.getByRole("tab", { name: "Métricas" }));
 
-    expect(await screen.findByText("Auditoria HTTP")).toBeTruthy();
-    expect(screen.getByLabelText(/oportunidade.*score 43/i)).toBeTruthy();
+    expect(await screen.findByText("Potencial da oportunidade")).toBeTruthy();
+    expect(screen.getByLabelText(/score 43 de 100/i)).toBeTruthy();
+    expect(screen.getByText("Maturidade digital")).toBeTruthy();
+    expect(screen.getByLabelText(/SEO basico: 45 de 100/i)).toBeTruthy();
     expect(screen.getByText("Sem title/description adequados")).toBeTruthy();
   });
 

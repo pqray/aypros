@@ -51,6 +51,7 @@ import { downloadBusinessReportPdf } from "@/features/businesses/api";
 import { useBusinessAuditSummary } from "@/features/businesses/queries";
 import { LEAD_STAGES, isOverdue, leadStageLabels, needsMoveConfirmation } from "../board";
 import { formatRelativeTime } from "@/lib/format";
+import { useTabParam } from "@/lib/use-tab-param";
 import {
   useCreateLeadContact,
   useDeleteLead,
@@ -80,6 +81,9 @@ const contactChannelLabels: Record<ContactChannel, string> = {
   phone: "Telefone",
   other: "Outro",
 };
+
+const LEAD_TABS = ["lead", "ai", "notes"] as const;
+type LeadTab = (typeof LEAD_TABS)[number];
 
 function StageStepper({
   current,
@@ -181,6 +185,7 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
   const deleteLead = useDeleteLead(orgId);
   const createContact = useCreateLeadContact(orgId, leadId);
 
+  const [activeTab, setActiveTab] = useTabParam<LeadTab>("tab", "lead", LEAD_TABS);
   const [potentialValue, setPotentialValue] = useState("");
   const [nextAction, setNextAction] = useState("");
   const [nextActionDate, setNextActionDate] = useState("");
@@ -370,7 +375,7 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
       <StageStepper current={lead.stage} onSelect={handleStageChange} disabled={updateLead.isPending} />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
-        <Tabs defaultValue="lead">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as LeadTab)}>
           <TabsList>
             <TabsTrigger value="lead">Lead</TabsTrigger>
             <TabsTrigger value="ai">Abordagem com IA</TabsTrigger>

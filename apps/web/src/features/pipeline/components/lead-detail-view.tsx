@@ -18,17 +18,26 @@ import {
   SelectTrigger,
   SelectValue,
   Skeleton,
+  Textarea,
   cn,
   toast,
 } from "@aypros/ui";
-import type { LeadStage, LeadStatus } from "@aypros/types";
+import type { ContactChannel, LeadStage, LeadStatus } from "@aypros/types";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { PiArrowLeft, PiClockCountdown, PiWarningCircle } from "react-icons/pi";
+import {
+  PiArrowLeft,
+  PiClockCountdown,
+  PiDownloadSimple,
+  PiPhoneCall,
+  PiWarningCircle,
+} from "react-icons/pi";
 import { useAppContext } from "@/components/shell/use-app-context";
 import { AiGenerationsCard } from "@/features/ai/components/ai-generations-card";
+import { downloadBusinessReportPdf } from "@/features/businesses/api";
 import { LEAD_STAGES, isOverdue, leadStageLabels } from "../board";
-import { useLead, useUpdateLead } from "../queries";
+import { formatRelativeTime } from "@/lib/format";
+import { useCreateLeadContact, useLead, useOrganizationMembers, useUpdateLead } from "../queries";
 import { LeadActivityTimeline } from "./lead-activity-timeline";
 import { LeadNotes } from "./lead-notes";
 
@@ -39,16 +48,28 @@ const leadStatusLabels: Record<LeadStatus, string> = {
   archived: "Arquivado",
 };
 
+const contactChannelLabels: Record<ContactChannel, string> = {
+  whatsapp: "WhatsApp",
+  email: "E-mail",
+  phone: "Telefone",
+  other: "Outro",
+};
+
 export function LeadDetailView({ leadId }: { leadId: string }) {
   const { data: context } = useAppContext();
   const orgId = context?.organization?.id;
   const detail = useLead(orgId, leadId);
+  const members = useOrganizationMembers(orgId);
   const updateLead = useUpdateLead(orgId);
+  const createContact = useCreateLeadContact(orgId, leadId);
 
   const [potentialValue, setPotentialValue] = useState("");
   const [nextAction, setNextAction] = useState("");
   const [nextActionDate, setNextActionDate] = useState("");
   const [pendingStage, setPendingStage] = useState<LeadStage | null>(null);
+  const [contactChannel, setContactChannel] = useState<ContactChannel>("whatsapp");
+  const [contactNote, setContactNote] = useState("");
+  const [reportDownloading, setReportDownloading] = useState(false);
 
   useEffect(() => {
     if (!detail.data) return;
@@ -107,6 +128,32 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
     saveField({ nextActionAt: iso });
   }
 
+  function handleRegisterContact() {
+    createContact.mutate(
+      { channel: contactChannel, note: contactNote.trim() || undefined },
+      {
+        onSuccess: () => {
+          setContactNote("");
+          toast.success("Contato registrado.");
+        },
+        onError: () => toast.error("Nao foi possivel registrar o contato."),
+      },
+    );
+  }
+
+  async function handleDownloadReport() {
+    if (!detail.data) return;
+    setReportDownloading(true);
+    try {
+      await downloadBusinessReportPdf(detail.data.business.id, detail.data.business.name);
+      toast.success("Diagnostico baixado.");
+    } catch {
+      toast.error("Nao foi possivel baixar o diagnostico.");
+    } finally {
+      setReportDownloading(false);
+    }
+  }
+
   if (detail.isLoading) {
     return (
       <div className="space-y-4">
@@ -151,12 +198,18 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
             </p>
           </div>
         </div>
-        <Button asChild variant="outline">
-          <Link href="/pipeline">
-            <PiArrowLeft aria-hidden />
-            Voltar ao pipeline
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <Link href="/pipeline">
+              <PiArrowLeft aria-hidden />
+              Voltar ao pipeline
+            </Link>
+          </Button>
+          <Button variant="outline" loading={reportDownloading} onClick={handleDownloadReport}>
+            <PiDownloadSimple aria-hidden />
+            Baixar diagnostico (PDF)
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
@@ -194,6 +247,25 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
                     {(Object.keys(leadStatusLabels) as LeadStatus[]).map((status) => (
                       <SelectItem key={status} value={status}>
                         {leadStatusLabels[status]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lead-assignee">Responsavel</Label>
+                <Select
+                  value={lead.assignedTo ?? "none"}
+                  onValueChange={(value) => saveField({ assignedTo: value === "none" ? null : value })}
+                >
+                  <SelectTrigger id="lead-assignee">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem responsavel</SelectItem>
+                    {(members.data?.items ?? []).map((member) => (
+                      <SelectItem key={member.userId} value={member.userId}>
+                        {member.fullName ?? member.userId}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -247,10 +319,61 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
                   className={cn(overdue && "border-destructive")}
                 />
               </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Ultimo contato</Label>
+                <p className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <PiPhoneCall aria-hidden />
+                  {lead.lastContactAt ? formatRelativeTime(lead.lastContactAt) : "Nenhum contato registrado"}
+                </p>
+              </div>
             </CardContent>
           </Card>
 
-          <AiGenerationsCard businessId={business.id} />
+          <Card>
+            <CardHeader>
+              <CardTitle>Registrar contato</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-[12rem_minmax(0,1fr)_auto]">
+              <div className="space-y-2">
+                <Label htmlFor="contact-channel">Canal</Label>
+                <Select
+                  value={contactChannel}
+                  onValueChange={(value) => setContactChannel(value as ContactChannel)}
+                >
+                  <SelectTrigger id="contact-channel">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(contactChannelLabels) as ContactChannel[]).map((channel) => (
+                      <SelectItem key={channel} value={channel}>
+                        {contactChannelLabels[channel]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contact-note">Nota opcional</Label>
+                <Textarea
+                  id="contact-note"
+                  rows={2}
+                  value={contactNote}
+                  onChange={(event) => setContactNote(event.target.value)}
+                />
+              </div>
+              <Button
+                type="button"
+                className="self-end"
+                loading={createContact.isPending}
+                onClick={handleRegisterContact}
+              >
+                <PiPhoneCall aria-hidden />
+                Registrar
+              </Button>
+            </CardContent>
+          </Card>
+
+          <AiGenerationsCard businessId={business.id} leadId={lead.id} phone={business.phone} />
 
           <Card>
             <CardHeader>

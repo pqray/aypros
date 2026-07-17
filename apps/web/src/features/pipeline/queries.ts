@@ -1,33 +1,51 @@
 "use client";
 
-import type { LeadStage, LeadStatus, PipelineResponse, UpdateLeadInput } from "@aypros/types";
+import type {
+  CreateLeadContactInput,
+  LeadStage,
+  LeadStatus,
+  PipelineResponse,
+  UpdateLeadInput,
+} from "@aypros/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   batchCreateLeads,
   createLead,
+  createLeadContact,
   createNote,
   deleteNote,
   getLead,
+  getOrganizationMembers,
   getPipeline,
+  type PipelineOwnerFilter,
   updateLead,
   updateNote,
 } from "./api";
 import { moveLead } from "./board";
 
-function pipelineKey(orgId: string | undefined) {
-  return ["org", orgId, "pipeline"] as const;
+function pipelineKey(orgId: string | undefined, ownerFilter: PipelineOwnerFilter = "all") {
+  return ["org", orgId, "pipeline", ownerFilter] as const;
 }
 
-function leadKey(orgId: string | undefined, leadId: string | undefined) {
+export function leadKey(orgId: string | undefined, leadId: string | undefined) {
   return ["org", orgId, "lead", leadId] as const;
 }
 
-export function usePipeline(orgId: string | undefined) {
+export function usePipeline(orgId: string | undefined, ownerFilter: PipelineOwnerFilter = "all") {
   return useQuery({
-    queryKey: pipelineKey(orgId),
-    queryFn: () => getPipeline(),
+    queryKey: pipelineKey(orgId, ownerFilter),
+    queryFn: () => getPipeline(ownerFilter),
     enabled: Boolean(orgId),
-    staleTime: 15_000,
+    staleTime: 30_000,
+  });
+}
+
+export function useOrganizationMembers(orgId: string | undefined) {
+  return useQuery({
+    queryKey: ["org", orgId, "members"] as const,
+    queryFn: () => getOrganizationMembers(),
+    enabled: Boolean(orgId),
+    staleTime: 60_000,
   });
 }
 
@@ -36,7 +54,21 @@ export function useLead(orgId: string | undefined, leadId: string | undefined) {
     queryKey: leadKey(orgId, leadId),
     queryFn: () => getLead(leadId as string),
     enabled: Boolean(orgId && leadId),
+    staleTime: 120_000,
   });
+}
+
+export function usePrefetchLead(orgId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return (leadId: string) => {
+    if (!orgId) return;
+    void queryClient.prefetchQuery({
+      queryKey: leadKey(orgId, leadId),
+      queryFn: () => getLead(leadId),
+      staleTime: 120_000,
+    });
+  };
 }
 
 /** Creates a lead for a business (idempotent — reuses the existing one, specs/12). */
@@ -52,7 +84,7 @@ export function useCreateLead(orgId: string | undefined) {
           current && typeof current === "object" ? { ...current, leadId: response.lead.id } : current,
       );
       void queryClient.invalidateQueries({ queryKey: ["org", orgId, "businesses"] });
-      void queryClient.invalidateQueries({ queryKey: pipelineKey(orgId) });
+      void queryClient.invalidateQueries({ queryKey: ["org", orgId, "pipeline"] });
     },
   });
 }
@@ -64,7 +96,7 @@ export function useBatchCreateLeads(orgId: string | undefined) {
     mutationFn: (businessIds: string[]) => batchCreateLeads(businessIds),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["org", orgId, "businesses"] });
-      void queryClient.invalidateQueries({ queryKey: pipelineKey(orgId) });
+      void queryClient.invalidateQueries({ queryKey: ["org", orgId, "pipeline"] });
     },
   });
 }
@@ -77,15 +109,16 @@ export function useBatchCreateLeads(orgId: string | undefined) {
  */
 export function useUpdateLead(orgId: string | undefined) {
   const queryClient = useQueryClient();
-  const key = pipelineKey(orgId);
+  const keyPrefix = ["org", orgId, "pipeline"] as const;
 
   return useMutation({
     mutationFn: ({ leadId, input }: { leadId: string; input: UpdateLeadInput }) => updateLead(leadId, input),
     onMutate: async ({ leadId, input }) => {
-      await queryClient.cancelQueries({ queryKey: key });
-      const previous = queryClient.getQueryData<PipelineResponse>(key);
+      await queryClient.cancelQueries({ queryKey: keyPrefix });
+      const previousEntries = queryClient.getQueriesData<PipelineResponse>({ queryKey: keyPrefix });
 
-      if (previous) {
+      for (const [key, previous] of previousEntries) {
+        if (!previous) continue;
         const items =
           input.stage !== undefined && input.position !== undefined
             ? moveLead(previous.items, leadId, input.stage, input.position)
@@ -100,21 +133,68 @@ export function useUpdateLead(orgId: string | undefined) {
                         : {}),
                       ...(input.nextAction !== undefined ? { nextAction: input.nextAction } : {}),
                       ...(input.nextActionAt !== undefined ? { nextActionAt: input.nextActionAt } : {}),
+                      ...(input.assignedTo !== undefined
+                        ? { assignedTo: input.assignedTo, assignedToName: null, assignedToAvatarUrl: null }
+                        : {}),
                     }
                   : lead,
               );
         queryClient.setQueryData<PipelineResponse>(key, { items });
       }
 
+      return { previousEntries };
+    },
+    onError: (_error, _vars, context) => {
+      for (const [key, previous] of context?.previousEntries ?? []) {
+        queryClient.setQueryData(key, previous);
+      }
+    },
+    onSettled: (_data, _error, { leadId }) => {
+      void queryClient.invalidateQueries({ queryKey: keyPrefix });
+      void queryClient.invalidateQueries({ queryKey: leadKey(orgId, leadId) });
+    },
+  });
+}
+
+export function useCreateLeadContact(orgId: string | undefined, leadId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateLeadContactInput) => createLeadContact(leadId as string, input),
+    onMutate: async () => {
+      const key = pipelineKey(orgId);
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<PipelineResponse>(key);
+      const optimisticContactAt = new Date().toISOString();
+
+      if (previous && leadId) {
+        queryClient.setQueryData<PipelineResponse>(key, {
+          items: previous.items.map((lead) =>
+            lead.id === leadId ? { ...lead, lastContactAt: optimisticContactAt } : lead,
+          ),
+        });
+      }
+
       return { previous };
     },
     onError: (_error, _vars, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(key, context.previous);
+        queryClient.setQueryData(pipelineKey(orgId), context.previous);
       }
     },
-    onSettled: (_data, _error, { leadId }) => {
-      void queryClient.invalidateQueries({ queryKey: key });
+    onSuccess: (response) => {
+      queryClient.setQueryData<PipelineResponse>(pipelineKey(orgId), (current) =>
+        current
+          ? {
+              items: current.items.map((lead) =>
+                lead.id === response.lead.id
+                  ? { ...lead, lastContactAt: response.lead.lastContactAt }
+                  : lead,
+              ),
+            }
+          : current,
+      );
+      void queryClient.invalidateQueries({ queryKey: pipelineKey(orgId) });
       void queryClient.invalidateQueries({ queryKey: leadKey(orgId, leadId) });
     },
   });

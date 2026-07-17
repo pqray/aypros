@@ -30,10 +30,12 @@ export function PipelineBoard({
   leads,
   onMove,
   movePendingLeadId,
+  onPrefetchDetail,
 }: {
   leads: LeadSummary[];
   onMove: (leadId: string, stage: LeadStage, position: number) => void;
   movePendingLeadId: string | null;
+  onPrefetchDetail?: (leadId: string) => void;
 }) {
   const [activeLead, setActiveLead] = useState<LeadSummary | null>(null);
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
@@ -123,11 +125,12 @@ export function PipelineBoard({
               column={column}
               onMove={handleMoveFromMenu}
               movePendingLeadId={movePendingLeadId}
+              onPrefetchDetail={onPrefetchDetail}
             />
           ))}
         </div>
         <DragOverlay dropAnimation={dropAnimation}>
-          {activeLead ? <LeadCardPreview lead={activeLead} /> : null}
+          {activeLead ? <LeadCardPreview lead={activeLead} onPrefetchDetail={onPrefetchDetail} /> : null}
         </DragOverlay>
       </DndContext>
 

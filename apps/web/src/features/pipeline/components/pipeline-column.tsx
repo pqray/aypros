@@ -15,10 +15,12 @@ export function PipelineColumn({
   column,
   onMove,
   movePendingLeadId,
+  onPrefetchDetail,
 }: {
   column: PipelineColumnData;
   onMove: (leadId: string, stage: LeadStage) => void;
   movePendingLeadId: string | null;
+  onPrefetchDetail?: (leadId: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.stage });
 
@@ -50,6 +52,7 @@ export function PipelineColumn({
               lead={lead}
               onMove={onMove}
               movePending={movePendingLeadId === lead.id}
+              onPrefetchDetail={onPrefetchDetail}
             />
           ))}
         </SortableContext>

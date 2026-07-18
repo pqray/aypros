@@ -62,6 +62,7 @@ Exemplo — Fase 5 (Dashboard) lê: `00`, `phases/phase-05-dashboard.md`, `03`, 
 | [16 — Lead Owner](phases/phase-16-lead-owner.md) | Responsável pelo lead, filtro "meus", avatar no Kanban |
 | [17 — Insights + Pipeline UX](phases/phase-17-insights-pipeline-ux.md) | IA consultiva v2, PDF v2, métricas da empresa e UX do pipeline |
 | [18 — Briefing IA](phases/phase-18-ai-briefing.md) | Briefing consultivo salvo por empresa para interpretar score, auditoria, presença digital e pipeline |
+| [19 — Copiloto de contato](phases/phase-19-contact-copilot.md) | Chat de IA no lead para interpretar conversas, sugerir follow-up, nota e próxima ação |
 
 ## Decisões
 

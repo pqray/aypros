@@ -9,6 +9,7 @@ Camada em `packages/integrations` (`AiProvider`), chamada **somente server-side*
 | `commercial_summary` | análise consultiva estruturada: contexto, presença digital, sinais, lacunas, impacto, oferta, ângulo e próximo passo |
 | `whatsapp_message` | mensagem curta de WhatsApp (informal-profissional, pt-BR, sem parecer spam) |
 | `email_message` | assunto + corpo de e-mail consultivo de prospecção |
+| `contact_copilot` | planejado: interpreta conversa/nota de contato do lead e sugere resumo, objeções, follow-up, nota e próxima ação |
 
 ## Inputs estruturados
 
@@ -25,6 +26,7 @@ Montados no servidor a partir do banco — nunca texto livre do usuário como fo
 - JSON inválido → 1 retentativa com instrução corretiva → senão `failed` com mensagem clara.
 - `commercial_summary` usa contrato estruturado (`summary-v2`): `context`, `digitalPresence`, `strongSignals`, `weakSignals`, `gaps`, `channelDependence`, `commercialImpact`, `recommendedOffer`, `salesAngle`, `expectedObjections`, `nextStep`.
 - `email_message` usa `email-v4`: corpo com 5 a 6 parágrafos, pelo menos 450 caracteres e quebras reais entre parágrafos; corpo raso ou bloco único deve ser rejeitado.
+- `contact_copilot` usará `contact-copilot-v1`: chat assistido para contato do lead, com resumo, objeções, resposta sugerida, nota pronta e próxima ação. Sugestões só podem ser aplicadas depois de confirmação do usuário.
 
 ## Proibição de inventar fatos
 
@@ -44,6 +46,7 @@ Versões atuais:
 - `commercial_summary`: `summary-v2`.
 - `whatsapp_message`: `whatsapp-v2`.
 - `email_message`: `email-v4`.
+- Planejada: `contact_copilot`: `contact-copilot-v1`.
 
 ## Modelo, tokens e custo
 

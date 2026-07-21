@@ -18,6 +18,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireOrgContext } from "./org-context";
 import { createServiceRoleClient } from "./supabase";
+import { timed } from "./timing";
 
 const businessIdParamSchema = z.object({ businessId: z.string().uuid() });
 
@@ -556,12 +557,14 @@ export function registerAuditRoutes(app: FastifyInstance, options: AuditRoutesOp
     if (!ctx) return;
 
     try {
-      const { data, error } = await serviceDb
-        .rpc("get_business_audit_summary", {
-          target_business_id: params.data.businessId,
-          org_id: ctx.orgId,
-        })
-        .maybeSingle();
+      const { data, error } = await timed(request, "audit.summary", () =>
+        serviceDb
+          .rpc("get_business_audit_summary", {
+            target_business_id: params.data.businessId,
+            org_id: ctx.orgId,
+          })
+          .maybeSingle(),
+      );
 
       if (error) {
         throw new Error(error.message);
@@ -590,12 +593,14 @@ export function registerAuditRoutes(app: FastifyInstance, options: AuditRoutesOp
     if (!ctx) return;
 
     try {
-      const result = await auditBusiness({
-        db: serviceDb,
-        orgId: ctx.orgId,
-        userId: ctx.userId,
-        businessId: params.data.businessId,
-      });
+      const result = await timed(request, "audit.run", () =>
+        auditBusiness({
+          db: serviceDb,
+          orgId: ctx.orgId,
+          userId: ctx.userId,
+          businessId: params.data.businessId,
+        }),
+      );
 
       if (!result) {
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);

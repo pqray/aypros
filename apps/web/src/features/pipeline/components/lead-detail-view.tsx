@@ -41,19 +41,24 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   PiArrowLeft,
+  PiArrowRight,
   PiClockCountdown,
   PiDownloadSimple,
   PiInfo,
   PiListChecks,
   PiPhoneCall,
+  PiSparkle,
   PiTrash,
   PiWarningCircle,
 } from "react-icons/pi";
 import { useAppContext } from "@/components/shell/use-app-context";
+import { CollapsibleCard } from "@/components/collapsible-card";
 import { AiGenerationsCard } from "@/features/ai/components/ai-generations-card";
+import { ApiError } from "@/features/ai/api";
+import { useGenerateAi } from "@/features/ai/queries";
 import { downloadBusinessReportPdf } from "@/features/businesses/api";
 import { useBusinessAuditSummary } from "@/features/businesses/queries";
-import { LEAD_STAGES, isOverdue, leadStageLabels, needsMoveConfirmation } from "../board";
+import { isOverdue, leadStageLabels, needsMoveConfirmation, nextForwardStage } from "../board";
 import { formatRelativeTime } from "@/lib/format";
 import { useTabParam } from "@/lib/use-tab-param";
 import {
@@ -63,8 +68,13 @@ import {
   useOrganizationMembers,
   useUpdateLead,
 } from "../queries";
+import { ContactCopilotCard } from "./contact-copilot-card";
+import { FollowUpPanel } from "./follow-up-panel";
 import { LeadActivityTimeline } from "./lead-activity-timeline";
 import { LeadNotes } from "./lead-notes";
+import { LostReasonDialog } from "./lost-reason-dialog";
+import { LostReasonPanel } from "./lost-reason-panel";
+import { WonPanel } from "./won-panel";
 
 const leadStatusLabels: Record<LeadStatus, string> = {
   active: "Ativo",
@@ -72,6 +82,39 @@ const leadStatusLabels: Record<LeadStatus, string> = {
   lost: "Perdido",
   archived: "Arquivado",
 };
+
+function formatCurrency(value: number | null): string | null {
+  if (value === null) return null;
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function InfoLabel({
+  htmlFor,
+  label,
+  description,
+}: {
+  htmlFor?: string;
+  label: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <Label htmlFor={htmlFor}>{label}</Label>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label={`Sobre ${label}`}
+            className="grid size-5 place-items-center rounded text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <PiInfo aria-hidden className="size-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">{description}</TooltipContent>
+      </Tooltip>
+    </div>
+  );
+}
 
 const confidenceLabels = {
   low: "Baixa",
@@ -86,86 +129,69 @@ const contactChannelLabels: Record<ContactChannel, string> = {
   other: "Outro",
 };
 
-const LEAD_TABS = ["lead", "ai", "notes"] as const;
+const LEAD_TABS = ["lead", "stage", "notes"] as const;
 type LeadTab = (typeof LEAD_TABS)[number];
 
-function StageStepper({
+/** Rótulo da aba central — o que importa fazer muda conforme o estágio (specs/22). */
+function stageTabLabel(stage: LeadStage): string {
+  switch (stage) {
+    case "new":
+      return "Abordagem";
+    case "contacted":
+      return "Acompanhamento";
+    case "in_conversation":
+    case "proposal_sent":
+      return "Copiloto";
+    case "won":
+      return "Cliente";
+    case "lost":
+      return "Motivo";
+  }
+}
+
+const stageBadgeVariant: Record<LeadStage, "secondary" | "success" | "destructive"> = {
+  new: "secondary",
+  contacted: "secondary",
+  in_conversation: "secondary",
+  proposal_sent: "secondary",
+  won: "success",
+  lost: "destructive",
+};
+
+/** Etapa atual + avançar/perder, só isso — a etapa em si é comunicada pelo painel abaixo (specs/22). */
+function StageProgress({
   current,
-  onSelect,
+  onAdvance,
+  onMarkLost,
   disabled,
 }: {
   current: LeadStage;
-  onSelect: (stage: LeadStage) => void;
+  onAdvance: (stage: LeadStage) => void;
+  onMarkLost: () => void;
   disabled?: boolean;
 }) {
-  const currentIndex = LEAD_STAGES.indexOf(current);
+  const next = nextForwardStage(current);
+  const terminal = current === "won" || current === "lost";
 
   return (
-    <div
-      role="group"
-      aria-label="Etapas da pipeline"
-      className="rounded-lg border bg-card p-3"
-    >
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium uppercase text-muted-foreground">Pipeline</p>
-          <p className="text-sm font-semibold text-foreground">Etapas do lead</p>
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-3">
+      <div className="flex items-center gap-2">
+        <p className="text-xs font-medium uppercase text-muted-foreground">Etapa atual</p>
+        <Badge variant={stageBadgeVariant[current]}>{leadStageLabels[current]}</Badge>
+      </div>
+      {!terminal ? (
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="outline" size="sm" disabled={disabled} onClick={onMarkLost}>
+            Marcar como perdido
+          </Button>
+          {next ? (
+            <Button type="button" size="sm" disabled={disabled} onClick={() => onAdvance(next)}>
+              Avançar para {leadStageLabels[next]}
+              <PiArrowRight aria-hidden />
+            </Button>
+          ) : null}
         </div>
-        <Badge variant="muted">
-          {currentIndex + 1}/{LEAD_STAGES.length}
-        </Badge>
-      </div>
-
-      <div className="grid gap-2 md:grid-cols-6">
-        {LEAD_STAGES.map((stage, index) => {
-          const active = stage === current;
-          const completed = index < currentIndex;
-          const reached = completed || active;
-          return (
-            <button
-              key={stage}
-              type="button"
-              aria-pressed={active}
-              disabled={disabled}
-              className={cn(
-                "group relative flex min-h-16 items-center gap-2 rounded-md border px-3 py-2 text-left transition-colors",
-                "disabled:pointer-events-none disabled:opacity-60",
-                active
-                  ? "border-primary bg-primary/10 text-foreground"
-                  : "border-transparent bg-muted/45 text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-              onClick={() => (active ? undefined : onSelect(stage))}
-            >
-              <span
-                className={cn(
-                  "flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
-                  reached
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-muted-foreground",
-                )}
-                aria-hidden
-              >
-                {index + 1}
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[11px] font-medium uppercase leading-none text-muted-foreground">
-                  Etapa {index + 1}
-                </span>
-                <span className="mt-1 block truncate text-sm font-semibold">{leadStageLabels[stage]}</span>
-              </span>
-              {index < LEAD_STAGES.length - 1 ? (
-                <span
-                  className={cn(
-                    "pointer-events-none absolute left-[calc(100%+1px)] top-1/2 z-10 hidden h-px w-2 -translate-y-1/2 md:block",
-                    index < currentIndex ? "bg-primary" : "bg-border",
-                  )}
-                  aria-hidden
-                />
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
+      ) : null}
     </div>
   );
 }
@@ -175,16 +201,30 @@ function PotentialBlock({ businessId }: { businessId: string }) {
   const summary = useBusinessAuditSummary(businessId);
 
   if (summary.isLoading) {
-    return <Skeleton className="h-40" />;
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-24" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <Skeleton className="h-7 w-32" />
+            <Skeleton className="h-6 w-24" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   const score = summary.data?.latestScore ?? null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Potencial</CardTitle>
-      </CardHeader>
+    <CollapsibleCard storageKey="lead-detail:potential" title="Potencial">
       <CardContent className="space-y-4">
         {score ? (
           <>
@@ -241,7 +281,33 @@ function PotentialBlock({ businessId }: { businessId: string }) {
           </p>
         )}
       </CardContent>
-    </Card>
+    </CollapsibleCard>
+  );
+}
+
+function LeadDetailSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-56" />
+          <Skeleton className="h-4 w-72 max-w-full" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-28" />
+          <Skeleton className="h-9 w-24" />
+        </div>
+      </div>
+      <Skeleton className="h-14 w-full" />
+      <Skeleton className="h-10 w-80 max-w-full" />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <Skeleton className="h-96" />
+        <div className="space-y-4">
+          <Skeleton className="h-40" />
+          <Skeleton className="h-40" />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -254,11 +320,15 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
   const updateLead = useUpdateLead(orgId);
   const deleteLead = useDeleteLead(orgId);
   const createContact = useCreateLeadContact(orgId, leadId);
+  const suggestCost = useGenerateAi(orgId, detail.data?.business.id ?? "");
 
   const [activeTab, setActiveTab] = useTabParam<LeadTab>("tab", "lead", LEAD_TABS);
   const [potentialValue, setPotentialValue] = useState("");
   const [nextAction, setNextAction] = useState("");
   const [nextActionDate, setNextActionDate] = useState("");
+  const [domainCostAnnual, setDomainCostAnnual] = useState("");
+  const [hostingCostMonthly, setHostingCostMonthly] = useState("");
+  const [marginTargetPercent, setMarginTargetPercent] = useState("");
   const [pendingStage, setPendingStage] = useState<LeadStage | null>(null);
   const [removeOpen, setRemoveOpen] = useState(false);
   const [contactChannel, setContactChannel] = useState<ContactChannel>("whatsapp");
@@ -270,6 +340,9 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
     setPotentialValue(detail.data.lead.potentialValue?.toString() ?? "");
     setNextAction(detail.data.lead.nextAction ?? "");
     setNextActionDate(detail.data.lead.nextActionAt ? detail.data.lead.nextActionAt.slice(0, 10) : "");
+    setDomainCostAnnual(detail.data.lead.domainCostAnnual.toString());
+    setHostingCostMonthly(detail.data.lead.hostingCostMonthly.toString());
+    setMarginTargetPercent(detail.data.lead.marginTargetPercent?.toString() ?? "");
   }, [detail.data]);
 
   function saveField(input: Parameters<typeof updateLead.mutate>[0]["input"]) {
@@ -277,6 +350,34 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
       { leadId, input },
       { onError: () => toast.error("Não foi possível salvar a alteração.") },
     );
+  }
+
+  function handleSuggestCost() {
+    suggestCost.mutate("cost_estimate", {
+      onSuccess: (response) => {
+        const output = response.generation.output;
+        if (!output || !("domainCostAnnual" in output)) {
+          toast.error("A IA não retornou uma sugestão válida.");
+          return;
+        }
+        setDomainCostAnnual(output.domainCostAnnual.toString());
+        setHostingCostMonthly(output.hostingCostMonthly.toString());
+        setMarginTargetPercent(output.marginTargetPercent.toString());
+        saveField({
+          domainCostAnnual: output.domainCostAnnual,
+          hostingCostMonthly: output.hostingCostMonthly,
+          marginTargetPercent: output.marginTargetPercent,
+        });
+        toast.success(output.rationale);
+      },
+      onError: (error) => {
+        toast.error(
+          error instanceof ApiError && error.body.code === "RATE_LIMITED"
+            ? "Limite diário de gerações com IA atingido."
+            : "Não foi possível gerar a sugestão.",
+        );
+      },
+    });
   }
 
   function handleStageChange(stage: LeadStage) {
@@ -288,10 +389,23 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
     saveField({ stage });
   }
 
-  function confirmStageChange() {
+  function confirmStageChange(lostReason?: string) {
     if (pendingStage) {
-      saveField({ stage: pendingStage });
+      saveField({ stage: pendingStage, ...(lostReason ? { lostReason } : {}) });
       setPendingStage(null);
+    }
+  }
+
+  function handleApplyCopilotPatch(patch: {
+    stage: LeadStage | null;
+    status: LeadStatus | null;
+    potentialValue: number | null;
+  }) {
+    if (patch.stage) {
+      handleStageChange(patch.stage);
+    }
+    if (patch.potentialValue !== null && patch.potentialValue !== undefined) {
+      saveField({ potentialValue: patch.potentialValue });
     }
   }
 
@@ -312,6 +426,31 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
     if (parsed !== null && (Number.isNaN(parsed) || parsed < 0)) return;
     if (parsed === detail.data.lead.potentialValue) return;
     saveField({ potentialValue: parsed });
+  }
+
+  function handleDomainCostBlur() {
+    if (!detail.data) return;
+    const parsed = Number(domainCostAnnual.trim());
+    if (Number.isNaN(parsed) || parsed < 0) return;
+    if (parsed === detail.data.lead.domainCostAnnual) return;
+    saveField({ domainCostAnnual: parsed });
+  }
+
+  function handleHostingCostBlur() {
+    if (!detail.data) return;
+    const parsed = Number(hostingCostMonthly.trim());
+    if (Number.isNaN(parsed) || parsed < 0) return;
+    if (parsed === detail.data.lead.hostingCostMonthly) return;
+    saveField({ hostingCostMonthly: parsed });
+  }
+
+  function handleMarginTargetBlur() {
+    if (!detail.data) return;
+    const trimmed = marginTargetPercent.trim();
+    const parsed = trimmed === "" ? null : Number(trimmed);
+    if (parsed !== null && (Number.isNaN(parsed) || parsed < 0 || parsed >= 100)) return;
+    if (parsed === detail.data.lead.marginTargetPercent) return;
+    saveField({ marginTargetPercent: parsed });
   }
 
   function handleNextActionBlur() {
@@ -359,12 +498,7 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
   }
 
   if (detail.isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-16" />
-        <Skeleton className="h-64" />
-      </div>
-    );
+    return <LeadDetailSkeleton />;
   }
 
   if (!detail.data) {
@@ -387,13 +521,13 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 items-center gap-3">
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
+        <div className="flex min-w-0 items-center gap-3 overflow-hidden">
           <BusinessLogo name={business.name} websiteUrl={business.websiteUrl} className="size-12 shrink-0" />
           <div className="min-w-0 space-y-1">
             <Link
               href={`/businesses/${business.id}`}
-              className="truncate text-2xl font-semibold tracking-tight text-foreground hover:underline"
+              className="block truncate text-2xl font-semibold tracking-tight text-foreground hover:underline"
             >
               {business.name}
             </Link>
@@ -402,7 +536,7 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 xl:justify-end">
           <Button asChild variant="outline">
             <Link href="/pipeline">
               <PiArrowLeft aria-hidden />
@@ -442,13 +576,18 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
         </div>
       </div>
 
-      <StageStepper current={lead.stage} onSelect={handleStageChange} disabled={updateLead.isPending} />
+      <StageProgress
+        current={lead.stage}
+        onAdvance={handleStageChange}
+        onMarkLost={() => handleStageChange("lost")}
+        disabled={updateLead.isPending}
+      />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]">
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as LeadTab)}>
           <TabsList>
             <TabsTrigger value="lead">Lead</TabsTrigger>
-            <TabsTrigger value="ai">Abordagem com IA</TabsTrigger>
+            <TabsTrigger value="stage">{stageTabLabel(lead.stage)}</TabsTrigger>
             <TabsTrigger value="notes">Notas</TabsTrigger>
           </TabsList>
 
@@ -545,6 +684,95 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
               </CardContent>
             </Card>
 
+            <CollapsibleCard
+              storageKey="lead-detail:cost-estimate"
+              title="Estimativa de custo e proposta"
+              headerActions={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  loading={suggestCost.isPending}
+                  disabled={!orgId}
+                  onClick={handleSuggestCost}
+                >
+                  <PiSparkle aria-hidden />
+                  Sugerir com IA
+                </Button>
+              }
+            >
+              <CardContent className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <InfoLabel
+                    htmlFor="lead-domain-cost"
+                    label="Custo de domínio (R$/ano)"
+                    description="Valor anual estimado para manter o domínio do site, como .com.br ou .com. Ele entra dividido por 12 no custo mensal."
+                  />
+                  <Input
+                    id="lead-domain-cost"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={domainCostAnnual}
+                    onChange={(event) => setDomainCostAnnual(event.target.value)}
+                    onBlur={handleDomainCostBlur}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <InfoLabel
+                    htmlFor="lead-hosting-cost"
+                    label="Custo de hospedagem (R$/mês)"
+                    description="Custo mensal de infraestrutura para manter o site online. A estimativa considera hospedagem paga, não gratuita."
+                  />
+                  <Input
+                    id="lead-hosting-cost"
+                    type="number"
+                    min={15}
+                    step="0.01"
+                    value={hostingCostMonthly}
+                    onChange={(event) => setHostingCostMonthly(event.target.value)}
+                    onBlur={handleHostingCostBlur}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <InfoLabel
+                    htmlFor="lead-margin-target"
+                    label="Margem alvo (%)"
+                    description="Percentual de margem desejada sobre o custo mensal. Ex.: com 30%, o valor sugerido cobre os custos e reserva 30% como margem."
+                  />
+                  <Input
+                    id="lead-margin-target"
+                    type="number"
+                    min={0}
+                    max={99}
+                    step="1"
+                    placeholder="Ex.: 30"
+                    value={marginTargetPercent}
+                    onChange={(event) => setMarginTargetPercent(event.target.value)}
+                    onBlur={handleMarginTargetBlur}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <InfoLabel
+                    label="Custo mensal estimado"
+                    description="Soma do custo mensal de hospedagem com o custo anual do domínio dividido por 12."
+                  />
+                  <p className="text-sm font-medium text-foreground">
+                    {formatCurrency(lead.estimatedMonthlyCost) ?? "—"}
+                  </p>
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <InfoLabel
+                    label="Valor de manutenção sugerido"
+                    description="Valor mensal recomendado para cobrar do cliente, calculado a partir do custo mensal estimado e da margem alvo."
+                  />
+                  <p className="text-lg font-semibold text-foreground">
+                    {formatCurrency(lead.suggestedMaintenanceValue) ?? "Defina a margem alvo para calcular"}
+                  </p>
+                </div>
+              </CardContent>
+            </CollapsibleCard>
+
             <Card>
               <CardHeader>
                 <CardTitle>Registrar contato</CardTitle>
@@ -590,8 +818,21 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
             </Card>
           </TabsContent>
 
-          <TabsContent value="ai">
-            <AiGenerationsCard businessId={business.id} leadId={lead.id} phone={business.phone} />
+          <TabsContent value="stage" className="space-y-4">
+            {lead.stage === "new" ? (
+              <AiGenerationsCard businessId={business.id} leadId={lead.id} phone={business.phone} />
+            ) : lead.stage === "contacted" ? (
+              <>
+                <FollowUpPanel lastContactAt={lead.lastContactAt} />
+                <AiGenerationsCard businessId={business.id} leadId={lead.id} phone={business.phone} />
+              </>
+            ) : lead.stage === "in_conversation" || lead.stage === "proposal_sent" ? (
+              <ContactCopilotCard leadId={lead.id} phone={business.phone} onApplyPatch={handleApplyCopilotPatch} />
+            ) : lead.stage === "won" ? (
+              <WonPanel ayhubClientId={detail.data.ayhubClientId} />
+            ) : (
+              <LostReasonPanel lostReason={lead.lostReason} />
+            )}
           </TabsContent>
 
           <TabsContent value="notes">
@@ -612,12 +853,18 @@ export function LeadDetailView({ leadId }: { leadId: string }) {
       </div>
 
       <ConfirmDialog
-        open={pendingStage !== null}
+        open={pendingStage !== null && pendingStage !== "lost"}
         onOpenChange={(open) => !open && setPendingStage(null)}
         title={pendingStage ? `Marcar como ${leadStageLabels[pendingStage].toLowerCase()}?` : ""}
         description="Isso também atualiza o status comercial do lead."
         confirmLabel="Confirmar"
-        onConfirm={confirmStageChange}
+        onConfirm={() => confirmStageChange()}
+      />
+
+      <LostReasonDialog
+        open={pendingStage === "lost"}
+        onOpenChange={(open) => !open && setPendingStage(null)}
+        onConfirm={(reason) => confirmStageChange(reason)}
       />
 
       <ConfirmDialog

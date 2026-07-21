@@ -7,7 +7,7 @@ import { useState, type ComponentType } from "react";
 import { PiCircleNotch } from "react-icons/pi";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import type { ShellOrganization, ShellUser } from "./app-shell";
-import { isActiveRoute, primaryNavItems, secondaryNavItems, type ShellNavItem } from "./navigation";
+import { isActiveRoute, managementNavItems, primaryNavItems, type ShellNavItem } from "./navigation";
 
 // Labels ficam sempre no DOM em largura natural; a própria animacao de largura da
 // sidebar as revela (clip via overflow-hidden). O fade e só para o texto não vazar
@@ -93,16 +93,15 @@ function SectionHeading({ expanded, label }: { expanded: boolean; label: string 
 function SidebarContent({
   expanded,
   user,
-  organization,
   onNavigate,
 }: {
   expanded: boolean;
   user: ShellUser | null;
-  organization: ShellOrganization;
   onNavigate?: () => void;
 }) {
-  const organizationName = organization?.name ?? "Sem organização";
-  const organizationInitial = organizationName.slice(0, 1).toUpperCase();
+  const appName = "Aypros";
+  const appInitial = appName.slice(0, 1).toUpperCase();
+  const userName = user?.fullName || user?.email || "Carregando";
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
@@ -110,12 +109,12 @@ function SidebarContent({
         <Link
           href="/dashboard"
           onClick={onNavigate}
-          aria-label={organizationName}
+          aria-label={appName}
           className="flex w-full min-w-0 items-center"
         >
           <span className="flex w-12 shrink-0 items-center justify-center">
             <span className="flex size-8 items-center justify-center rounded-md bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
-              {organizationInitial}
+              {appInitial}
             </span>
           </span>
           <span
@@ -125,44 +124,50 @@ function SidebarContent({
             )}
             aria-hidden={!expanded}
           >
-            {organizationName}
+            {appName}
           </span>
         </Link>
       </div>
 
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-3" aria-label="Navegacao principal">
+      <nav className="flex-1 overflow-hidden px-2 py-3" aria-label="Navegacao principal">
         <div className="mb-2">
           {primaryNavItems.map((item) => (
             <NavLink key={item.href} item={item} expanded={expanded} onNavigate={onNavigate} />
           ))}
         </div>
-        <SectionHeading expanded={expanded} label="Configuracoes" />
-        {secondaryNavItems.map((item) => (
-          <NavLink key={item.href} item={item} expanded={expanded} onNavigate={onNavigate} />
-        ))}
+        <SectionHeading expanded={expanded} label="Gestao" />
+        <div className="mb-2">
+          {managementNavItems.map((item) => (
+            <NavLink key={item.href} item={item} expanded={expanded} onNavigate={onNavigate} />
+          ))}
+        </div>
       </nav>
 
       <div className="flex shrink-0 items-center border-t border-sidebar-border px-2 py-3">
         <span className="flex w-12 shrink-0 items-center justify-center">
           <span className="flex size-8 items-center justify-center rounded-md bg-sidebar-accent text-xs font-semibold text-sidebar-accent-foreground">
-            {organizationInitial}
+            {userName.slice(0, 1).toUpperCase()}
           </span>
         </span>
         <div
           className={cn("min-w-0 flex-1 overflow-hidden", labelClasses(expanded))}
           aria-hidden={!expanded}
         >
-          <p className="truncate text-xs font-medium">{organizationName}</p>
-          <p className="truncate text-xs text-sidebar-foreground/60">
-            {user?.fullName || user?.email || "Carregando"}
-          </p>
+          <p className="truncate text-xs font-medium">{userName}</p>
+          <p className="truncate text-xs text-sidebar-foreground/60">{user?.email ?? "Conta"}</p>
         </div>
       </div>
     </div>
   );
 }
 
-export function Sidebar({ user, organization }: { user: ShellUser | null; organization: ShellOrganization }) {
+export function Sidebar({
+  user,
+  organization: _organization,
+}: {
+  user: ShellUser | null;
+  organization: ShellOrganization;
+}) {
   const [expanded, setExpanded] = useState(false);
   const mobileOpen = useSidebarStore((state) => state.mobileOpen);
   const setMobileOpen = useSidebarStore((state) => state.setMobileOpen);
@@ -187,7 +192,7 @@ export function Sidebar({ user, organization }: { user: ShellUser | null; organi
         )}
         aria-label="Navegacao lateral"
       >
-        <SidebarContent expanded={expanded} user={user} organization={organization} />
+        <SidebarContent expanded={expanded} user={user} />
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -197,7 +202,6 @@ export function Sidebar({ user, organization }: { user: ShellUser | null; organi
           <SidebarContent
             expanded
             user={user}
-            organization={organization}
             onNavigate={() => setMobileOpen(false)}
           />
         </SheetContent>

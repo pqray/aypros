@@ -16,7 +16,7 @@ import React, { useEffect } from "react";
 import { PiMagnifyingGlass, PiMoon, PiPlus, PiSun } from "react-icons/pi";
 import { useCommandPaletteStore } from "@/stores/command-palette-store";
 import { notifyNavigationStart } from "./navigation-progress";
-import { primaryNavItems, secondaryNavItems } from "./navigation";
+import { managementNavItems, primaryNavItems, secondaryNavItems } from "./navigation";
 
 export function CommandPalette() {
   const router = useRouter();
@@ -55,7 +55,7 @@ export function CommandPalette() {
       <CommandList>
         <CommandEmpty>Nenhum comando encontrado.</CommandEmpty>
         <CommandGroup heading="Navegação">
-          {[...primaryNavItems, ...secondaryNavItems].map((item) => {
+          {[...primaryNavItems, ...managementNavItems, ...secondaryNavItems].map((item) => {
             const Icon = item.icon;
             return (
               <CommandItem key={item.href} value={item.label} onSelect={() => navigate(item.href)}>

@@ -1,4 +1,4 @@
-export type AiKind = "commercial_summary" | "whatsapp_message" | "email_message";
+export type AiKind = "commercial_summary" | "whatsapp_message" | "email_message" | "cost_estimate";
 
 export type AiDetectionState = "detected" | "not_detected" | "inconclusive";
 export type AiBusinessSegment = "restaurant" | "food_service" | "services" | "retail" | "other";
@@ -73,6 +73,13 @@ export type EmailMessageOutput = {
   body: string;
 };
 
+export type CostEstimateOutput = {
+  domainCostAnnual: number;
+  hostingCostMonthly: number;
+  marginTargetPercent: number;
+  rationale: string;
+};
+
 export type BusinessBriefingInput = AiInput & {
   report: {
     summary: string;
@@ -104,11 +111,51 @@ export type BusinessBriefingOutput = {
   confidenceNotes: string[];
 };
 
+export type ContactCopilotChannel = "whatsapp" | "email" | "phone" | "other";
+export type ContactCopilotStage = "new" | "contacted" | "in_conversation" | "proposal_sent" | "won" | "lost";
+export type ContactCopilotStatus = "active" | "won" | "lost" | "archived";
+
+/** Input do Copiloto de contato (fase 19) — AiInput + a conversa livre do vendedor. */
+export type ContactCopilotInput = AiInput & {
+  channel: ContactCopilotChannel;
+  transcript: string;
+  recentNotes: string[];
+};
+
+export type ContactCopilotOutput = {
+  summary: string;
+  customerPosition: string;
+  objections: string[];
+  positiveSignals: string[];
+  risks: string[];
+  recommendedReply: string;
+  recommendedNextAction: {
+    label: string;
+    dueInDays: number;
+    reason: string;
+  };
+  suggestedLeadPatch: {
+    stage: ContactCopilotStage | null;
+    status: ContactCopilotStatus | null;
+    potentialValue: number | null;
+  };
+  noteDraft: string;
+  confidenceNotes: string[];
+};
+
+export type ContactCopilotResult = {
+  output: ContactCopilotOutput;
+  model: string;
+  tokensUsed: number | null;
+  promptVersion: string;
+};
+
 export type AiOutput =
   | CommercialSummaryOutput
   | CommercialSummaryV2Output
   | WhatsappMessageOutput
-  | EmailMessageOutput;
+  | EmailMessageOutput
+  | CostEstimateOutput;
 
 export type BusinessBriefingResult = {
   output: BusinessBriefingOutput;

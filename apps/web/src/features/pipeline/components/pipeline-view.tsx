@@ -22,9 +22,9 @@ export function PipelineView() {
   const deleteLead = useDeleteLead(orgId);
   const prefetchLead = usePrefetchLead(orgId);
 
-  function handleMove(leadId: string, stage: LeadStage, position: number) {
+  function handleMove(leadId: string, stage: LeadStage, position: number, lostReason?: string) {
     updateLead.mutate(
-      { leadId, input: { stage, position } },
+      { leadId, input: { stage, position, ...(lostReason ? { lostReason } : {}) } },
       { onError: () => toast.error("Não foi possível mover o lead.") },
     );
   }

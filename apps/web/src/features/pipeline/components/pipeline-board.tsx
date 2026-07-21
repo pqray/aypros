@@ -17,9 +17,10 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { groupByStage, LEAD_STAGES, leadStageLabels, moveLead, needsMoveConfirmation } from "../board";
 import { LeadCardPreview } from "./lead-card";
+import { LostReasonDialog } from "./lost-reason-dialog";
 import { PipelineColumn } from "./pipeline-column";
 
 type PendingMove = {
@@ -47,7 +48,7 @@ export function PipelineBoard({
   onPrefetchDetail,
 }: {
   leads: LeadSummary[];
-  onMove: (leadId: string, stage: LeadStage, position: number) => void;
+  onMove: (leadId: string, stage: LeadStage, position: number, lostReason?: string) => void;
   onRemoveLead?: (leadId: string) => void;
   removeLoading?: boolean;
   onPrefetchDetail?: (leadId: string) => void;
@@ -159,15 +160,18 @@ export function PipelineBoard({
     requestMove(activeId, target.stage, target.position);
   }
 
-  function confirmPendingMove() {
+  function confirmPendingMove(lostReason?: string) {
     if (!pendingMove) return;
-    onMove(pendingMove.leadId, pendingMove.stage, pendingMove.position);
+    onMove(pendingMove.leadId, pendingMove.stage, pendingMove.position, lostReason);
     setPendingMove(null);
   }
 
-  function requestRemove(lead: LeadSummary) {
+  // Referência estável — durante o drag, `PipelineBoard` re-renderiza a cada
+  // `handleDragOver`; sem `useCallback` isso invalidaria a memoização de
+  // `PipelineColumn`/`SortableLeadCard` mesmo em colunas que não mudaram.
+  const requestRemove = useCallback((lead: LeadSummary) => {
     setPendingRemoval({ leadId: lead.id, businessName: lead.businessName });
-  }
+  }, []);
 
   function confirmPendingRemoval() {
     if (!pendingRemoval) return;
@@ -205,7 +209,7 @@ export function PipelineBoard({
       </DndContext>
 
       <ConfirmDialog
-        open={pendingMove !== null}
+        open={pendingMove !== null && pendingMove.stage !== "lost"}
         onOpenChange={(open) => !open && setPendingMove(null)}
         title={pendingMove ? `Marcar como ${leadStageLabels[pendingMove.stage].toLowerCase()}?` : ""}
         description={
@@ -214,7 +218,13 @@ export function PipelineBoard({
             : undefined
         }
         confirmLabel="Confirmar"
-        onConfirm={confirmPendingMove}
+        onConfirm={() => confirmPendingMove()}
+      />
+
+      <LostReasonDialog
+        open={pendingMove !== null && pendingMove.stage === "lost"}
+        onOpenChange={(open) => !open && setPendingMove(null)}
+        onConfirm={(reason) => confirmPendingMove(reason)}
       />
 
       <ConfirmDialog

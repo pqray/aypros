@@ -32,9 +32,12 @@ export const aiConfig = {
     commercial_summary: 1536,
     whatsapp_message: 512,
     email_message: 1024,
+    cost_estimate: 256,
   },
   /** Briefing consultivo salvo por empresa (fase 18). */
   maxBusinessBriefingTokens: 1536,
+  /** Copiloto de contato — vários campos estruturados por resposta (fase 19). */
+  maxContactCopilotTokens: 1280,
 } as const;
 
 export const businessesConfig = {
@@ -45,6 +48,8 @@ export const businessesConfig = {
   maxExportRows: 1000,
   /** Rate limit: CSV exports per organization per hour. */
   maxExportsPerOrgPerHour: 10,
+  /** Rate limit: manual business registrations per organization per hour. */
+  maxManualCreatesPerOrgPerHour: 30,
   /** Max businesses accepted in one batch action (favorite/audit/export selection). */
   maxBatchSize: 100,
 } as const;

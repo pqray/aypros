@@ -1,6 +1,7 @@
 import type { IconType } from "react-icons";
 import {
   PiBriefcase,
+  PiBuildings,
   PiChartLineUp,
   PiClockCounterClockwise,
   PiGear,
@@ -26,6 +27,10 @@ export const primaryNavItems: ShellNavItem[] = [
   { href: "/pipeline", label: "Pipeline", icon: PiKanban },
 ];
 
+export const managementNavItems: ShellNavItem[] = [
+  { href: "/ayhub", label: "AYhub", icon: PiBuildings },
+];
+
 export const secondaryNavItems: ShellNavItem[] = [
   { href: "/settings/profile", label: "Perfil", icon: PiUser },
   { href: "/settings/organization", label: "Organização", icon: PiGear },
@@ -38,6 +43,9 @@ export const routeLabels: Record<string, string> = {
   businesses: "Empresas",
   favorites: "Favoritos",
   pipeline: "Pipeline",
+  ayhub: "AYhub",
+  sites: "Sites",
+  docs: "Documentação",
   settings: "Configurações",
   profile: "Perfil",
   organization: "Organização",

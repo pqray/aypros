@@ -18,6 +18,11 @@ const refreshMutate = vi.fn();
 const toggleFavoriteMutate = vi.fn();
 const createLeadMutate = vi.fn();
 const generateBriefingMutate = vi.fn();
+const routerPush = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: routerPush }),
+}));
 
 vi.mock("@/components/shell/use-app-context", () => ({
   useAppContext: () => ({ data: { organization: { id: "org1" } } }),
@@ -138,6 +143,7 @@ describe("BusinessDetailView", () => {
     toggleFavoriteMutate.mockClear();
     createLeadMutate.mockClear();
     generateBriefingMutate.mockClear();
+    routerPush.mockClear();
   });
 
   it("runs a data refresh from the action menu", async () => {
@@ -199,5 +205,11 @@ describe("BusinessDetailView", () => {
     await user.click(screen.getByRole("menuitem", { name: /adicionar ao pipeline/i }));
 
     expect(createLeadMutate).toHaveBeenCalledWith("b1", expect.anything());
+    const options = createLeadMutate.mock.calls[0]?.[1] as
+      | { onSuccess?: (response: { created: boolean }) => void }
+      | undefined;
+    options?.onSuccess?.({ created: true });
+
+    expect(routerPush).toHaveBeenCalledWith("/pipeline");
   });
 });

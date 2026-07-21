@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   businessIdsSchema,
   businessListQuerySchema,
+  createManualBusinessSchema,
   createNoteSchema,
   createSearchSchema,
   generateAiSchema,
@@ -25,6 +26,44 @@ describe("createSearchSchema", () => {
     expect(
       createSearchSchema.safeParse({ city: "Fortaleza", state: "Ceará", segment: "Padarias" }).success,
     ).toBe(false);
+  });
+});
+
+describe("createManualBusinessSchema", () => {
+  it("accepts a business with instagram only", () => {
+    const result = createManualBusinessSchema.parse({
+      name: " Doceria da Ana ",
+      segment: " Doceria ",
+      instagramUrl: " @doceriadaana ",
+    });
+
+    expect(result).toEqual({
+      name: "Doceria da Ana",
+      segment: "Doceria",
+      instagramUrl: "@doceriadaana",
+    });
+  });
+
+  it("accepts site and optional location fields", () => {
+    const result = createManualBusinessSchema.parse({
+      name: "Padaria Central",
+      segment: "Padaria",
+      city: " Fortaleza ",
+      state: "ce",
+      websiteUrl: "padariacentral.com.br",
+    });
+
+    expect(result).toMatchObject({
+      city: "Fortaleza",
+      state: "CE",
+      websiteUrl: "padariacentral.com.br",
+    });
+  });
+
+  it("rejects missing name, segment, and digital presence", () => {
+    expect(createManualBusinessSchema.safeParse({ name: "", segment: "Padaria", websiteUrl: "" }).success).toBe(false);
+    expect(createManualBusinessSchema.safeParse({ name: "Padaria", segment: "", instagramUrl: "" }).success).toBe(false);
+    expect(createManualBusinessSchema.safeParse({ name: "Padaria", segment: "Padaria" }).success).toBe(false);
   });
 });
 
@@ -86,6 +125,11 @@ describe("updateLeadSchema", () => {
   it("requires an ISO datetime with offset for nextActionAt", () => {
     expect(updateLeadSchema.safeParse({ nextActionAt: "2026-07-17" }).success).toBe(false);
     expect(updateLeadSchema.safeParse({ nextActionAt: "2026-07-17T10:00:00Z" }).success).toBe(true);
+  });
+
+  it("requires a paid monthly hosting cost", () => {
+    expect(updateLeadSchema.safeParse({ hostingCostMonthly: 0 }).success).toBe(false);
+    expect(updateLeadSchema.safeParse({ hostingCostMonthly: 35 }).success).toBe(true);
   });
 });
 

@@ -22,10 +22,11 @@ import { canAccessBusiness } from "./audits";
 import { env } from "./env";
 import { requireOrgContext } from "./org-context";
 import { createServiceRoleClient } from "./supabase";
+import { timed } from "./timing";
 
 const businessIdParamSchema = z.object({ businessId: z.string().uuid() });
 
-type BusinessRow = {
+export type BusinessRow = {
   id: string;
   name: string;
   city: string | null;
@@ -38,14 +39,14 @@ type BusinessRow = {
   raw?: Record<string, unknown> | null;
 };
 
-type AuditRow = {
+export type AuditRow = {
   status: string;
   is_https: boolean | null;
   response_time_ms: number | null;
   detections: Record<string, { state?: string; evidence?: Record<string, unknown> }> | null;
 };
 
-type ScoreRow = {
+export type ScoreRow = {
   score: number;
   level: string;
   confidence: string;
@@ -147,7 +148,7 @@ function toGenerationSummary(row: GenerationRow): AiGenerationSummary {
   };
 }
 
-async function ensureAiRateLimit(db: SupabaseClient, orgId: string) {
+export async function ensureAiRateLimit(db: SupabaseClient, orgId: string) {
   const windowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { count, error } = await db
     .from("ai_generations")
@@ -165,7 +166,7 @@ async function ensureAiRateLimit(db: SupabaseClient, orgId: string) {
   }
 }
 
-function friendlyAiError(error: AiError): { status: number; body: ApiErrorBody } {
+export function friendlyAiError(error: AiError): { status: number; body: ApiErrorBody } {
   switch (error.code) {
     case "TIMEOUT":
       return { status: 504, body: { error: "A geração demorou demais. Tente novamente." } };
@@ -214,11 +215,13 @@ export function registerAiRoutes(app: FastifyInstance, options: AiRoutesOptions 
     if (!ctx) return;
 
     try {
-      const { data, error } = await serviceDb.rpc("get_business_ai_generations_api", {
-        target_business_id: params.data.businessId,
-        org_id: ctx.orgId,
-        result_limit: 12,
-      });
+      const { data, error } = await timed(request, "ai.generations", () =>
+        serviceDb.rpc("get_business_ai_generations_api", {
+          target_business_id: params.data.businessId,
+          org_id: ctx.orgId,
+          result_limit: 12,
+        }),
+      );
 
       if (error) throw new Error(error.message);
 
@@ -252,13 +255,13 @@ export function registerAiRoutes(app: FastifyInstance, options: AiRoutesOptions 
     if (!ctx) return;
 
     try {
-      if (!(await canAccessBusiness(serviceDb, ctx.orgId, params.data.businessId))) {
+      if (!(await timed(request, "business.access", () => canAccessBusiness(serviceDb, ctx.orgId, params.data.businessId)))) {
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
-      await ensureAiRateLimit(serviceDb, ctx.orgId);
+      await timed(request, "ai.rate", () => ensureAiRateLimit(serviceDb, ctx.orgId));
 
       const [businessResult, auditResult, scoreResult, profileResult, orgResult] =
-        await Promise.all([
+        await timed(request, "ai.input", () => Promise.all([
           serviceDb
             .from("businesses")
             .select("id, name, city, state, categories, rating, review_count, website_url, phone, raw")
@@ -281,7 +284,7 @@ export function registerAiRoutes(app: FastifyInstance, options: AiRoutesOptions 
             .maybeSingle(),
           serviceDb.from("profiles").select("full_name").eq("id", ctx.userId).maybeSingle(),
           serviceDb.from("organizations").select("name").eq("id", ctx.orgId).maybeSingle(),
-        ]);
+        ]));
 
       if (businessResult.error || !businessResult.data) {
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
@@ -297,23 +300,25 @@ export function registerAiRoutes(app: FastifyInstance, options: AiRoutesOptions 
 
       let generationRow: GenerationRow;
       try {
-        const result = await provider.generate(body.data.kind, input);
-        const { data, error } = await serviceDb
-          .from("ai_generations")
-          .insert({
-            organization_id: ctx.orgId,
-            business_id: params.data.businessId,
-            requested_by: ctx.userId,
-            kind: body.data.kind,
-            prompt_version: result.promptVersion,
-            input,
-            output: result.output,
-            model: result.model,
-            tokens_used: result.tokensUsed,
-            status: "completed",
-          })
-          .select("id, kind, status, output, model, tokens_used, prompt_version, created_at")
-          .single();
+        const result = await timed(request, "ai.provider", () => provider.generate(body.data.kind, input));
+        const { data, error } = await timed(request, "ai.insert", () =>
+          serviceDb
+            .from("ai_generations")
+            .insert({
+              organization_id: ctx.orgId,
+              business_id: params.data.businessId,
+              requested_by: ctx.userId,
+              kind: body.data.kind,
+              prompt_version: result.promptVersion,
+              input,
+              output: result.output,
+              model: result.model,
+              tokens_used: result.tokensUsed,
+              status: "completed",
+            })
+            .select("id, kind, status, output, model, tokens_used, prompt_version, created_at")
+            .single(),
+        );
         if (error || !data) {
           throw new Error(`generation insert failed: ${error?.message ?? "missing data"}`);
         }

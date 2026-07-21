@@ -5,6 +5,8 @@ import type {
   BusinessAuditSummaryResponse,
   BusinessBriefingResponse,
   BusinessRefreshResponse,
+  CreateManualBusinessRequest,
+  CreateManualBusinessResponse,
   BusinessReportResponse,
   BusinessListQuery,
   BusinessListResponse,
@@ -67,6 +69,15 @@ export function businessListQueryParams(query: BusinessListQuery): URLSearchPara
 
 export function listBusinesses(query: BusinessListQuery): Promise<BusinessListResponse> {
   return apiFetch<BusinessListResponse>(`/v1/businesses?${businessListQueryParams(query).toString()}`);
+}
+
+export function createManualBusiness(
+  input: CreateManualBusinessRequest,
+): Promise<CreateManualBusinessResponse> {
+  return apiFetch<CreateManualBusinessResponse>("/v1/businesses", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
 export function batchFavoriteBusinesses(businessIds: string[]): Promise<BatchFavoriteResponse> {

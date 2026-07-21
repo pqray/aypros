@@ -7,6 +7,7 @@ Primeira tela após login. Objetivo: orientar a próxima ação de prospecção.
 | Bloco | Conteúdo | Fonte |
 |---|---|---|
 | Cards de métricas | pesquisas realizadas, empresas descobertas, empresas sem site, leads no pipeline (período: total ou últimos 30 dias) | agregações por `organization_id` (Server Component) |
+| Distribuição do pipeline | gráfico de pizza com a contagem de leads por estágio (novo, contactado, em conversa, proposta enviada, ganho, perdido) + legenda com contagem e percentual; substitui o bloco "Hoje" da fase 13 (`specs/phases/phase-24-dashboard-pipeline-distribution.md`) | RPC `get_dashboard_pipeline_distribution` |
 | Busca rápida | formulário compacto cidade + segmento → redireciona para `/discovery` com params na URL | — |
 | Oportunidades em destaque | top N empresas por score (score alto + sem lead criado), com nível e motivo principal; ação: ver detalhe / adicionar ao pipeline | `opportunity_scores` + `businesses` |
 | Pesquisas recentes | últimas pesquisas com status e contagem; link para resultados | `searches` |

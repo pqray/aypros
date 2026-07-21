@@ -2,10 +2,11 @@ import { TooltipProvider } from "@aypros/ui";
 import { render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
-import type { DashboardActivity, DashboardOpportunity, DashboardSearch } from "../schemas";
+import type { DashboardActivity, DashboardOpportunity, DashboardPipelineDistribution, DashboardSearch } from "../schemas";
 import { ActivitiesBlock } from "./activities-block";
 import { MetricCards } from "./metric-cards";
 import { OpportunitiesBlock } from "./opportunities-block";
+import { PipelineDistributionBlock } from "./pipeline-distribution-block";
 import { RecentSearchesBlock } from "./recent-searches-block";
 import { WelcomeHero } from "./welcome-hero";
 
@@ -174,6 +175,34 @@ describe("ActivitiesBlock", () => {
     expect(screen.getByText(/restaurantes em fortaleza/i)).toBeInTheDocument();
     expect(screen.getByText(/lead adicionado ao pipeline/i)).toBeInTheDocument();
     expect(screen.getByText(/padaria central/i)).toBeInTheDocument();
+  });
+});
+
+describe("PipelineDistributionBlock", () => {
+  it("renders an empty state with CTA to businesses when there are no leads", () => {
+    render(<PipelineDistributionBlock distribution={[]} />);
+
+    expect(screen.getByText("Pipeline vazio")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /ver empresas/i })).toHaveAttribute("href", "/businesses");
+  });
+
+  it("renders the legend with stage labels, counts and percentages", () => {
+    const distribution: DashboardPipelineDistribution[] = [
+      { stage: "new", count: 3 },
+      { stage: "contacted", count: 1 },
+      { stage: "in_conversation", count: 0 },
+      { stage: "proposal_sent", count: 0 },
+      { stage: "won", count: 0 },
+      { stage: "lost", count: 0 },
+    ];
+
+    render(<PipelineDistributionBlock distribution={distribution} />);
+
+    expect(screen.getByText("Novo")).toBeInTheDocument();
+    expect(screen.getByText("3 · 75%")).toBeInTheDocument();
+    expect(screen.getByText("Contactado")).toBeInTheDocument();
+    expect(screen.getByText("1 · 25%")).toBeInTheDocument();
+    expect(screen.queryByText("Pipeline vazio")).not.toBeInTheDocument();
   });
 });
 

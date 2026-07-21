@@ -37,7 +37,6 @@ export function SegmentAuditBadges({
   return (
     <>
       {!compact ? <Badge variant="muted">{segmentLabels[segment]}</Badge> : null}
-      {instagramDetected ? <Badge variant="info">Instagram</Badge> : null}
       {!instagramDetected && socialLinks ? <Badge variant="secondary">Redes sociais</Badge> : null}
       {linkInBio ? <Badge variant="warning">Link-in-bio</Badge> : null}
       {deliveryPlatform ? <Badge variant="info">Delivery</Badge> : null}

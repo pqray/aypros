@@ -71,6 +71,35 @@ export const createSearchSchema = z.object({
 
 export const quickSearchSchema = createSearchSchema;
 
+const optionalInputText = (max = 200) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .optional()
+    .or(z.literal("").transform(() => undefined));
+
+export const createManualBusinessSchema = z
+  .object({
+    name: requiredText("Nome", 2),
+    segment: requiredText("Segmento", 2),
+    city: optionalInputText(80),
+    state: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^[A-Z]{2}$/, "UF deve ter 2 letras")
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
+    phone: optionalInputText(40),
+    websiteUrl: optionalInputText(300),
+    instagramUrl: optionalInputText(300),
+  })
+  .refine((data) => Boolean(data.websiteUrl || data.instagramUrl), {
+    message: "Informe um site ou Instagram",
+    path: ["websiteUrl"],
+  });
+
 const optionalTriStateBoolean = z
   .enum(["true", "false"])
   .optional()
@@ -146,6 +175,10 @@ export const updateLeadSchema = z
     nextActionAt: z.string().datetime({ offset: true }).nullable().optional(),
     position: z.number().int().min(0).optional(),
     assignedTo: z.string().uuid().nullable().optional(),
+    domainCostAnnual: z.coerce.number().min(0).max(1_000_000).optional(),
+    hostingCostMonthly: z.coerce.number().min(15).max(1_000_000).optional(),
+    marginTargetPercent: z.coerce.number().min(0).max(99).nullable().optional(),
+    lostReason: z.string().trim().min(1, "Descreva o motivo").max(500).nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, { message: "Nada para atualizar" });
 
@@ -164,16 +197,114 @@ export const updateNoteSchema = z.object({
   content: noteContentSchema,
 });
 
-export const aiKindSchema = z.enum(["commercial_summary", "whatsapp_message", "email_message"]);
+export const aiKindSchema = z.enum([
+  "commercial_summary",
+  "whatsapp_message",
+  "email_message",
+  "cost_estimate",
+]);
 
 export const generateAiSchema = z.object({
   kind: aiKindSchema,
+});
+
+export const generateContactCopilotSchema = z.object({
+  channel: contactChannelSchema,
+  transcript: z
+    .string()
+    .trim()
+    .min(10, "Descreva a conversa com um pouco mais de detalhe")
+    .max(4000, "Resumo muito longo — encurte para os pontos principais"),
 });
 
 export const onboardingSchema = z.object({
   fullName: requiredText("Nome"),
   organizationName: requiredText("Organizacao"),
   professionalRole: z.string().trim().max(80).optional(),
+});
+
+export const ayhubClientStatusSchema = z.enum(["active", "inactive", "delinquent"]);
+export const ayhubSiteStatusSchema = z.enum(["development", "live", "maintenance", "paused"]);
+export const ayhubOwnerSchema = z.enum(["me", "client"]);
+export const ayhubCostTypeSchema = z.enum(["domain", "hosting", "storage", "other"]);
+export const ayhubFrequencySchema = z.enum(["monthly", "yearly", "once"]);
+
+const slugSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(2, "Slug deve ter pelo menos 2 caracteres")
+  .max(80, "Slug deve ter no maximo 80 caracteres")
+  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "Use apenas letras minusculas, numeros e hifens");
+
+export const createAyhubClientSchema = z.object({
+  name: requiredText("Nome"),
+  contact: z.string().trim().max(200).nullable().optional(),
+  maintenanceValue: z.coerce.number().min(0).max(1_000_000).nullable().optional(),
+  status: ayhubClientStatusSchema.optional(),
+});
+
+export const updateAyhubClientSchema = z
+  .object({
+    name: requiredText("Nome").optional(),
+    contact: z.string().trim().max(200).nullable().optional(),
+    maintenanceValue: z.coerce.number().min(0).max(1_000_000).nullable().optional(),
+    status: ayhubClientStatusSchema.optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, { message: "Nada para atualizar" });
+
+export const createAyhubSiteSchema = z.object({
+  slug: slugSchema,
+  domain: z.string().trim().max(253).nullable().optional(),
+  domainOwner: ayhubOwnerSchema.optional(),
+  deliveryDate: z.string().datetime({ offset: true }).nullable().optional(),
+  status: ayhubSiteStatusSchema.optional(),
+});
+
+export const updateAyhubSiteSchema = z
+  .object({
+    slug: slugSchema.optional(),
+    domain: z.string().trim().max(253).nullable().optional(),
+    domainOwner: ayhubOwnerSchema.optional(),
+    deliveryDate: z.string().datetime({ offset: true }).nullable().optional(),
+    status: ayhubSiteStatusSchema.optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, { message: "Nada para atualizar" });
+
+export const createAyhubSiteCostSchema = z.object({
+  type: ayhubCostTypeSchema,
+  amount: z.coerce.number().min(0).max(1_000_000),
+  frequency: ayhubFrequencySchema,
+  nextRenewal: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data invalida")
+    .nullable()
+    .optional(),
+  paymentOwner: ayhubOwnerSchema.optional(),
+});
+
+const contentBlockKeySchema = z
+  .string()
+  .trim()
+  .min(2, "Chave deve ter pelo menos 2 caracteres")
+  .max(80, "Chave deve ter no maximo 80 caracteres")
+  .regex(/^[a-z0-9]+(\.[a-z0-9_]+)*$/, "Use letras minusculas, numeros, pontos e underscores (ex.: hero.titulo)");
+
+export const ayhubContentBlockTypeSchema = z.enum(["text", "image", "list"]);
+
+export const createAyhubContentBlockSchema = z.object({
+  key: contentBlockKeySchema,
+  type: ayhubContentBlockTypeSchema,
+  draftValue: z.unknown().optional(),
+});
+
+export const updateAyhubContentBlockSchema = z.object({
+  draftValue: z.unknown(),
+});
+
+export const createAyhubPaymentSchema = z.object({
+  amount: z.coerce.number().min(0.01).max(1_000_000),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data invalida"),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
@@ -186,6 +317,7 @@ export type AddOrganizationMemberInput = z.infer<typeof addOrganizationMemberSch
 export type OnboardingInput = z.infer<typeof onboardingSchema>;
 export type QuickSearchInput = z.infer<typeof quickSearchSchema>;
 export type CreateSearchInput = z.infer<typeof createSearchSchema>;
+export type CreateManualBusinessInput = z.infer<typeof createManualBusinessSchema>;
 export type BusinessListQueryInput = z.infer<typeof businessListQuerySchema>;
 export type SavedFilterCreateInput = z.infer<typeof savedFilterCreateSchema>;
 export type BusinessIdsInput = z.infer<typeof businessIdsSchema>;
@@ -194,4 +326,13 @@ export type UpdateLeadInputSchema = z.infer<typeof updateLeadSchema>;
 export type CreateLeadContactInputSchema = z.infer<typeof createLeadContactSchema>;
 export type CreateNoteInput = z.infer<typeof createNoteSchema>;
 export type GenerateAiInput = z.infer<typeof generateAiSchema>;
+export type GenerateContactCopilotInputSchema = z.infer<typeof generateContactCopilotSchema>;
+export type CreateAyhubClientInputSchema = z.infer<typeof createAyhubClientSchema>;
+export type UpdateAyhubClientInputSchema = z.infer<typeof updateAyhubClientSchema>;
+export type CreateAyhubSiteInputSchema = z.infer<typeof createAyhubSiteSchema>;
+export type UpdateAyhubSiteInputSchema = z.infer<typeof updateAyhubSiteSchema>;
+export type CreateAyhubSiteCostInputSchema = z.infer<typeof createAyhubSiteCostSchema>;
+export type CreateAyhubContentBlockInputSchema = z.infer<typeof createAyhubContentBlockSchema>;
+export type UpdateAyhubContentBlockInputSchema = z.infer<typeof updateAyhubContentBlockSchema>;
+export type CreateAyhubPaymentInputSchema = z.infer<typeof createAyhubPaymentSchema>;
 export type UpdateNoteInput = z.infer<typeof updateNoteSchema>;

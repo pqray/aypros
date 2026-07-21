@@ -28,6 +28,7 @@ const businessItem: BusinessListItem = {
   websiteUrl: null,
   socialOnly: false,
   instagramDetected: false,
+  instagramUrl: null,
   socialLinks: false,
   segment: "other",
   linkInBio: false,

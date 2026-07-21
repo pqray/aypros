@@ -3,6 +3,7 @@ import {
   parseDashboardActivities,
   parseDashboardMetrics,
   parseDashboardOpportunities,
+  parseDashboardPipelineDistribution,
   parseDashboardSearches,
 } from "./schemas";
 
@@ -138,6 +139,7 @@ describe("parseDashboardActivities", () => {
   it("maps rows and defaults payload to empty object", () => {
     const rows = parseDashboardActivities([
       { id: "a1", type: "search_created", payload: { city: "Fortaleza" }, created_at: "2026-07-16T12:00:00Z" },
+      { id: "a2", type: "business_created", created_at: "2026-07-16T13:00:00Z" },
     ]);
 
     expect(rows[0]).toEqual({
@@ -145,6 +147,12 @@ describe("parseDashboardActivities", () => {
       type: "search_created",
       payload: { city: "Fortaleza" },
       createdAt: "2026-07-16T12:00:00Z",
+    });
+    expect(rows[1]).toEqual({
+      id: "a2",
+      type: "business_created",
+      payload: {},
+      createdAt: "2026-07-16T13:00:00Z",
     });
   });
 
@@ -154,5 +162,24 @@ describe("parseDashboardActivities", () => {
         { id: "a1", type: "mystery", payload: {}, created_at: "2026-07-16T12:00:00Z" },
       ]),
     ).toThrow();
+  });
+});
+
+describe("parseDashboardPipelineDistribution", () => {
+  it("maps stage counts and coerces bigint strings", () => {
+    const rows = parseDashboardPipelineDistribution([
+      { stage: "new", count: "3" },
+      { stage: "won", count: 0 },
+    ]);
+
+    expect(rows).toEqual([
+      { stage: "new", count: 3 },
+      { stage: "won", count: 0 },
+    ]);
+  });
+
+  it("rejects unknown stages and negative counts", () => {
+    expect(() => parseDashboardPipelineDistribution([{ stage: "archived", count: 1 }])).toThrow();
+    expect(() => parseDashboardPipelineDistribution([{ stage: "new", count: -1 }])).toThrow();
   });
 });

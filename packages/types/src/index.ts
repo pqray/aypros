@@ -42,6 +42,21 @@ export type CreateSearchResponse = {
   reused: boolean;
 };
 
+export type CreateManualBusinessRequest = {
+  name: string;
+  segment: string;
+  city?: string;
+  state?: string;
+  phone?: string;
+  websiteUrl?: string;
+  instagramUrl?: string;
+};
+
+export type CreateManualBusinessResponse = {
+  businessId: string;
+  searchId: string;
+};
+
 export type PaginationMeta = {
   page: number;
   pageSize: number;
@@ -161,6 +176,7 @@ export type BusinessListItem = {
   categories: string[];
   segment: BusinessSegment;
   instagramDetected: boolean;
+  instagramUrl: string | null;
   socialLinks: boolean;
   linkInBio: boolean;
   deliveryPlatform: boolean;
@@ -252,6 +268,12 @@ export type LeadSummary = {
   assignedTo: string | null;
   assignedToName: string | null;
   assignedToAvatarUrl: string | null;
+  domainCostAnnual: number;
+  hostingCostMonthly: number;
+  marginTargetPercent: number | null;
+  estimatedMonthlyCost: number | null;
+  suggestedMaintenanceValue: number | null;
+  lostReason: string | null;
   createdAt: string;
 };
 
@@ -289,6 +311,10 @@ export type UpdateLeadInput = {
   /** Target index within the destination stage's column; only meaningful together with `stage`. */
   position?: number;
   assignedTo?: string | null;
+  domainCostAnnual?: number;
+  hostingCostMonthly?: number;
+  marginTargetPercent?: number | null;
+  lostReason?: string | null;
 };
 
 export type CreateLeadContactInput = {
@@ -320,6 +346,7 @@ export type LeadActivity = {
 
 export type ActivityType =
   | "search_created"
+  | "business_created"
   | "business_favorited"
   | "audit_completed"
   | "data_refresh_requested"
@@ -337,6 +364,8 @@ export type LeadDetailResponse = {
   business: BusinessDetail;
   notes: LeadNote[];
   activities: LeadActivity[];
+  /** Cliente AYhub correspondente, quando o lead está "won" e o cliente já existe (specs/22). Resolvido via RLS — null tanto quando não existe quanto quando o usuário não tem acesso ao AYhub. */
+  ayhubClientId: string | null;
 };
 
 export type BusinessReportFindingStatus = "problem" | "ok" | "unknown";
@@ -375,7 +404,12 @@ export type BusinessReportResponse = {
   generatedAt: string;
 };
 
-export type AiKind = "commercial_summary" | "whatsapp_message" | "email_message";
+export type AiKind =
+  | "commercial_summary"
+  | "whatsapp_message"
+  | "email_message"
+  | "cost_estimate"
+  | "contact_copilot";
 
 export type CommercialSummaryOutput = {
   summary: string;
@@ -407,11 +441,19 @@ export type EmailMessageOutput = {
   body: string;
 };
 
+export type CostEstimateOutput = {
+  domainCostAnnual: number;
+  hostingCostMonthly: number;
+  marginTargetPercent: number;
+  rationale: string;
+};
+
 export type AiOutput =
   | CommercialSummaryOutput
   | CommercialSummaryV2Output
   | WhatsappMessageOutput
-  | EmailMessageOutput;
+  | EmailMessageOutput
+  | CostEstimateOutput;
 
 export type AiGenerationSummary = {
   id: string;
@@ -430,6 +472,43 @@ export type AiGenerationsResponse = {
 
 export type GenerateAiResponse = {
   generation: AiGenerationSummary;
+};
+
+export type ContactCopilotLeadStage = LeadStage;
+export type ContactCopilotLeadStatus = LeadStatus;
+
+export type ContactCopilotOutput = {
+  summary: string;
+  customerPosition: string;
+  objections: string[];
+  positiveSignals: string[];
+  risks: string[];
+  recommendedReply: string;
+  recommendedNextAction: {
+    label: string;
+    dueInDays: number;
+    reason: string;
+  };
+  suggestedLeadPatch: {
+    stage: ContactCopilotLeadStage | null;
+    status: ContactCopilotLeadStatus | null;
+    potentialValue: number | null;
+  };
+  noteDraft: string;
+  confidenceNotes: string[];
+};
+
+export type GenerateContactCopilotInput = {
+  channel: ContactChannel;
+  transcript: string;
+};
+
+export type ContactCopilotResponse = {
+  generationId: string;
+  output: ContactCopilotOutput;
+  model: string;
+  tokensUsed: number | null;
+  promptVersion: string;
 };
 
 export type BusinessBriefingKind = "commercial_briefing";
@@ -466,4 +545,189 @@ export type BusinessBriefingResponse = {
 
 export type GenerateBusinessBriefingResponse = {
   briefing: BusinessBriefing;
+};
+
+// AYhub — gestão de clientes e sites (fase 21).
+
+export type AyhubClientStatus = "active" | "inactive" | "delinquent";
+export type AyhubClientOrigin = "pipeline" | "manual";
+export type AyhubSiteStatus = "development" | "live" | "maintenance" | "paused";
+export type AyhubOwner = "me" | "client";
+export type AyhubCostType = "domain" | "hosting" | "storage" | "other";
+export type AyhubFrequency = "monthly" | "yearly" | "once";
+export type AyhubContentBlockType = "text" | "image" | "list";
+export type AyhubContentBlockStatus = "draft" | "published";
+
+export type AyhubClientSummary = {
+  id: string;
+  name: string;
+  contact: string | null;
+  maintenanceValue: number | null;
+  status: AyhubClientStatus;
+  origin: AyhubClientOrigin;
+  startDate: string;
+  sitesCount: number;
+  createdAt: string;
+};
+
+export type AyhubClientsResponse = {
+  items: AyhubClientSummary[];
+};
+
+export type AyhubSiteSummary = {
+  id: string;
+  clientId: string;
+  slug: string;
+  domain: string | null;
+  domainOwner: AyhubOwner;
+  deliveryDate: string | null;
+  status: AyhubSiteStatus;
+  monthlyCostTotal: number;
+  nextRenewal: string | null;
+  createdAt: string;
+};
+
+export type AyhubClientDetail = {
+  client: AyhubClientSummary;
+  originLeadBusinessName: string | null;
+  sites: AyhubSiteSummary[];
+  payments: AyhubPayment[];
+};
+
+export type AyhubSiteCost = {
+  id: string;
+  siteId: string;
+  type: AyhubCostType;
+  amount: number;
+  frequency: AyhubFrequency;
+  nextRenewal: string | null;
+  paymentOwner: AyhubOwner;
+  createdAt: string;
+};
+
+export type AyhubContentBlock = {
+  id: string;
+  siteId: string;
+  key: string;
+  type: AyhubContentBlockType;
+  draftValue: unknown;
+  publishedValue: unknown;
+  status: AyhubContentBlockStatus;
+  updatedAt: string;
+  publishedAt: string | null;
+};
+
+export type AyhubSiteKeySummary = {
+  id: string;
+  createdAt: string;
+  revokedAt: string | null;
+  lastUsedAt: string | null;
+};
+
+export type AyhubSiteDetail = {
+  site: AyhubSiteSummary;
+  clientName: string;
+  costs: AyhubSiteCost[];
+  contentBlocks: AyhubContentBlock[];
+  hasUnpublishedChanges: boolean;
+  activeKey: AyhubSiteKeySummary | null;
+};
+
+export type CreateAyhubSiteKeyResponse = {
+  key: string;
+  keyInfo: AyhubSiteKeySummary;
+};
+
+export type CreateAyhubClientInput = {
+  name: string;
+  contact?: string | null;
+  maintenanceValue?: number | null;
+  status?: AyhubClientStatus;
+};
+
+export type UpdateAyhubClientInput = {
+  name?: string;
+  contact?: string | null;
+  maintenanceValue?: number | null;
+  status?: AyhubClientStatus;
+};
+
+export type CreateAyhubSiteInput = {
+  slug: string;
+  domain?: string | null;
+  domainOwner?: AyhubOwner;
+  deliveryDate?: string | null;
+  status?: AyhubSiteStatus;
+};
+
+export type UpdateAyhubSiteInput = {
+  slug?: string;
+  domain?: string | null;
+  domainOwner?: AyhubOwner;
+  deliveryDate?: string | null;
+  status?: AyhubSiteStatus;
+};
+
+export type CreateAyhubSiteCostInput = {
+  type: AyhubCostType;
+  amount: number;
+  frequency: AyhubFrequency;
+  nextRenewal?: string | null;
+  paymentOwner?: AyhubOwner;
+};
+
+export type CreateAyhubContentBlockInput = {
+  key: string;
+  type: AyhubContentBlockType;
+  draftValue?: unknown;
+};
+
+export type UpdateAyhubContentBlockInput = {
+  draftValue: unknown;
+};
+
+export type CreateAyhubPaymentInput = {
+  amount: number;
+  date: string;
+};
+
+export type AyhubPayment = {
+  id: string;
+  clientId: string;
+  amount: number;
+  date: string;
+  createdAt: string;
+};
+
+export type AyhubPublishSiteResponse = {
+  publishedCount: number;
+  contentBlocks: AyhubContentBlock[];
+};
+
+export type AyhubRenewalAlert = {
+  type: "maintenance" | "site_cost";
+  clientId: string;
+  siteId: string | null;
+  siteSlug: string;
+  clientName: string;
+  costType: AyhubCostType | null;
+  amount: number | null;
+  nextRenewal: string;
+  daysRemaining: number;
+};
+
+export type AyhubClientMargin = {
+  clientId: string;
+  clientName: string;
+  maintenanceValue: number | null;
+  monthlyCostTotal: number;
+  marginPercent: number | null;
+};
+
+export type AyhubDashboardResponse = {
+  totalActiveSites: number;
+  grossMrr: number;
+  netMrr: number;
+  renewalAlerts: AyhubRenewalAlert[];
+  clientMargins: AyhubClientMargin[];
 };

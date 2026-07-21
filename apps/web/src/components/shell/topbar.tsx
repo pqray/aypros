@@ -36,11 +36,10 @@ export function Topbar({
       </Button>
 
       <div className="min-w-0 flex-1">
-        {isNestedRoute ? (
-          <Breadcrumbs />
-        ) : organization ? (
-          <p className="truncate text-sm font-medium text-muted-foreground">{organization.name}</p>
+        {organization ? (
+          <p className="truncate text-sm font-medium text-foreground">{organization.name}</p>
         ) : null}
+        {isNestedRoute ? <Breadcrumbs /> : null}
       </div>
 
       <Button

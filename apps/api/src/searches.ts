@@ -21,6 +21,7 @@ import { auditSearchResults } from "./audits";
 import { requireOrgContext } from "./org-context";
 import { paginationMeta } from "./pagination";
 import { createServiceRoleClient } from "./supabase";
+import { timed } from "./timing";
 
 const SEARCH_FIELDS =
   "id, city, state, segment, status, total_found, error_message, provider, created_at";
@@ -428,12 +429,14 @@ export function registerSearchRoutes(app: FastifyInstance, options: SearchRoutes
     const { page, pageSize } = query.data;
     const from = (page - 1) * pageSize;
 
-    const { data, count, error } = await serviceDb
-      .from("searches")
-      .select(SEARCH_FIELDS, { count: "exact" })
-      .eq("organization_id", ctx.orgId)
-      .order("created_at", { ascending: false })
-      .range(from, from + pageSize - 1);
+    const { data, count, error } = await timed(request, "search.list", () =>
+      serviceDb
+        .from("searches")
+        .select(SEARCH_FIELDS, { count: "exact" })
+        .eq("organization_id", ctx.orgId)
+        .order("created_at", { ascending: false })
+        .range(from, from + pageSize - 1),
+    );
 
     if (error) {
       return reply.code(500).send({ error: "Erro ao listar pesquisas" } satisfies ApiErrorBody);
@@ -496,14 +499,16 @@ export function registerSearchRoutes(app: FastifyInstance, options: SearchRoutes
     }
 
     const { page, pageSize, filter, sort } = query.data;
-    const { data, error } = await serviceDb.rpc("get_search_results_page_api", {
-      target_search_id: params.data.id,
-      org_id: ctx.orgId,
-      website_filter: filter,
-      sort_by: sort,
-      page,
-      page_size: pageSize,
-    });
+    const { data, error } = await timed(request, "search.results", () =>
+      serviceDb.rpc("get_search_results_page_api", {
+        target_search_id: params.data.id,
+        org_id: ctx.orgId,
+        website_filter: filter,
+        sort_by: sort,
+        page,
+        page_size: pageSize,
+      }),
+    );
 
     if (error) {
       return reply.code(500).send({ error: "Erro ao carregar resultados" } satisfies ApiErrorBody);

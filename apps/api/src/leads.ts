@@ -27,8 +27,10 @@ import {
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { findOrCreateAyhubClient } from "./ayhub-service";
 import { requireOrgContext } from "./org-context";
 import { createServiceRoleClient } from "./supabase";
+import { timed } from "./timing";
 
 const idParamSchema = z.object({ id: z.string().uuid() });
 const pipelineQuerySchema = z.object({
@@ -72,6 +74,12 @@ type LeadRow = {
   last_contact_at: string | null;
   assigned_to: string | null;
   position: number;
+  domain_cost_annual: number | string;
+  hosting_cost_monthly: number | string;
+  margin_target_percent: number | string | null;
+  estimated_monthly_cost: number | string | null;
+  suggested_maintenance_value: number | string | null;
+  lost_reason: string | null;
   created_at: string;
   business: {
     id: string;
@@ -113,12 +121,19 @@ function toLeadSummary(
     assignedTo: row.assigned_to,
     assignedToName: assignee?.fullName ?? null,
     assignedToAvatarUrl: assignee?.avatarUrl ?? null,
+    domainCostAnnual: Number(row.domain_cost_annual),
+    hostingCostMonthly: Number(row.hosting_cost_monthly),
+    marginTargetPercent: row.margin_target_percent === null ? null : Number(row.margin_target_percent),
+    estimatedMonthlyCost: row.estimated_monthly_cost === null ? null : Number(row.estimated_monthly_cost),
+    suggestedMaintenanceValue:
+      row.suggested_maintenance_value === null ? null : Number(row.suggested_maintenance_value),
+    lostReason: row.lost_reason,
     createdAt: row.created_at,
   };
 }
 
 const LEAD_FIELDS =
-  "id, stage, status, potential_value, next_action, next_action_at, last_contact_at, assigned_to, position, created_at, business:businesses(id, name, address, city, state, phone, website_url, rating, review_count, categories, raw)";
+  "id, stage, status, potential_value, next_action, next_action_at, last_contact_at, assigned_to, position, domain_cost_annual, hosting_cost_monthly, margin_target_percent, estimated_monthly_cost, suggested_maintenance_value, lost_reason, created_at, business:businesses(id, name, address, city, state, phone, website_url, rating, review_count, categories, raw)";
 
 const pipelineRowSchema = z.object({
   id: z.string(),
@@ -139,6 +154,12 @@ const pipelineRowSchema = z.object({
   assigned_to: z.string().nullable(),
   assigned_to_name: z.string().nullable(),
   assigned_to_avatar_url: z.string().nullable(),
+  domain_cost_annual: z.coerce.number(),
+  hosting_cost_monthly: z.coerce.number(),
+  margin_target_percent: z.coerce.number().nullable(),
+  estimated_monthly_cost: z.coerce.number().nullable(),
+  suggested_maintenance_value: z.coerce.number().nullable(),
+  lost_reason: z.string().nullable(),
   created_at: z.string(),
 });
 
@@ -162,6 +183,12 @@ function pipelineRowToLeadSummary(row: z.infer<typeof pipelineRowSchema>): LeadS
     assignedTo: row.assigned_to,
     assignedToName: row.assigned_to_name,
     assignedToAvatarUrl: row.assigned_to_avatar_url,
+    domainCostAnnual: row.domain_cost_annual,
+    hostingCostMonthly: row.hosting_cost_monthly,
+    marginTargetPercent: row.margin_target_percent,
+    estimatedMonthlyCost: row.estimated_monthly_cost,
+    suggestedMaintenanceValue: row.suggested_maintenance_value,
+    lostReason: row.lost_reason,
     createdAt: row.created_at,
   };
 }
@@ -438,10 +465,12 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
     const ctx = await requireOrgContext(request, reply);
     if (!ctx) return;
 
-    const { data, error } = await ctx.supabase.rpc("get_pipeline_leads", {
-      org_id: ctx.orgId,
-      assigned_user_id: query.data.assignedTo === "me" ? ctx.userId : null,
-    });
+    const { data, error } = await timed(request, "pipeline.list", () =>
+      ctx.supabase.rpc("get_pipeline_leads", {
+        org_id: ctx.orgId,
+        assigned_user_id: query.data.assignedTo === "me" ? ctx.userId : null,
+      }),
+    );
 
     if (error) {
       return reply.code(500).send({ error: "Erro ao carregar pipeline" } satisfies ApiErrorBody);
@@ -526,7 +555,7 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
     const row = leadRow as unknown as LeadRow;
     const business = row.business!;
 
-    const [scores, membersList, notesResult, activitiesResult] = await Promise.all([
+    const [scores, membersList, notesResult, activitiesResult, ayhubClientResult] = await Promise.all([
       fetchLatestScores(ctx.supabase, [business.id]),
       fetchOrgMembers(serviceDb, ctx.orgId),
       ctx.supabase
@@ -540,6 +569,9 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
         .eq("lead_id", row.id)
         .order("created_at", { ascending: false })
         .limit(50),
+      // RLS em ayhub.clients já restringe a owner/admin (specs/22) — um membro sem
+      // acesso ao AYhub simplesmente recebe null aqui, sem erro.
+      ctx.supabase.schema("ayhub").from("clients").select("id").eq("origin_lead_id", row.id).maybeSingle(),
     ]);
     const members = new Map(membersList.map((member) => [member.userId, member]));
 
@@ -610,6 +642,7 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
       },
       notes,
       activities,
+      ayhubClientId: (ayhubClientResult.data as { id: string } | null)?.id ?? null,
     } satisfies LeadDetailResponse);
   });
 
@@ -628,7 +661,9 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
 
     const { data: currentRow, error: currentError } = await ctx.supabase
       .from("leads")
-      .select("id, stage, status, assigned_to, business:businesses(id, name)")
+      .select(
+        "id, stage, status, assigned_to, domain_cost_annual, hosting_cost_monthly, margin_target_percent, business:businesses(id, name)",
+      )
       .eq("organization_id", ctx.orgId)
       .eq("id", params.data.id)
       .maybeSingle();
@@ -645,6 +680,9 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
       stage: LeadStage;
       status: LeadStatus;
       assigned_to: string | null;
+      domain_cost_annual: number | string;
+      hosting_cost_monthly: number | string;
+      margin_target_percent: number | string | null;
       business: { id: string; name: string } | null;
     };
 
@@ -677,7 +715,35 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
       }
     }
 
-    if (input.stage !== undefined || input.position !== undefined) {
+    if (
+      input.domainCostAnnual !== undefined ||
+      input.hostingCostMonthly !== undefined ||
+      input.marginTargetPercent !== undefined
+    ) {
+      const domainCostAnnual = input.domainCostAnnual ?? Number(current.domain_cost_annual);
+      const hostingCostMonthly = input.hostingCostMonthly ?? Number(current.hosting_cost_monthly);
+      const marginTargetPercent =
+        input.marginTargetPercent !== undefined
+          ? input.marginTargetPercent
+          : current.margin_target_percent === null
+            ? null
+            : Number(current.margin_target_percent);
+
+      if (input.domainCostAnnual !== undefined) updates.domain_cost_annual = domainCostAnnual;
+      if (input.hostingCostMonthly !== undefined) updates.hosting_cost_monthly = hostingCostMonthly;
+      if (input.marginTargetPercent !== undefined) updates.margin_target_percent = marginTargetPercent;
+
+      const estimatedMonthlyCost = domainCostAnnual / 12 + hostingCostMonthly;
+      updates.estimated_monthly_cost = estimatedMonthlyCost;
+      updates.suggested_maintenance_value =
+        marginTargetPercent === null ? null : estimatedMonthlyCost / (1 - marginTargetPercent / 100);
+    }
+
+    if (input.lostReason !== undefined) updates.lost_reason = input.lostReason;
+
+    if (input.position !== undefined) {
+      // Drag-and-drop no Kanban: posição explícita, precisa reindexar a coluna de destino
+      // (e a de origem, quando muda) pra não deixar buraco/duplicata nas posições.
       const { data: siblingRows } = await ctx.supabase
         .from("leads")
         .select("id")
@@ -687,7 +753,7 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
         .order("position", { ascending: true });
 
       const siblingIds = (siblingRows ?? []).map((row) => (row as { id: string }).id);
-      const targetIndex = input.position ?? siblingIds.length;
+      const targetIndex = input.position;
       const ordered = reorderColumn(siblingIds, params.data.id, targetIndex);
 
       updates.position = ordered.indexOf(params.data.id);
@@ -703,6 +769,17 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
             ctx.supabase.from("leads").update({ position }).eq("organization_id", ctx.orgId).eq("id", id),
           ),
       );
+    } else if (stageChanged) {
+      // Troca de estágio sem drag (stepper do detalhe do lead): sempre entra no fim da
+      // coluna de destino, então basta contar — sem puxar/reindexar os irmãos existentes.
+      const { count } = await ctx.supabase
+        .from("leads")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", ctx.orgId)
+        .eq("stage", nextStage)
+        .neq("id", params.data.id);
+
+      updates.position = count ?? 0;
     }
 
     const { data: updated, error: updateError } = await ctx.supabase
@@ -717,8 +794,10 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
       return reply.code(500).send({ error: "Erro ao atualizar lead" } satisfies ApiErrorBody);
     }
 
+    // Logs de atividade são histórico complementar — nunca precisam segurar a resposta
+    // do PATCH (o board/detalhe já reflete o novo estado antes de a atividade existir).
     if (stageChanged) {
-      await logActivity(serviceDb, {
+      void logActivity(serviceDb, {
         orgId: ctx.orgId,
         actorId: ctx.userId,
         leadId: params.data.id,
@@ -730,29 +809,49 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
           from_label: leadStageLabels[current.stage],
           to_label: leadStageLabels[nextStage],
         },
-      });
+      }).catch((error) => request.log.error({ err: error }, "lead_stage_changed activity log failed"));
     }
 
     if (input.assignedTo !== undefined && input.assignedTo !== current.assigned_to) {
-      const membersList = await fetchOrgMembers(serviceDb, ctx.orgId);
-      const nextAssignee = input.assignedTo
-        ? membersList.find((member) => member.userId === input.assignedTo)
-        : null;
-      await logActivity(serviceDb, {
-        orgId: ctx.orgId,
-        actorId: ctx.userId,
-        leadId: params.data.id,
-        businessId: current.business?.id,
-        type: "lead_assigned",
-        payload: {
-          from: current.assigned_to,
-          to: input.assignedTo,
-          to_name: nextAssignee?.fullName ?? null,
-        },
-      });
+      const logAssignment = async () => {
+        let toName: string | null = null;
+        if (input.assignedTo) {
+          const { data: assigneeProfile } = await serviceDb
+            .from("profiles")
+            .select("full_name")
+            .eq("id", input.assignedTo)
+            .maybeSingle();
+          toName = (assigneeProfile as { full_name: string | null } | null)?.full_name ?? null;
+        }
+        await logActivity(serviceDb, {
+          orgId: ctx.orgId,
+          actorId: ctx.userId,
+          leadId: params.data.id,
+          businessId: current.business?.id,
+          type: "lead_assigned",
+          payload: { from: current.assigned_to, to: input.assignedTo, to_name: toName },
+        });
+      };
+      void logAssignment().catch((error) => request.log.error({ err: error }, "lead_assigned activity log failed"));
     }
 
     const row = updated as unknown as LeadRow;
+
+    // Entrar em "won" cria (ou localiza) o cliente correspondente no AYhub —
+    // complementar, nunca bloqueia a resposta do pipeline (specs/decisions/011, P2).
+    if (current.status !== "won" && row.status === "won" && row.business) {
+      void findOrCreateAyhubClient(serviceDb, {
+        orgId: ctx.orgId,
+        leadId: params.data.id,
+        businessName: row.business.name,
+        businessPhone: row.business.phone,
+        suggestedMaintenanceValue:
+          row.suggested_maintenance_value === null ? null : Number(row.suggested_maintenance_value),
+      }).catch((error) => {
+        request.log.error({ err: error }, "ayhub cliente auto-create failed");
+      });
+    }
+
     const [scores, membersList] = await Promise.all([
       row.business ? fetchLatestScores(ctx.supabase, [row.business.id]) : Promise.resolve(new Map()),
       fetchOrgMembers(serviceDb, ctx.orgId),

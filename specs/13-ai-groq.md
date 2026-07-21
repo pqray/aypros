@@ -25,7 +25,8 @@ Montados no servidor a partir do banco — nunca texto livre do usuário como fo
 - Prompt exige resposta em JSON com schema fixo; parse + validação **Zod** antes de persistir/exibir.
 - JSON inválido → 1 retentativa com instrução corretiva → senão `failed` com mensagem clara.
 - `commercial_summary` usa contrato estruturado (`summary-v2`): `context`, `digitalPresence`, `strongSignals`, `weakSignals`, `gaps`, `channelDependence`, `commercialImpact`, `recommendedOffer`, `salesAngle`, `expectedObjections`, `nextStep`.
-- `email_message` usa `email-v4`: corpo com 5 a 6 parágrafos, pelo menos 450 caracteres e quebras reais entre parágrafos; corpo raso ou bloco único deve ser rejeitado.
+- `whatsapp_message` usa `whatsapp-v4`: abordagem consultiva que explica a descoberta pela plataforma desenvolvida pela Rayssa, ligada a achado real da empresa.
+- `email_message` usa `email-v6`: corpo com 5 a 6 parágrafos, pelo menos 450 caracteres e quebras reais entre parágrafos; inclui a narrativa de descoberta pela plataforma; corpo raso ou bloco único deve ser rejeitado.
 - `contact_copilot` usará `contact-copilot-v1`: chat assistido para contato do lead, com resumo, objeções, resposta sugerida, nota pronta e próxima ação. Sugestões só podem ser aplicadas depois de confirmação do usuário.
 
 ## Proibição de inventar fatos
@@ -44,8 +45,8 @@ A UI mostra a mensagem como **rascunho editável** — usuário copia manualment
 Versões atuais:
 
 - `commercial_summary`: `summary-v2`.
-- `whatsapp_message`: `whatsapp-v2`.
-- `email_message`: `email-v4`.
+- `whatsapp_message`: `whatsapp-v4`.
+- `email_message`: `email-v6`.
 - Planejada: `contact_copilot`: `contact-copilot-v1`.
 
 ## Modelo, tokens e custo

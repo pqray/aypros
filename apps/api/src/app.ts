@@ -6,13 +6,17 @@ import { env } from "./env";
 import { loadAppContext } from "./app-context";
 import { registerAiRoutes, type AiRoutesOptions } from "./ai";
 import { registerAuditRoutes, type AuditRoutesOptions } from "./audits";
+import { registerAyhubRoutes, type AyhubRoutesOptions } from "./ayhub";
 import { registerBusinessBriefingRoutes, type BusinessBriefingRoutesOptions } from "./business-briefings";
 import { registerBusinessRoutes, type BusinessRoutesOptions } from "./businesses";
+import { registerContactCopilotRoutes, type ContactCopilotRoutesOptions } from "./contact-copilot";
+import { registerContentRoutes, type ContentRoutesOptions } from "./content";
 import { registerLeadRoutes, type LeadRoutesOptions } from "./leads";
 import { runRefreshTick } from "./refresh";
 import { registerReportRoutes, type ReportRoutesOptions } from "./reports";
 import { registerSearchRoutes, type SearchRoutesOptions } from "./searches";
 import { createServiceRoleClient, createSupabaseClient } from "./supabase";
+import { formatServerTiming, timed } from "./timing";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -34,7 +38,10 @@ export function buildApp(
       LeadRoutesOptions &
       AiRoutesOptions &
       BusinessBriefingRoutesOptions &
-      ReportRoutesOptions
+      ReportRoutesOptions &
+      AyhubRoutesOptions &
+      ContentRoutesOptions &
+      ContactCopilotRoutesOptions
   > = {},
 ) {
   const app = Fastify({
@@ -51,7 +58,7 @@ export function buildApp(
   app.addHook("onSend", async (request, reply, payload) => {
     if (request.startTime) {
       const durationMs = Number(process.hrtime.bigint() - request.startTime) / 1_000_000;
-      reply.header("server-timing", `app;dur=${durationMs.toFixed(1)}`);
+      reply.header("server-timing", formatServerTiming(durationMs, request.timings));
     }
 
     return payload;
@@ -69,6 +76,10 @@ export function buildApp(
           url: request.url,
           statusCode: reply.statusCode,
           durationMs: Math.round(durationMs),
+          timings: request.timings?.map((timing) => ({
+            name: timing.name,
+            durationMs: Math.round(timing.durationMs),
+          })),
         },
         "slow api request",
       );
@@ -98,7 +109,7 @@ export function buildApp(
   app.get("/v1/app-context", async (request, reply) => {
     try {
       const supabase = createSupabaseClient(request, reply);
-      const context = await loadAppContext(supabase);
+      const context = await timed(request, "ctx", () => loadAppContext(supabase));
 
       if (!context) {
         return reply.code(401).send({ error: "Unauthorized" });
@@ -138,6 +149,12 @@ export function buildApp(
     briefingProvider: overrides.briefingProvider,
   });
   registerReportRoutes(app, { serviceDb: overrides.serviceDb });
+  registerAyhubRoutes(app, { serviceDb: overrides.serviceDb });
+  registerContentRoutes(app, { serviceDb: overrides.serviceDb });
+  registerContactCopilotRoutes(app, {
+    serviceDb: overrides.serviceDb,
+    contactCopilotProvider: overrides.contactCopilotProvider,
+  });
 
   if (process.env.NODE_ENV !== "test" && env.REFRESH_ENABLED) {
     let timer: NodeJS.Timeout | undefined;

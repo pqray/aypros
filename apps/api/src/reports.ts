@@ -8,6 +8,7 @@ import { z } from "zod";
 import { canAccessBusiness } from "./audits";
 import { requireOrgContext } from "./org-context";
 import { createServiceRoleClient } from "./supabase";
+import { timed } from "./timing";
 
 const businessIdParamSchema = z.object({ businessId: z.string().uuid() });
 
@@ -788,13 +789,15 @@ export function registerReportRoutes(app: FastifyInstance, options: ReportRoutes
     if (!ctx) return;
 
     try {
-      const model = await loadModel({
-        orgId: ctx.orgId,
-        userId: ctx.userId,
-        businessId: params.data.businessId,
-        organizationName: ctx.organizationName,
-        senderName: ctx.userName,
-      });
+      const model = await timed(request, "report.model", () =>
+        loadModel({
+          orgId: ctx.orgId,
+          userId: ctx.userId,
+          businessId: params.data.businessId,
+          organizationName: ctx.organizationName,
+          senderName: ctx.userName,
+        }),
+      );
       if (!model) {
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
@@ -815,18 +818,20 @@ export function registerReportRoutes(app: FastifyInstance, options: ReportRoutes
     if (!ctx) return;
 
     try {
-      await ensureReportRateLimit(serviceDb, ctx.orgId);
-      const model = await loadModel({
-        orgId: ctx.orgId,
-        userId: ctx.userId,
-        businessId: params.data.businessId,
-        organizationName: ctx.organizationName,
-        senderName: ctx.userName,
-      });
+      await timed(request, "report.rate", () => ensureReportRateLimit(serviceDb, ctx.orgId));
+      const model = await timed(request, "report.model", () =>
+        loadModel({
+          orgId: ctx.orgId,
+          userId: ctx.userId,
+          businessId: params.data.businessId,
+          organizationName: ctx.organizationName,
+          senderName: ctx.userName,
+        }),
+      );
       if (!model) {
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
-      const pdf = await renderPdf(model);
+      const pdf = await timed(request, "report.pdf", () => renderPdf(model));
 
       await serviceDb.from("activities").insert({
         organization_id: ctx.orgId,

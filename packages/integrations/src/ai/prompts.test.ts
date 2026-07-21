@@ -40,14 +40,17 @@ describe("buildPromptMessages", () => {
     expect(system?.content).toContain("JSON");
   });
 
-  it.each(kinds)("only allows social/platform mentions backed by detected evidence (%s)", (kind) => {
-    const [system] = buildPromptMessages(kind, input);
-    // Fase 17: Instagram/Linktree/delivery só com sinal "detected"; nunca inventar
-    // perfil, seguidores ou posts.
-    expect(system?.content).toContain('state "detected"');
-    expect(system?.content).toContain("NUNCA invente perfil, seguidores");
-    expect(system?.content).toContain("dependência PROVÁVEL");
-  });
+  it.each(kinds)(
+    "only allows social/platform mentions backed by detected evidence (%s)",
+    (kind) => {
+      const [system] = buildPromptMessages(kind, input);
+      // Fase 17: Instagram/Linktree/delivery só com sinal "detected"; nunca inventar
+      // perfil, seguidores ou posts.
+      expect(system?.content).toContain('state "detected"');
+      expect(system?.content).toContain("NUNCA invente perfil, seguidores");
+      expect(system?.content).toContain("dependência PROVÁVEL");
+    },
+  );
 
   it("sends the structured input as JSON in the user message", () => {
     const messages = buildPromptMessages("whatsapp_message", input);
@@ -77,9 +80,35 @@ describe("promptVersions", () => {
   it("has one immutable version id per kind", () => {
     expect(promptVersions).toEqual({
       commercial_summary: "summary-v2",
-      whatsapp_message: "whatsapp-v2",
-      email_message: "email-v4",
+      whatsapp_message: "whatsapp-v4",
+      email_message: "email-v6",
+      cost_estimate: "cost-estimate-v2",
     });
+  });
+
+  it("does not suggest free hosting for cost estimates", () => {
+    const [costSystem] = buildPromptMessages("cost_estimate", input);
+
+    expect(costSystem?.content).toContain("NUNCA presuma hospedagem");
+    expect(costSystem?.content).toContain("paga conservadora");
+    expect(costSystem?.content).not.toContain("free tier");
+    expect(costSystem?.content).not.toContain("comece de R$0");
+  });
+
+  it("positions outreach as consultative and proposal-led", () => {
+    const [whatsappSystem] = buildPromptMessages("whatsapp_message", input);
+    const [emailSystem] = buildPromptMessages("email_message", input);
+
+    expect(whatsappSystem?.content).toContain("mais de 10 anos");
+    expect(whatsappSystem?.content).toContain("desenvolveu uma plataforma");
+    expect(whatsappSystem?.content).toContain("apareceu nessa busca");
+    expect(whatsappSystem?.content).toContain("proposta/ideia inicial");
+    expect(whatsappSystem?.content).toContain("sem compromisso");
+    expect(emailSystem?.content).toContain("mais de 10 anos");
+    expect(emailSystem?.content).toContain("desenvolveu uma plataforma");
+    expect(emailSystem?.content).toContain("apareceu nessa busca");
+    expect(emailSystem?.content).toContain("proposta inicial concreta");
+    expect(emailSystem?.content).toContain("só avança se fizer sentido");
   });
 });
 
@@ -89,7 +118,14 @@ describe("business briefing prompt", () => {
     business: { ...input.business, segment: "services" },
     report: {
       summary: "Empresa de serviços com presença digital parcial.",
-      findings: [{ title: "Descrição ausente", body: "Sem description.", impact: "Menos clareza.", status: "problem" }],
+      findings: [
+        {
+          title: "Descrição ausente",
+          body: "Sem description.",
+          impact: "Menos clareza.",
+          status: "problem",
+        },
+      ],
       recommendations: [{ priority: "alta", text: "Revisar SEO básico." }],
       nextSteps: ["Validar hipótese comercial."],
       httpStatusNote: null,
@@ -103,6 +139,8 @@ describe("business briefing prompt", () => {
     expect(system?.content).toContain("Não invente Instagram");
     expect(system?.content).toContain("Não fale de cardápio");
     expect(system?.content).toContain("restaurant ou food_service");
+    expect(system?.content).toContain("desenvolveu uma plataforma");
+    expect(system?.content).toContain("apareceu nessa busca");
   });
 
   it("sends the structured briefing input as JSON", () => {
@@ -115,7 +153,7 @@ describe("business briefing prompt", () => {
   });
 
   it("has an immutable version and corrective retry message", () => {
-    expect(businessBriefingPromptVersion).toBe("business-briefing-v1");
+    expect(businessBriefingPromptVersion).toBe("business-briefing-v2");
     const messages = buildBusinessBriefingCorrectiveMessages(briefingInput, "nope");
     expect(messages).toHaveLength(3);
     expect(messages.at(-1)?.content).toContain("APENAS com o objeto JSON");

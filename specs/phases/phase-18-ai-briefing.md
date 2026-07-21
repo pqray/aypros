@@ -18,7 +18,7 @@ O resultado fica salvo e reutilizavel em empresa, lead, PDF e geracoes de aborda
 - `source_hash` para identificar quando os dados-base mudaram.
 - API `GET /v1/businesses/:businessId/briefing`.
 - API `POST /v1/businesses/:businessId/briefing`.
-- Provider Groq especifico para briefing, com prompt versionado `business-briefing-v1`.
+- Provider Groq especifico para briefing, com prompt versionado `business-briefing-v2`.
 - Schema JSON validado para `context`, `digitalPresence`, `opportunities`, `risks`, `salesAngle`, `recommendedOffer`, `nextStep` e `confidenceNotes`.
 - Input de IA reunindo empresa, auditoria, score, relatorio atual, pipeline/notas quando existir, organizacao e vendedor.
 - Card `BusinessAiBriefingCard` na aba Visao geral da empresa.
@@ -35,6 +35,7 @@ O resultado fica salvo e reutilizavel em empresa, lead, PDF e geracoes de aborda
 - Nao falar de cardapio para segmento que nao seja `restaurant` ou `food_service`.
 - Achados `inconclusive` ou `unknown` nao podem ser afirmados como problema.
 - Evitar texto generico como "melhorar presenca online" sem conectar a um achado real e ao impacto comercial.
+- Preparar a narrativa da abordagem: Rayssa desenvolveu uma plataforma para mapear empresas na internet, e esta empresa apareceu na busca por causa de sinais reais encontrados.
 
 ## Contrato
 

@@ -44,3 +44,4 @@ Efeitos positivos e negativos, migrações necessárias, o que fica mais difíci
 | 7 | ~~Mecanismo de agendamento do refresh~~ - **resolvida**: scheduler in-process ([ADR 008](008-refresh-scheduler.md)) | 12 |
 | 8 | ~~Biblioteca de geração de PDF do diagnóstico~~ - **resolvida**: pdfkit ([ADR 009](009-pdf-library.md)) | 14 |
 | 9 | ~~Scoring v2 (motivos por segmento e pesos revisados)~~ - **resolvida**: sinais por segmento ([ADR 010](010-scoring-v2-segment-signals.md)) | 15 |
+| 10 | ~~Visibilidade de empresas cadastradas manualmente~~ - **resolvida**: provider sintético `manual` + busca sintética ([ADR 011](011-manual-business-registration.md)) | 20 |

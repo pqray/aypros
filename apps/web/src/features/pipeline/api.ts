@@ -1,7 +1,9 @@
 import type {
   BatchCreateLeadResponse,
+  ContactCopilotResponse,
   CreateLeadContactInput,
   CreateLeadResponse,
+  GenerateContactCopilotInput,
   LeadContactResponse,
   LeadDetailResponse,
   LeadNote,
@@ -61,6 +63,16 @@ export function createLeadContact(
   input: CreateLeadContactInput,
 ): Promise<LeadContactResponse> {
   return apiFetch<LeadContactResponse>(`/v1/leads/${leadId}/contacts`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function generateContactCopilot(
+  leadId: string,
+  input: GenerateContactCopilotInput,
+): Promise<ContactCopilotResponse> {
+  return apiFetch<ContactCopilotResponse>(`/v1/leads/${leadId}/contact-copilot`, {
     method: "POST",
     body: JSON.stringify(input),
   });

@@ -4,7 +4,7 @@ Plataforma SaaS B2B de prospecção comercial para profissionais que vendem cria
 
 ## Documentação
 
-A fonte oficial de verdade do projeto está em [`/specs`](specs/README.md) — leia o índice antes de qualquer implementação. Decisões arquiteturais em [`/specs/decisions`](specs/decisions/README.md). Guia completo de setup local (env vars, Supabase, troubleshooting) em [`docs/setup.md`](docs/setup.md).
+A fonte oficial de verdade do projeto está em [`/specs`](specs/README.md) — leia o índice antes de qualquer implementação. Decisões arquiteturais em [`/specs/decisions`](specs/decisions/README.md). Guia completo de setup local (env vars, Supabase, troubleshooting) em [`docs/setup.md`](docs/setup.md). Como conectar um site de cliente ao AYhub em [`docs/ayhub-integracao.md`](docs/ayhub-integracao.md).
 
 ## Stack
 
@@ -37,14 +37,14 @@ O web roda em `http://localhost:3000`; a API em `http://localhost:4000`.
 
 ## Comandos
 
-| Comando | Ação |
-|---|---|
-| `pnpm dev` | dev server do web (API deve subir separada em Docker) |
-| `pnpm dev:web` | dev server do Next.js |
-| `pnpm dev:api` | fallback: dev server da API sem Docker |
-| `pnpm dev:all` | fallback: todos os dev servers via Turbo |
-| `pnpm docker:api:up` / `pnpm docker:api:down` | inicia/para a API em Docker |
-| `pnpm docker:api:logs` | logs da API em Docker |
-| `pnpm build` | build de todos os packages |
-| `pnpm lint` / `pnpm typecheck` / `pnpm test` | qualidade |
-| `pnpm format` | Prettier |
+| Comando                                       | Ação                                                  |
+| --------------------------------------------- | ----------------------------------------------------- |
+| `pnpm dev`                                    | dev server do web (API deve subir separada em Docker) |
+| `pnpm dev:web`                                | dev server do Next.js                                 |
+| `pnpm dev:api`                                | fallback: dev server da API sem Docker                |
+| `pnpm dev:all`                                | fallback: todos os dev servers via Turbo              |
+| `pnpm docker:api:up` / `pnpm docker:api:down` | inicia/para a API em Docker                           |
+| `pnpm docker:api:logs`                        | logs da API em Docker                                 |
+| `pnpm build`                                  | build de todos os packages                            |
+| `pnpm lint` / `pnpm typecheck` / `pnpm test`  | qualidade                                             |
+| `pnpm format`                                 | Prettier                                              |

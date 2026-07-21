@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-`apps/api` e o backend Node separado do Aypros. Ele concentra regras de negocio, autorização, agregacoes, cache, rate limit futuro e integracoes com Supabase/providers externos.
+`apps/api` é o backend Node separado do Aypros. Ele concentra regras de negócio, autorização, agregações, cache, rate limit futuro e integrações com Supabase/providers externos.
 
 ## Responsabilidades
 
@@ -11,7 +11,7 @@
 - Verificar sessão e membership antes de acessar dados de organização.
 - Agregar dados para reduzir round-trips do frontend.
 - Encapsular Supabase/Postgres, providers externos, cache e logs.
-- Retornar erros estaveis para o frontend tratar com TanStack Query.
+- Retornar erros estáveis para o frontend tratar com TanStack Query.
 
 ## Fora do escopo
 
@@ -20,7 +20,7 @@
 - Banco direto no frontend.
 - Dados de produto em Zustand.
 
-## Fluxo padrao
+## Fluxo padrão
 
 ```txt
 apps/web -> apps/api -> Supabase/Postgres
@@ -29,7 +29,7 @@ apps/web -> apps/api -> Supabase/Postgres
 
 `apps/web` deve chamar a API via `NEXT_PUBLIC_API_URL`. Novos endpoints de produto não devem nascer em `apps/web/src/app/api`; essa pasta fica reservada para necessidades específicas do Next, como callback de auth quando inevitável.
 
-## Execucao local
+## Execução local
 
 Modo recomendado:
 
@@ -61,19 +61,19 @@ A API escuta em `http://localhost:4000`; o web em `http://localhost:3000`.
 
 ## Endpoints atuais
 
-| Metodo | Rota | Usó |
+| Método | Rota | Uso |
 |---|---|---|
-| GET | `/health` | Healthcheck do container/processó |
+| GET | `/health` | Healthcheck do container/processo |
 | GET | `/v1/app-context` | Contexto autenticado do shell: user, profile e organização ativa |
-| POST | `/v1/searches` | Cria pesquisa de descoberta (valida, rate limit por org, reusa pesquisa identica <24h) e dispara execucao |
-| GET | `/v1/searches` | Lista pesquisas da organização (páginado) |
-| GET | `/v1/searches/:id` | Status/progressó de uma pesquisa (polling) |
-| GET | `/v1/searches/:id/results` | Resultados persistidos da pesquisa (páginado, join com `businesses`) |
-| POST | `/v1/searches/:id/retry` | Reexecuta pesquisa `failed`/`partial`/travada (idempotente, retomavel) |
+| POST | `/v1/searches` | Cria pesquisa de descoberta (valida, rate limit por org, reusa pesquisa idêntica <24h) e dispara execução |
+| GET | `/v1/searches` | Lista pesquisas da organização (paginado) |
+| GET | `/v1/searches/:id` | Status/progresso de uma pesquisa (polling) |
+| GET | `/v1/searches/:id/results` | Resultados persistidos da pesquisa (paginado, join com `businesses`) |
+| POST | `/v1/searches/:id/retry` | Reexecuta pesquisa `failed`/`partial`/travada (idempotente, retomável) |
 | GET | `/v1/businesses/:businessId/audit-summary` | Retorna empresa, última auditoria HTTP e último score de oportunidade |
 | POST | `/v1/businesses/:businessId/audit` | Executa auditoria HTTP individual, persiste audit/score e registra atividade |
-| GET | `/v1/businesses` | Lista empresas da organização com filtros/ordenação/páginação server-side (RPC `get_org_businesses`) |
-| GET | `/v1/businesses/export.csv` | Exporta a listagem filtrada (ou selecao) em CSV, com escaping contra formula injection; rate limit por org |
+| GET | `/v1/businesses` | Lista empresas da organização com filtros/ordenação/paginação server-side (RPC `get_org_businesses`) |
+| GET | `/v1/businesses/export.csv` | Exporta a listagem filtrada (ou seleção) em CSV, com escaping contra formula injection; rate limit por org |
 | POST | `/v1/businesses/:businessId/favorite` | Favorita a empresa (idempotente) |
 | DELETE | `/v1/businesses/:businessId/favorite` | Remove favorito |
 | POST | `/v1/businesses/batch/favorite` | Favorita em lote |
@@ -83,14 +83,14 @@ A API escuta em `http://localhost:4000`; o web em `http://localhost:3000`.
 | DELETE | `/v1/saved-filters/:id` | Remove filtro salvo |
 | GET | `/v1/pipeline` | Lista leads da organização com empresa e score embutidos (Kanban monta as colunas no cliente) |
 | POST | `/v1/leads` | Cria lead a partir de uma empresa (idempotente: reusa lead existente pela constraint org+empresa) |
-| POST | `/v1/leads/batch` | Cria leads em lote a partir de uma selecao de empresas |
+| POST | `/v1/leads/batch` | Cria leads em lote a partir de uma seleção de empresas |
 | GET | `/v1/leads/:id` | Detalhe do lead: empresa, notas e timeline de atividades |
-| PATCH | `/v1/leads/:id` | Move estágio/position (drag ou menu), edita status/valor/próxima ação; reindexação simples da coluna |
+| PATCH | `/v1/leads/:id` | Move estágio/position (drag ou botão "Avançar"), edita status/valor/próxima ação; reindexação completa da coluna só no drag (`position` explícito), mudança de estágio sem drag só conta o destino; log de atividade e hook do AYhub em "Ganho" são fire-and-forget (não bloqueiam a resposta) |
 | POST | `/v1/leads/:id/notes` | Cria nota no lead e registra atividade |
 | PATCH | `/v1/notes/:id` | Edita nota |
 | DELETE | `/v1/notes/:id` | Remove nota |
 | GET | `/v1/businesses/:businessId/ai-generations` | Lista gerações de IA da empresa na organização (rascunhos recentes por kind) |
-| POST | `/v1/businesses/:businessId/ai-generations` | Gera conteúdo com Groq (`summary-v2`, `whatsapp-v2`, `email-v4`): input estruturado do banco, Zod no output, rate limit diário por org, persiste em `ai_generations` e registra atividade; 503 se `GROQ_API_KEY` ausente |
+| POST | `/v1/businesses/:businessId/ai-generations` | Gera conteúdo com Groq (`summary-v2`, `whatsapp-v4`, `email-v6`): input estruturado do banco, Zod no output, rate limit diário por org, persiste em `ai_generations` e registra atividade; 503 se `GROQ_API_KEY` ausente |
 | POST | `/v1/businesses/:businessId/refresh` | Refresh manual de dados da empresa (Place Details + re-auditoria + score), respeitando caps de custo |
 | GET | `/v1/businesses/:businessId/report` | JSON do diagnóstico comercial usado pela UI: resumo, score, nota HTTP amigável, achados, maturidade, recomendações e próximos passos |
 | GET | `/v1/businesses/:businessId/report.pdf` | PDF de diagnóstico v2 (resumo executivo, barra de score, maturidade por eixo, recomendações priorizadas); rate limit por org |
@@ -99,30 +99,30 @@ A API escuta em `http://localhost:4000`; o web em `http://localhost:3000`.
 | GET | `/v1/organization/members` | Lista membros da organização (para atribuição de leads) |
 | POST | `/v1/organization/members` | Adiciona membro já cadastrado por e-mail (owner/admin) |
 
-## Padroes de implementação
+## Padrões de implementação
 
 - Entrypoint: `apps/api/src/server.ts`.
-- Factory testavel: `apps/api/src/app.ts`.
-- Services por dominio em arquivos dedicados dentro de `apps/api/src`.
+- Factory testável: `apps/api/src/app.ts`.
+- Services por domínio em arquivos dedicados dentro de `apps/api/src`.
 - Contratos compartilhados em `packages/types`.
 - Schemas de entrada em `packages/validation` quando também forem usados pelo web; schemas internos podem ficar na API.
 - Respostas devem ser pequenas, agregadas e pensadas para cache no TanStack Query.
 - Toda rota paginada deve retornar o contrato compartilhado `PaginationMeta`: `page`, `pageSize`, `total`, `totalPages`, `hasNextPage` e `hasPreviousPage`.
-- Telas paginadas devem consumir os flags do backend em vez de recalcular paginaÃ§Ã£o no cliente.
+- Telas paginadas devem consumir os flags do backend em vez de recalcular paginação no cliente.
 
 ## Performance
 
-Separar a API não e, por si so, otimização. Os ganhos vem de:
+Separar a API não é, por si só, otimização. Os ganhos vêm de:
 
-- endpoints agregados em vez de varias queries por tela;
-- indices e RPCs quando fizer sentido;
+- endpoints agregados em vez de várias queries por tela;
+- índices e RPCs quando fizer sentido;
 - cache HTTP/TanStack Query;
 - evitar fetch duplicado no frontend;
-- reaproveitar o contexto autenticado (`orgId`, `userId`, nome da organizaÃ§Ã£o e nome do usuÃ¡rio) quando a rota jÃ¡ chamou `requireOrgContext`;
-- polling somente para processos nÃ£o-terminais, com intervalos diferentes para status leve e listas pesadas;
-- logs de tempo por request e metricas futuras.
+- reaproveitar o contexto autenticado (`orgId`, `userId`, nome da organização e nome do usuário) quando a rota já chamou `requireOrgContext`;
+- polling somente para processos não-terminais, com intervalos diferentes para status leve e listas pesadas;
+- logs de tempo por request e métricas futuras.
 
-## Seguranca
+## Segurança
 
 - Nunca logar cookies, tokens ou secrets.
 - CORS restrito por `WEB_ORIGINS`.

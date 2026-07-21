@@ -28,6 +28,7 @@ TanStack Table + paginação server-side (Route Handler + TanStack Query).
   - **Métricas**: score, nível, confiança, `reasons`, serviços sugeridos e maturidade digital por eixo.
   - **Abordagem IA**: resumo comercial, WhatsApp e e-mail (`13-ai-groq.md`).
 - **Presença digital**: site, resultado da auditoria, sinais sociais/segmento quando detectados e estados inconclusivos sem virar problema confirmado.
+- Cards de "Presença digital", "Resumo da oportunidade", "Potencial da oportunidade", "Maturidade digital" e "Briefing IA" são colapsáveis, com preferência lembrada por tipo de card entre visitas (`specs/phases/phase-23-pipeline-detail-and-card-ux.md`).
 - Ações: favoritar, adicionar/ver no pipeline, atualizar dados, reanalisar e baixar diagnóstico.
 - Se a empresa é lead: link para o card no pipeline.
 

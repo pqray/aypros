@@ -4,6 +4,7 @@ import {
   PiBrain,
   PiArrowsClockwise,
   PiBriefcase,
+  PiBuildings,
   PiChartLineUp,
   PiDownloadSimple,
   PiHeart,
@@ -14,6 +15,7 @@ import {
 
 export const activityLabels: Record<ActivityType, string> = {
   search_created: "Pesquisa criada",
+  business_created: "Empresa cadastrada",
   business_favorited: "Empresa favoritada",
   audit_completed: "Auditoria de site concluída",
   data_refresh_requested: "Dados atualizados",
@@ -29,6 +31,7 @@ export const activityLabels: Record<ActivityType, string> = {
 
 export const activityIcons: Record<ActivityType, ComponentType<{ className?: string }>> = {
   search_created: PiMagnifyingGlass,
+  business_created: PiBuildings,
   business_favorited: PiHeart,
   audit_completed: PiChartLineUp,
   data_refresh_requested: PiArrowsClockwise,

@@ -6,13 +6,13 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
   EmptyState,
   Skeleton,
   toast,
 } from "@aypros/ui";
 import type { BusinessBriefing } from "@aypros/types";
 import type { ReactNode } from "react";
+import { CollapsibleCard } from "@/components/collapsible-card";
 import {
   PiArrowClockwise,
   PiBrain,
@@ -70,15 +70,6 @@ function BriefingContent({ briefing }: { briefing: BusinessBriefing }) {
   const content = briefing.content;
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border bg-muted/30 p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">Briefing IA</Badge>
-          {briefing.isStale ? <Badge variant="warning">Dados atualizados</Badge> : null}
-          <Badge variant="outline">{briefing.promptVersion}</Badge>
-        </div>
-        <p className="mt-3 text-sm leading-6 text-foreground">{briefing.summary}</p>
-      </div>
-
       <div className="grid gap-3 lg:grid-cols-2">
         <BriefingSection title="Contexto" icon={<PiCompass aria-hidden />}>
           {content.context}
@@ -118,6 +109,31 @@ function BriefingContent({ briefing }: { briefing: BusinessBriefing }) {
   );
 }
 
+function BriefingSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-4 w-80 max-w-full" />
+        </div>
+        <Skeleton className="h-8 w-28" />
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 lg:grid-cols-2">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+        </div>
+        <div className="grid gap-3 lg:grid-cols-3">
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function BusinessAiBriefingCard({ businessId }: { businessId: string }) {
   const briefing = useBusinessBriefing(businessId);
   const generate = useGenerateBusinessBriefing(businessId);
@@ -130,26 +146,24 @@ export function BusinessAiBriefingCard({ businessId }: { businessId: string }) {
     });
   }
 
-  if (briefing.isLoading) {
-    return <Skeleton className="h-72" />;
+  if (briefing.isLoading || generate.isPending) {
+    return <BriefingSkeleton />;
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-        <div>
-          <CardTitle>Briefing IA</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Leitura consultiva da empresa para preparar abordagem comercial.
-          </p>
-        </div>
-        {current ? (
+    <CollapsibleCard
+      storageKey="business-detail:ai-briefing"
+      title="Briefing IA"
+      description="Leitura consultiva da empresa para preparar abordagem comercial."
+      headerActions={
+        current ? (
           <Button type="button" variant="outline" size="sm" loading={generate.isPending} onClick={handleGenerate}>
             <PiArrowClockwise aria-hidden />
             {current.isStale ? "Atualizar" : "Regenerar"}
           </Button>
-        ) : null}
-      </CardHeader>
+        ) : null
+      }
+    >
       <CardContent>
         {current ? (
           <BriefingContent briefing={current} />
@@ -167,6 +181,6 @@ export function BusinessAiBriefingCard({ businessId }: { businessId: string }) {
           />
         )}
       </CardContent>
-    </Card>
+    </CollapsibleCard>
   );
 }

@@ -1,15 +1,20 @@
+import type { LeadStage } from "@aypros/types";
 import { z } from "zod";
+import { LEAD_STAGES } from "@/features/pipeline/board";
 
 export const opportunityLevels = ["low", "medium", "high", "very_high"] as const;
 export const searchStatuses = ["pending", "processing", "completed", "partial", "failed"] as const;
 export const activityTypes = [
   "search_created",
+  "business_created",
   "business_favorited",
   "audit_completed",
   "data_refresh_requested",
   "lead_created",
+  "lead_assigned",
   "lead_contacted",
   "lead_stage_changed",
+  "lead_archived",
   "note_created",
   "ai_generated",
   "export_created",
@@ -127,33 +132,21 @@ export type DashboardActivity = {
   createdAt: string;
 };
 
-const todayLeadRowSchema = z.object({
-  id: z.string().min(1),
-  business_id: z.string().min(1),
-  business_name: z.string().min(1),
-  next_action: z.string().nullable(),
-  next_action_at: z.string(),
+const pipelineDistributionRowSchema = z.object({
+  stage: z.enum(LEAD_STAGES as [LeadStage, ...LeadStage[]]),
+  count: z.coerce.number().int().nonnegative(),
 });
 
-export type DashboardTodayLead = {
-  id: string;
-  businessId: string;
-  businessName: string;
-  nextAction: string | null;
-  nextActionAt: string;
+export type DashboardPipelineDistribution = {
+  stage: LeadStage;
+  count: number;
 };
 
-export function parseDashboardTodayLeads(input: unknown): DashboardTodayLead[] {
+export function parseDashboardPipelineDistribution(input: unknown): DashboardPipelineDistribution[] {
   return z
-    .array(todayLeadRowSchema)
+    .array(pipelineDistributionRowSchema)
     .parse(input)
-    .map((row) => ({
-      id: row.id,
-      businessId: row.business_id,
-      businessName: row.business_name,
-      nextAction: row.next_action,
-      nextActionAt: row.next_action_at,
-    }));
+    .map((row) => ({ stage: row.stage, count: row.count }));
 }
 
 export function parseDashboardActivities(input: unknown): DashboardActivity[] {

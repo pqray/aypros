@@ -15,6 +15,7 @@ const items: BusinessListItem[] = [
     websiteUrl: "https://padariacentral.com.br",
     socialOnly: false,
     instagramDetected: true,
+    instagramUrl: "https://instagram.com/padariacentral",
     socialLinks: true,
     segment: "food_service",
     linkInBio: false,
@@ -40,6 +41,7 @@ const items: BusinessListItem[] = [
     websiteUrl: null,
     socialOnly: true,
     instagramDetected: true,
+    instagramUrl: "https://instagram.com/docariadaana",
     socialLinks: false,
     segment: "food_service",
     linkInBio: true,
@@ -88,7 +90,14 @@ describe("BusinessesCards", () => {
       "href",
       "/businesses/b1",
     );
-    expect(screen.getByText("Social apenas")).toBeInTheDocument();
+    expect(screen.getByLabelText("Abrir site")).toHaveAttribute(
+      "href",
+      "https://padariacentral.com.br",
+    );
+    const instagramLinks = screen.getAllByLabelText("Abrir Instagram");
+    expect(instagramLinks[0]).toHaveAttribute("href", "https://instagram.com/padariacentral");
+    expect(instagramLinks[1]).toHaveAttribute("href", "https://instagram.com/docariadaana");
+    expect(screen.getByLabelText("Sem site")).toBeInTheDocument();
     expect(screen.getByLabelText(/oportunidade alta.*score 62/i)).toBeInTheDocument();
   });
 

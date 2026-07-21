@@ -11,8 +11,8 @@ import type {
 } from "@aypros/types";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect } from "react";
-import { PiBuildings, PiDownloadSimple, PiHeart, PiMagnifyingGlass } from "react-icons/pi";
+import { useCallback, useEffect, useState } from "react";
+import { PiBuildings, PiDownloadSimple, PiHeart, PiMagnifyingGlass, PiPlus } from "react-icons/pi";
 import { useAppContext } from "@/components/shell/use-app-context";
 import { useCreateLead } from "@/features/pipeline/queries";
 import { useBusinessSelectionStore } from "@/stores/business-selection-store";
@@ -28,6 +28,7 @@ import { BatchActionBar } from "./batch-action-bar";
 import { BusinessesCards } from "./businesses-cards";
 import { BusinessesTable } from "./businesses-table";
 import { BusinessesToolbar, type BusinessesViewMode } from "./businesses-toolbar";
+import { ManualBusinessDialog } from "./manual-business-dialog";
 
 export function BusinessesView({
   favoritesOnly = false,
@@ -43,6 +44,7 @@ export function BusinessesView({
   const searchParams = useSearchParams();
   const { data: context } = useAppContext();
   const orgId = context?.organization?.id;
+  const [manualDialogOpen, setManualDialogOpen] = useState(false);
 
   const query: BusinessListQuery = {
     ...parseBusinessListQuery(searchParams),
@@ -142,14 +144,30 @@ export function BusinessesView({
         description={description}
         className="pb-2"
         actions={
-          total > 0 ? (
-            <Button type="button" variant="outline" onClick={() => void handleExportAll()}>
-              <PiDownloadSimple aria-hidden />
-              Exportar CSV
-            </Button>
-          ) : undefined
+          <div className="flex flex-wrap items-center gap-2">
+            {!favoritesOnly ? (
+              <Button type="button" onClick={() => setManualDialogOpen(true)}>
+                <PiPlus aria-hidden />
+                Cadastrar empresa
+              </Button>
+            ) : null}
+            {total > 0 ? (
+              <Button type="button" variant="outline" onClick={() => void handleExportAll()}>
+                <PiDownloadSimple aria-hidden />
+                Exportar CSV
+              </Button>
+            ) : null}
+          </div>
         }
       />
+
+      {!favoritesOnly ? (
+        <ManualBusinessDialog
+          orgId={orgId}
+          open={manualDialogOpen}
+          onOpenChange={setManualDialogOpen}
+        />
+      ) : null}
 
       <BusinessesToolbar
         orgId={orgId}
@@ -212,9 +230,15 @@ export function BusinessesView({
             title="Nenhuma empresa descoberta ainda"
             description="Faça uma pesquisa para começar a descobrir empresas."
             action={
-              <Button asChild variant="outline">
-                <Link href="/discovery">Fazer pesquisa</Link>
-              </Button>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button type="button" onClick={() => setManualDialogOpen(true)}>
+                  <PiPlus aria-hidden />
+                  Cadastrar empresa
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/discovery">Fazer pesquisa</Link>
+                </Button>
+              </div>
             }
           />
         )

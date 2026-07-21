@@ -40,7 +40,12 @@ function providerWith(client: ChatCompletionClient, fallbackModel?: string) {
     model: "model-main",
     fallbackModel,
     timeoutMs: 1000,
-    maxTokensByKind: { commercial_summary: 1024, whatsapp_message: 512, email_message: 1024 },
+    maxTokensByKind: {
+      commercial_summary: 1024,
+      whatsapp_message: 512,
+      email_message: 1024,
+      cost_estimate: 256,
+    },
     client,
   });
 }
@@ -58,7 +63,7 @@ describe("createGroqAiProvider", () => {
     expect(result.output).toEqual({ message: "Olá! Vi que a Padaria Central ainda não tem site." });
     expect(result.model).toBe("model-main");
     expect(result.tokensUsed).toBe(321);
-    expect(result.promptVersion).toBe("whatsapp-v2");
+    expect(result.promptVersion).toBe("whatsapp-v4");
     const params = complete.mock.calls[0]?.[0] as ChatCompletionParams;
     expect(params.response_format).toEqual({ type: "json_object" });
     expect(params.max_tokens).toBe(512);
@@ -156,13 +161,15 @@ describe("createGroqBusinessBriefingProvider", () => {
       nextStep: "Validar se já existe canal oficial fora dos dados salvos.",
       confidenceNotes: ["Sem auditoria de site porque não há URL própria."],
     };
-    const complete = vi.fn().mockResolvedValue({ content: JSON.stringify(output), tokensUsed: 400 });
+    const complete = vi
+      .fn()
+      .mockResolvedValue({ content: JSON.stringify(output), tokensUsed: 400 });
     const provider = briefingProviderWith({ complete });
 
     const result = await provider.generate(briefingInput);
 
     expect(result.output).toEqual(output);
-    expect(result.promptVersion).toBe("business-briefing-v1");
+    expect(result.promptVersion).toBe("business-briefing-v2");
     const params = complete.mock.calls[0]?.[0] as ChatCompletionParams;
     expect(params.max_tokens).toBe(1536);
     expect(params.messages[0]?.content).toContain("Não fale de cardápio");

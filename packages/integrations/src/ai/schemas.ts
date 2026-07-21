@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 import type { AiKind } from "./types";
 
 const line = (max: number) => z.string().trim().min(1).max(max);
@@ -19,7 +19,7 @@ export const commercialSummaryOutputSchema = z.object({
 
 /**
  * summary-v2 (fase 17): análise consultiva estruturada. Limites por seção
- * seguram a verbosidade do modelo; listas vazias são válidas (sem sinal ≠ erro).
+ * seguram a verbosidade do modelo; listas vazias são válidas (sem sinal != erro).
  */
 export const commercialSummaryV2OutputSchema = z.object({
   context: line(600),
@@ -41,16 +41,24 @@ export const whatsappMessageOutputSchema = z.object({
 
 export const emailMessageOutputSchema = z.object({
   subject: line(200),
-  // email-v4 exige corpo estruturado; bloco raso ou curto demais não passa.
+  // email-v6 exige corpo estruturado; bloco raso ou curto demais não passa.
   body: z
     .string()
     .trim()
     .min(450)
     .max(4000)
     .refine(
-      (body) => body.split(/\n\s*\n/).filter((paragraph) => paragraph.trim().length > 0).length >= 5,
+      (body) =>
+        body.split(/\n\s*\n/).filter((paragraph) => paragraph.trim().length > 0).length >= 5,
       "EMAIL_BODY_NEEDS_PARAGRAPHS",
     ),
+});
+
+export const costEstimateOutputSchema = z.object({
+  domainCostAnnual: z.number().min(0).max(1000),
+  hostingCostMonthly: z.number().min(15).max(2000),
+  marginTargetPercent: z.number().min(10).max(70),
+  rationale: line(300),
 });
 
 export const businessBriefingOutputSchema = z.object({
@@ -64,8 +72,35 @@ export const businessBriefingOutputSchema = z.object({
   confidenceNotes: z.array(line(220)).max(5).default([]),
 });
 
+const contactCopilotStageSchema = z
+  .enum(["new", "contacted", "in_conversation", "proposal_sent", "won", "lost"])
+  .nullable();
+const contactCopilotStatusSchema = z.enum(["active", "won", "lost", "archived"]).nullable();
+
+export const contactCopilotOutputSchema = z.object({
+  summary: line(400),
+  customerPosition: line(400),
+  objections: z.array(line(220)).max(6).default([]),
+  positiveSignals: z.array(line(220)).max(6).default([]),
+  risks: z.array(line(220)).max(6).default([]),
+  recommendedReply: line(1200),
+  recommendedNextAction: z.object({
+    label: line(200),
+    dueInDays: z.number().int().min(0).max(90),
+    reason: line(300),
+  }),
+  suggestedLeadPatch: z.object({
+    stage: contactCopilotStageSchema.optional().transform((value) => value ?? null),
+    status: contactCopilotStatusSchema.optional().transform((value) => value ?? null),
+    potentialValue: z.number().min(0).max(1_000_000_000).nullable().optional().transform((value) => value ?? null),
+  }),
+  noteDraft: line(1000),
+  confidenceNotes: z.array(line(220)).max(5).default([]),
+});
+
 export const aiOutputSchemas: Record<AiKind, z.ZodType> = {
   commercial_summary: commercialSummaryV2OutputSchema,
   whatsapp_message: whatsappMessageOutputSchema,
   email_message: emailMessageOutputSchema,
+  cost_estimate: costEstimateOutputSchema,
 };

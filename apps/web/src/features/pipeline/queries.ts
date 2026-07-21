@@ -2,12 +2,14 @@
 
 import type {
   CreateLeadContactInput,
+  GenerateContactCopilotInput,
   LeadStage,
   LeadStatus,
   PipelineResponse,
   UpdateLeadInput,
 } from "@aypros/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ayhubClientsKey, ayhubDashboardKey } from "@/features/ayhub/queries";
 import {
   batchCreateLeads,
   createLead,
@@ -15,6 +17,7 @@ import {
   createNote,
   deleteLead,
   deleteNote,
+  generateContactCopilot,
   getLead,
   getOrganizationMembers,
   getPipeline,
@@ -181,9 +184,16 @@ export function useUpdateLead(orgId: string | undefined) {
         queryClient.setQueryData(key, previous);
       }
     },
-    onSettled: (_data, _error, { leadId }) => {
+    onSettled: (_data, _error, { leadId, input }) => {
       void queryClient.invalidateQueries({ queryKey: keyPrefix });
       void queryClient.invalidateQueries({ queryKey: leadKey(orgId, leadId) });
+      // Entrar em "ganho" cria/localiza um cliente no AYhub server-side (specs/21) —
+      // sem mutation própria pra isso aqui, então invalidamos direto pra lista e
+      // dashboard do AYhub não ficarem mostrando dado stale até o próximo refetch natural.
+      if (input.stage === "won") {
+        void queryClient.invalidateQueries({ queryKey: ayhubClientsKey });
+        void queryClient.invalidateQueries({ queryKey: ayhubDashboardKey });
+      }
     },
   });
 }
@@ -229,6 +239,13 @@ export function useCreateLeadContact(orgId: string | undefined, leadId: string |
       void queryClient.invalidateQueries({ queryKey: pipelineKey(orgId) });
       void queryClient.invalidateQueries({ queryKey: leadKey(orgId, leadId) });
     },
+  });
+}
+
+/** Analisa a conversa relatada e devolve leitura estruturada — nunca altera o lead sozinha (specs/19). */
+export function useGenerateContactCopilot(leadId: string) {
+  return useMutation({
+    mutationFn: (input: GenerateContactCopilotInput) => generateContactCopilot(leadId, input),
   });
 }
 

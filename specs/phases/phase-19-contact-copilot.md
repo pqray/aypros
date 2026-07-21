@@ -1,6 +1,6 @@
 # Fase 19 - Copiloto de contato
 
-Status: planejada. Implementação pendente.
+Status: implementado (2026-07-20), testes automatizados parciais — rota `POST /v1/leads/:id/contact-copilot` coberta (`contact-copilot.test.ts`); schema Zod, conteúdo do prompt e UI ainda sem teste dedicado (ver "Testes automatizados"). Ver [ADR 016](../decisions/016-contact-copilot-dedicated-provider.md) — provider dedicado, não o mecanismo genérico de `ai_generations`/`AiKind` usado por `commercial_summary`/`whatsapp_message`/`email_message`.
 
 ## Objetivo
 
@@ -116,10 +116,15 @@ Rotas propostas:
   - `POST /v1/leads/:id/contact-copilot/apply`
   - aplica nota, contato e patch do lead em uma operação transacional.
 
-Persistência proposta:
+Persistência:
 
-- Reutilizar `ai_generations` com `kind = contact_copilot`, ligado a `business_id` e `lead_id`.
-- Guardar `prompt_version`, `input_hash`, `content_json`, `model`, `tokens_used` e status.
+- Reutiliza `ai_generations` (mesma tabela dos outros tipos de geração), com `kind =
+  'contact_copilot'`. Coluna nova `lead_id` (nullable, `on delete set null`) adicionada à tabela
+  pra ligar a geração ao lead, além do `business_id` já existente.
+- Colunas usadas: `prompt_version`, `input` (jsonb, o `ContactCopilotInput` estruturado), `output`
+  (jsonb, o `ContactCopilotOutput`), `model`, `tokens_used`, `status` — mesmo shape das outras
+  linhas de `ai_generations`, sem colunas novas além de `lead_id`.
+- Conta pro mesmo rate limit diário por organização que os outros tipos de geração (mesma tabela).
 - O registro de contato continua em `POST /v1/leads/:id/contacts`.
 - A nota final continua em `POST /v1/leads/:id/notes`.
 
@@ -158,8 +163,8 @@ Comportamento esperado:
 
 - [ ] Schema Zod aceita saída válida e rejeita JSON incompleto.
 - [ ] Prompt contém regras anti-alucinação e não aplicação automática.
-- [ ] API bloqueia lead fora da organização.
-- [ ] API retorna 503 amigável quando `GROQ_API_KEY` não existe.
+- [x] API bloqueia lead fora da organização.
+- [x] API retorna 503 amigável quando `GROQ_API_KEY` não existe.
 - [ ] UI renderiza empty state, loading, erro e análise.
 - [ ] Botões "Salvar nota" e "Registrar contato" chamam mutations corretas.
 

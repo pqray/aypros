@@ -21,9 +21,10 @@ Rótulos na UI em pt-BR: Novo, Contactado, Em conversa, Proposta enviada, Ganho,
 ## Detalhe do lead (drawer sobre o Kanban ou `/pipeline/[leadId]`)
 
 - Resumo da empresa (link para `/businesses/[id]`).
-- Detalhe organizado em tabs/seções: Lead, Abordagem com IA, Notas e Atividades.
+- **Progresso do estágio**: badge com o estágio atual + botão "Avançar para [próxima etapa]" (progressão linear novo → contactado → em conversa → proposta enviada → ganho) + botão "Marcar como perdido" (alcançável de qualquer estágio não-terminal). Sem stepper com as 6 etapas clicáveis — decisão da fase 23, substitui o stepper da fase 22 por ficar "morto" quando clicado sem nada mudar de visível (`specs/phases/phase-23-pipeline-detail-and-card-ux.md`).
+- Detalhe organizado em tabs: **Lead** (dados comerciais, estimativa de custo, registrar contato), um painel central que muda de conteúdo e rótulo conforme o estágio atual (Abordagem/Acompanhamento/Copiloto/Cliente/Motivo — `specs/phases/phase-22-pipeline-stage-panels.md`) e **Notas**. Atividades fica num painel lateral (Sheet) acessível por botão, não é uma tab.
 - Campos editáveis: estágio, status comercial, valor potencial, próxima ação (`next_action` + `next_action_at`) e responsável.
-- Score aparece integrado a um bloco de potencial com confiança e motivos, não como tag solta no meio dos campos.
+- Score aparece integrado a um bloco de potencial com confiança e motivos, não como tag solta no meio dos campos; card colapsável (preferência lembrada por tipo de card, `specs/phases/phase-23-pipeline-detail-and-card-ux.md`), assim como o de estimativa de custo.
 - **Notas**: lista cronológica, criar/editar/excluir (autor + timestamp); RHF + Zod.
 - **Atividades**: timeline automática (criado, mudança de estágio, nota criada, auditoria, IA gerada).
 - Ações de IA: gerar resumo/mensagens (`13-ai-groq.md`).

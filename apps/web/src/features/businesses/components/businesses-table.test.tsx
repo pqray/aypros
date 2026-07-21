@@ -17,6 +17,7 @@ const items: BusinessListItem[] = [
     websiteUrl: "https://padariacentral.com.br",
     socialOnly: false,
     instagramDetected: true,
+    instagramUrl: "https://instagram.com/padariacentral",
     socialLinks: true,
     segment: "food_service",
     linkInBio: false,
@@ -42,6 +43,7 @@ const items: BusinessListItem[] = [
     websiteUrl: null,
     socialOnly: true,
     instagramDetected: true,
+    instagramUrl: "https://instagram.com/docariadaana",
     socialLinks: false,
     segment: "food_service",
     linkInBio: true,
@@ -92,16 +94,42 @@ function renderTable(overrides: Partial<ComponentProps<typeof BusinessesTable>> 
 }
 
 describe("BusinessesTable", () => {
-  it("renders rows with name link, website badge and score badge", () => {
+  it("renders rows with name link, website/instagram icons and score badge", () => {
     renderTable();
 
     expect(screen.getByRole("link", { name: "Padaria Central" })).toHaveAttribute(
       "href",
       "/businesses/b1",
     );
-    expect(screen.getByText("Social apenas")).toBeInTheDocument();
+    expect(screen.getByLabelText("Abrir site")).toHaveAttribute(
+      "href",
+      "https://padariacentral.com.br",
+    );
+    const instagramLinks = screen.getAllByLabelText("Abrir Instagram");
+    expect(instagramLinks[0]).toHaveAttribute("href", "https://instagram.com/padariacentral");
+    expect(instagramLinks[1]).toHaveAttribute("href", "https://instagram.com/docariadaana");
+    expect(screen.getByLabelText("Sem site")).toBeInTheDocument();
     expect(screen.getAllByText("Alimentação").length).toBeGreaterThan(0);
     expect(screen.getByLabelText(/oportunidade alta.*score 62/i)).toBeInTheDocument();
+  });
+
+  it("shows a fallback badge when a business has neither a site nor Instagram", () => {
+    renderTable({
+      items: [
+        {
+          ...(items[0] as BusinessListItem),
+          businessId: "b3",
+          name: "Sem Presença",
+          websiteUrl: null,
+          instagramDetected: false,
+          instagramUrl: null,
+          socialOnly: false,
+        },
+      ],
+    });
+
+    expect(screen.getByText("Sem redes sociais")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Instagram não detectado")).not.toBeInTheDocument();
   });
 
   it("calls onSelectionChange when a row checkbox is toggled", () => {

@@ -18,6 +18,16 @@ export const leadStageLabels: Record<LeadStage, string> = {
   lost: "Perdido",
 };
 
+/** Progressão normal do lead — "lost" fica fora por ser alcançável de qualquer etapa, não só da última. */
+const FORWARD_STAGES: LeadStage[] = ["new", "contacted", "in_conversation", "proposal_sent", "won"];
+
+/** Próxima etapa da progressão normal, ou `null` quando a etapa atual já é terminal (won/lost). */
+export function nextForwardStage(current: LeadStage): LeadStage | null {
+  const index = FORWARD_STAGES.indexOf(current);
+  if (index === -1 || index === FORWARD_STAGES.length - 1) return null;
+  return FORWARD_STAGES[index + 1] ?? null;
+}
+
 export type PipelineColumn = {
   stage: LeadStage;
   leads: LeadSummary[];

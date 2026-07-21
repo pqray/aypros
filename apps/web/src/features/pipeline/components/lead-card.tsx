@@ -16,7 +16,7 @@ import {
 import type { LeadSummary } from "@aypros/types";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { CSSProperties } from "react";
+import { memo, type CSSProperties } from "react";
 import { PiArrowSquareOut, PiClockCountdown, PiDotsSixVertical, PiPhoneCall, PiTrash } from "react-icons/pi";
 import { formatRelativeTime } from "@/lib/format";
 import { isOverdue } from "../board";
@@ -120,7 +120,7 @@ function LeadCardBody({
   );
 }
 
-export function SortableLeadCard({
+function SortableLeadCardComponent({
   lead,
   onPrefetchDetail,
   onRemove,
@@ -202,6 +202,12 @@ export function SortableLeadCard({
     </div>
   );
 }
+
+/**
+ * Memoizado — sem isso, todo card do board (mesmo em colunas alheias ao
+ * drag) re-renderiza a cada `handleDragOver` durante o arrasto.
+ */
+export const SortableLeadCard = memo(SortableLeadCardComponent);
 
 /** Static rendering used by DragOverlay (no sortable wiring — it's a floating copy). */
 export function LeadCardPreview({

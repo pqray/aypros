@@ -116,7 +116,7 @@ async function buildTestApp(serviceDb = createServiceDb()) {
         },
         model: "test-model",
         tokensUsed: 123,
-        promptVersion: "business-briefing-v1",
+        promptVersion: "business-briefing-v2",
       })),
     },
   });
@@ -158,7 +158,7 @@ describe("business briefing routes", () => {
     expect(response.json().briefing).toMatchObject({
       id: "briefing1",
       businessId: BUSINESS_ID,
-      promptVersion: "business-briefing-v1",
+      promptVersion: "business-briefing-v2",
       isStale: false,
     });
     expect(serviceDb.inserted[0]).toMatchObject({

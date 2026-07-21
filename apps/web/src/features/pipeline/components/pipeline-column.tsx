@@ -3,6 +3,7 @@
 import { cn } from "@aypros/ui";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useDroppable } from "@dnd-kit/core";
+import { memo } from "react";
 import { leadStageLabels, type PipelineColumn as PipelineColumnData } from "../board";
 import { SortableLeadCard } from "./lead-card";
 
@@ -10,7 +11,7 @@ function formatCurrency(value: number): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 }
 
-export function PipelineColumn({
+function PipelineColumnComponent({
   column,
   onPrefetchDetail,
   onRemoveLead,
@@ -59,3 +60,20 @@ export function PipelineColumn({
     </div>
   );
 }
+
+/**
+ * `groupByStage` sempre devolve um objeto de coluna novo, mesmo pras colunas
+ * que não mudaram — comparação rasa do React.memo não ajudaria. `moveLead`
+ * preserva a referência de cada lead não afetado, então comparar os arrays
+ * `leads` item a item detecta corretamente quando uma coluna é intocada
+ * (evita re-render de todo o board a cada `handleDragOver` do drag, specs/09).
+ */
+export const PipelineColumn = memo(PipelineColumnComponent, (prev, next) => {
+  if (prev.onPrefetchDetail !== next.onPrefetchDetail) return false;
+  if (prev.onRemoveLead !== next.onRemoveLead) return false;
+  if (prev.column.stage !== next.column.stage) return false;
+  if (prev.column.count !== next.column.count) return false;
+  if (prev.column.totalValue !== next.column.totalValue) return false;
+  if (prev.column.leads.length !== next.column.leads.length) return false;
+  return prev.column.leads.every((lead, index) => lead === next.column.leads[index]);
+});

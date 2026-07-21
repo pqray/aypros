@@ -1,4 +1,5 @@
 import { businessesConfig } from "@aypros/config";
+import { buildManualDiscoveredBusiness } from "@aypros/integrations";
 import type {
   ApiErrorBody,
   BatchActionResult,
@@ -6,14 +7,21 @@ import type {
   BatchFavoriteResponse,
   BusinessListItem,
   BusinessListResponse,
+  CreateManualBusinessResponse,
   FavoriteToggleResponse,
   SavedFilter,
   SavedFilterListResponse,
 } from "@aypros/types";
 import type { PlaceDetailsProvider } from "@aypros/integrations";
-import { businessIdsSchema, businessListQuerySchema, savedFilterCreateSchema } from "@aypros/validation";
+import {
+  businessIdsSchema,
+  businessListQuerySchema,
+  createManualBusinessSchema,
+  savedFilterCreateSchema,
+} from "@aypros/validation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FastifyInstance } from "fastify";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { auditBusiness, canAccessBusiness } from "./audits";
 import { buildCsv } from "./csv";
@@ -21,6 +29,7 @@ import { requireOrgContext } from "./org-context";
 import { ensureManualRefreshRateLimit, refreshBusiness, toRefreshResponse } from "./refresh";
 import { paginationMeta } from "./pagination";
 import { createServiceRoleClient } from "./supabase";
+import { timed } from "./timing";
 
 const businessListRowSchema = z.object({
   business_id: z.string(),
@@ -32,6 +41,7 @@ const businessListRowSchema = z.object({
   website_url: z.string().nullable(),
   social_only: z.boolean(),
   instagram_detected: z.boolean().default(false),
+  instagram_url: z.string().nullable().default(null),
   social_links: z.boolean().default(false),
   segment: z.enum(["restaurant", "food_service", "services", "retail", "other"]).default("other"),
   link_in_bio: z.boolean().default(false),
@@ -60,6 +70,7 @@ function toBusinessListItem(row: z.infer<typeof businessListRowSchema>): Busines
     websiteUrl: row.website_url,
     socialOnly: row.social_only,
     instagramDetected: row.instagram_detected,
+    instagramUrl: row.instagram_url,
     socialLinks: row.social_links,
     segment: row.segment,
     linkInBio: row.link_in_bio,
@@ -141,6 +152,22 @@ async function ensureExportRateLimit(db: SupabaseClient, orgId: string) {
   return (count ?? 0) < businessesConfig.maxExportsPerOrgPerHour;
 }
 
+async function ensureManualCreateRateLimit(db: SupabaseClient, orgId: string) {
+  const windowStart = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { count, error } = await db
+    .from("activities")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", orgId)
+    .eq("type", "business_created")
+    .gte("created_at", windowStart);
+
+  if (error) {
+    throw new Error(`manual business rate limit check failed: ${error.message}`);
+  }
+
+  return (count ?? 0) < businessesConfig.maxManualCreatesPerOrgPerHour;
+}
+
 const exportQuerySchema = businessListQuerySchema
   .omit({ page: true, pageSize: true })
   .extend({
@@ -171,6 +198,69 @@ export function registerBusinessRoutes(app: FastifyInstance, options: BusinessRo
   const serviceDb = options.serviceDb ?? createServiceRoleClient();
   const detailsProvider = options.detailsProvider;
 
+  app.post("/v1/businesses", async (request, reply) => {
+    const body = createManualBusinessSchema.safeParse(request.body ?? {});
+    if (!body.success) {
+      return reply
+        .code(400)
+        .send({ error: "Informe nome, segmento e site ou Instagram", code: "VALIDATION" } satisfies ApiErrorBody);
+    }
+
+    const ctx = await requireOrgContext(request, reply);
+    if (!ctx) return;
+
+    try {
+      if (!(await ensureManualCreateRateLimit(serviceDb, ctx.orgId))) {
+        return reply.code(429).send({
+          error: "Limite de cadastros manuais por hora atingido",
+          code: "RATE_LIMITED",
+        } satisfies ApiErrorBody);
+      }
+
+      const manualBusiness = buildManualDiscoveredBusiness({
+        providerPlaceId: randomUUID(),
+        ...body.data,
+      });
+
+      if (!manualBusiness.websiteUrl && !manualBusiness.socialOnly) {
+        return reply
+          .code(400)
+          .send({ error: "Informe um site valido ou Instagram valido", code: "VALIDATION" } satisfies ApiErrorBody);
+      }
+
+      const { data, error } = await serviceDb.rpc("create_manual_business_api", {
+        p_org_id: ctx.orgId,
+        p_user_id: ctx.userId,
+        p_provider_place_id: manualBusiness.providerPlaceId,
+        p_name: manualBusiness.name,
+        p_segment: body.data.segment,
+        p_city: manualBusiness.city ?? "",
+        p_state: manualBusiness.state ?? "",
+        p_phone: manualBusiness.phone,
+        p_website_url: manualBusiness.websiteUrl,
+        p_categories: manualBusiness.categories,
+        p_raw: manualBusiness.raw,
+      });
+
+      if (error) {
+        throw new Error(`manual business rpc failed: ${error.message}`);
+      }
+
+      const [row] = z
+        .tuple([z.object({ business_id: z.string().uuid(), search_id: z.string().uuid() })])
+        .rest(z.unknown())
+        .parse(data);
+
+      return reply.code(201).send({
+        businessId: row.business_id,
+        searchId: row.search_id,
+      } satisfies CreateManualBusinessResponse);
+    } catch (error) {
+      request.log.error({ err: error }, "manual business create failed");
+      return reply.code(500).send({ error: "Erro ao cadastrar empresa" } satisfies ApiErrorBody);
+    }
+  });
+
   app.get("/v1/businesses", async (request, reply) => {
     const query = businessListQuerySchema.safeParse(request.query ?? {});
     if (!query.success) {
@@ -181,7 +271,9 @@ export function registerBusinessRoutes(app: FastifyInstance, options: BusinessRo
     if (!ctx) return;
 
     try {
-      const { items, total } = await fetchBusinessList(serviceDb, ctx.orgId, query.data);
+      const { items, total } = await timed(request, "business.list", () =>
+        fetchBusinessList(serviceDb, ctx.orgId, query.data),
+      );
       return reply.send({
         items,
         ...paginationMeta(query.data.page, query.data.pageSize, total),

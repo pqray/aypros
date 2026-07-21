@@ -25,6 +25,12 @@ function makeLead(overrides: Partial<LeadSummary> = {}): LeadSummary {
     assignedTo: null,
     assignedToName: null,
     assignedToAvatarUrl: null,
+    domainCostAnnual: 40,
+    hostingCostMonthly: 35,
+    marginTargetPercent: null,
+    estimatedMonthlyCost: null,
+    suggestedMaintenanceValue: null,
+    lostReason: null,
     createdAt: "2026-07-16T12:00:00Z",
     ...overrides,
   };

@@ -1,11 +1,14 @@
 import Groq from "groq-sdk";
-import { aiOutputSchemas, businessBriefingOutputSchema } from "./schemas";
+import { aiOutputSchemas, businessBriefingOutputSchema, contactCopilotOutputSchema } from "./schemas";
 import {
   buildBusinessBriefingCorrectiveMessages,
   buildBusinessBriefingMessages,
+  buildContactCopilotCorrectiveMessages,
+  buildContactCopilotMessages,
   buildCorrectiveMessages,
   buildPromptMessages,
   businessBriefingPromptVersion,
+  contactCopilotPromptVersion,
   promptVersions,
 } from "./prompts";
 import {
@@ -17,6 +20,9 @@ import {
   type BusinessBriefingInput,
   type BusinessBriefingOutput,
   type BusinessBriefingResult,
+  type ContactCopilotInput,
+  type ContactCopilotOutput,
+  type ContactCopilotResult,
 } from "./types";
 
 export type ChatCompletionParams = {
@@ -51,6 +57,19 @@ export type BusinessBriefingProvider = {
 };
 
 export type GroqBusinessBriefingProviderOptions = {
+  apiKey: string;
+  model: string;
+  fallbackModel?: string;
+  timeoutMs: number;
+  maxTokens: number;
+  client?: ChatCompletionClient;
+};
+
+export type ContactCopilotProvider = {
+  generate(input: ContactCopilotInput): Promise<ContactCopilotResult>;
+};
+
+export type GroqContactCopilotProviderOptions = {
   apiKey: string;
   model: string;
   fallbackModel?: string;
@@ -104,6 +123,17 @@ function parseBusinessBriefingOutput(content: string): BusinessBriefingOutput | 
   }
   const result = businessBriefingOutputSchema.safeParse(parsed);
   return result.success ? result.data : null;
+}
+
+function parseContactCopilotOutput(content: string): ContactCopilotOutput | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return null;
+  }
+  const result = contactCopilotOutputSchema.safeParse(parsed);
+  return result.success ? (result.data as ContactCopilotOutput) : null;
 }
 
 export function createGroqAiProvider(options: GroqAiProviderOptions): AiProvider {
@@ -240,6 +270,75 @@ export function createGroqBusinessBriefingProvider(
         model: activeModel,
         tokensUsed,
         promptVersion: businessBriefingPromptVersion,
+      };
+    },
+  };
+}
+
+export function createGroqContactCopilotProvider(
+  options: GroqContactCopilotProviderOptions,
+): ContactCopilotProvider {
+  const client = options.client ?? createSdkClient(options.apiKey, options.timeoutMs);
+
+  async function callModel(
+    model: string,
+    messages: ChatCompletionParams["messages"],
+  ): Promise<ChatCompletionResult> {
+    try {
+      return await client.complete({
+        model,
+        messages,
+        response_format: { type: "json_object" },
+        max_tokens: options.maxTokens,
+        temperature: 0.35,
+      });
+    } catch (error) {
+      throw mapProviderError(error);
+    }
+  }
+
+  return {
+    async generate(input) {
+      const messages = buildContactCopilotMessages(input);
+
+      let activeModel = options.model;
+      let first: ChatCompletionResult;
+      try {
+        first = await callModel(activeModel, messages);
+      } catch (error) {
+        const aiError = error as AiError;
+        const canFallback =
+          options.fallbackModel &&
+          options.fallbackModel !== activeModel &&
+          (aiError.code === "PROVIDER_ERROR" || aiError.code === "RATE_LIMITED");
+        if (!canFallback) throw aiError;
+        activeModel = options.fallbackModel as string;
+        first = await callModel(activeModel, messages);
+      }
+
+      let tokensUsed = first.tokensUsed;
+      let output = parseContactCopilotOutput(first.content);
+
+      if (!output) {
+        const retry = await callModel(
+          activeModel,
+          buildContactCopilotCorrectiveMessages(input, first.content),
+        );
+        tokensUsed =
+          retry.tokensUsed === null && tokensUsed === null
+            ? null
+            : (tokensUsed ?? 0) + (retry.tokensUsed ?? 0);
+        output = parseContactCopilotOutput(retry.content);
+        if (!output) {
+          throw new AiError("INVALID_OUTPUT", "A IA não retornou o formato esperado.");
+        }
+      }
+
+      return {
+        output,
+        model: activeModel,
+        tokensUsed,
+        promptVersion: contactCopilotPromptVersion,
       };
     },
   };

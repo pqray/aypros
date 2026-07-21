@@ -34,6 +34,7 @@ export const leadStage = pgEnum("lead_stage", [
 export const leadStatus = pgEnum("lead_status", ["active", "won", "lost", "archived"]);
 export const activityType = pgEnum("activity_type", [
   "search_created",
+  "business_created",
   "business_favorited",
   "audit_completed",
   "data_refresh_requested",
@@ -45,7 +46,13 @@ export const activityType = pgEnum("activity_type", [
   "ai_generated",
   "export_created",
 ]);
-export const aiKind = pgEnum("ai_kind", ["commercial_summary", "whatsapp_message", "email_message"]);
+export const aiKind = pgEnum("ai_kind", [
+  "commercial_summary",
+  "whatsapp_message",
+  "email_message",
+  "cost_estimate",
+  "contact_copilot",
+]);
 
 const createdAt = timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 const updatedAt = timestamp("updated_at", { withTimezone: true }).notNull().defaultNow();
@@ -156,36 +163,48 @@ export const savedFilters = pgTable("saved_filters", {
   updatedAt,
 });
 
-export const websiteAudits = pgTable("website_audits", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  businessId: uuid("business_id").notNull(),
-  organizationId: uuid("organization_id").notNull(),
-  requestedBy: uuid("requested_by").notNull(),
-  status: processStatus("status").notNull().default("pending"),
-  finalUrl: text("final_url"),
-  httpStatus: integer("http_status"),
-  responseTimeMs: integer("response_time_ms"),
-  redirectCount: integer("redirect_count"),
-  isHttps: boolean("is_https"),
-  detections: jsonb("detections").notNull().default({}),
-  evidence: jsonb("evidence").notNull().default({}),
-  errorCode: text("error_code"),
-  createdAt,
-  completedAt: timestamp("completed_at", { withTimezone: true }),
-});
+export const websiteAudits = pgTable(
+  "website_audits",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    organizationId: uuid("organization_id").notNull(),
+    requestedBy: uuid("requested_by").notNull(),
+    status: processStatus("status").notNull().default("pending"),
+    finalUrl: text("final_url"),
+    httpStatus: integer("http_status"),
+    responseTimeMs: integer("response_time_ms"),
+    redirectCount: integer("redirect_count"),
+    isHttps: boolean("is_https"),
+    detections: jsonb("detections").notNull().default({}),
+    evidence: jsonb("evidence").notNull().default({}),
+    errorCode: text("error_code"),
+    createdAt,
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("website_audits_business_created_idx").on(table.businessId, table.createdAt),
+    index("website_audits_org_business_created_idx").on(table.organizationId, table.businessId, table.createdAt),
+    index("website_audits_org_created_idx").on(table.organizationId, table.createdAt),
+  ],
+);
 
-export const opportunityScores = pgTable("opportunity_scores", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  businessId: uuid("business_id").notNull(),
-  auditId: uuid("audit_id"),
-  score: integer("score").notNull(),
-  level: opportunityLevel("level").notNull(),
-  confidence: confidenceLevel("confidence").notNull(),
-  reasons: jsonb("reasons").notNull().default([]),
-  suggestedServices: jsonb("suggested_services").notNull().default([]),
-  algorithmVersion: text("algorithm_version").notNull(),
-  createdAt,
-});
+export const opportunityScores = pgTable(
+  "opportunity_scores",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessId: uuid("business_id").notNull(),
+    auditId: uuid("audit_id"),
+    score: integer("score").notNull(),
+    level: opportunityLevel("level").notNull(),
+    confidence: confidenceLevel("confidence").notNull(),
+    reasons: jsonb("reasons").notNull().default([]),
+    suggestedServices: jsonb("suggested_services").notNull().default([]),
+    algorithmVersion: text("algorithm_version").notNull(),
+    createdAt,
+  },
+  (table) => [index("opportunity_scores_business_created_idx").on(table.businessId, table.createdAt)],
+);
 
 export const leads = pgTable(
   "leads",
@@ -202,6 +221,12 @@ export const leads = pgTable(
     assignedTo: uuid("assigned_to"),
     position: integer("position").notNull().default(0),
     createdBy: uuid("created_by").notNull(),
+    domainCostAnnual: numeric("domain_cost_annual").notNull().default("40"),
+    hostingCostMonthly: numeric("hosting_cost_monthly").notNull().default("35"),
+    marginTargetPercent: numeric("margin_target_percent"),
+    estimatedMonthlyCost: numeric("estimated_monthly_cost"),
+    suggestedMaintenanceValue: numeric("suggested_maintenance_value"),
+    lostReason: text("lost_reason"),
     createdAt,
     updatedAt,
   },
@@ -211,41 +236,62 @@ export const leads = pgTable(
   ],
 );
 
-export const notes = pgTable("notes", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  leadId: uuid("lead_id").notNull(),
-  organizationId: uuid("organization_id").notNull(),
-  authorId: uuid("author_id").notNull(),
-  content: text("content").notNull(),
-  createdAt,
-  updatedAt,
-});
+export const notes = pgTable(
+  "notes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    leadId: uuid("lead_id").notNull(),
+    organizationId: uuid("organization_id").notNull(),
+    authorId: uuid("author_id").notNull(),
+    content: text("content").notNull(),
+    createdAt,
+    updatedAt,
+  },
+  (table) => [index("notes_org_lead_created_idx").on(table.organizationId, table.leadId, table.createdAt)],
+);
 
-export const activities = pgTable("activities", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  organizationId: uuid("organization_id").notNull(),
-  leadId: uuid("lead_id"),
-  businessId: uuid("business_id"),
-  actorId: uuid("actor_id"),
-  type: activityType("type").notNull(),
-  payload: jsonb("payload").notNull().default({}),
-  createdAt,
-});
+export const activities = pgTable(
+  "activities",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id").notNull(),
+    leadId: uuid("lead_id"),
+    businessId: uuid("business_id"),
+    actorId: uuid("actor_id"),
+    type: activityType("type").notNull(),
+    payload: jsonb("payload").notNull().default({}),
+    createdAt,
+  },
+  (table) => [
+    index("activities_org_created_idx").on(table.organizationId, table.createdAt),
+    index("activities_org_lead_created_idx").on(table.organizationId, table.leadId, table.createdAt),
+    index("activities_org_type_created_idx").on(table.organizationId, table.type, table.createdAt),
+  ],
+);
 
-export const aiGenerations = pgTable("ai_generations", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  organizationId: uuid("organization_id").notNull(),
-  businessId: uuid("business_id").notNull(),
-  requestedBy: uuid("requested_by").notNull(),
-  kind: aiKind("kind").notNull(),
-  promptVersion: text("prompt_version").notNull(),
-  input: jsonb("input").notNull(),
-  output: jsonb("output"),
-  model: text("model").notNull(),
-  tokensUsed: integer("tokens_used"),
-  status: processStatus("status").notNull().default("pending"),
-  createdAt,
-});
+export const aiGenerations = pgTable(
+  "ai_generations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id").notNull(),
+    businessId: uuid("business_id").notNull(),
+    leadId: uuid("lead_id"),
+    requestedBy: uuid("requested_by").notNull(),
+    kind: aiKind("kind").notNull(),
+    promptVersion: text("prompt_version").notNull(),
+    input: jsonb("input").notNull(),
+    output: jsonb("output"),
+    model: text("model").notNull(),
+    tokensUsed: integer("tokens_used"),
+    status: processStatus("status").notNull().default("pending"),
+    createdAt,
+  },
+  (table) => [
+    index("ai_generations_org_business_created_idx").on(table.organizationId, table.businessId, table.createdAt),
+    index("ai_generations_org_created_idx").on(table.organizationId, table.createdAt),
+    index("ai_generations_lead_id_idx").on(table.leadId),
+  ],
+);
 
 export const businessAiBriefings = pgTable(
   "business_ai_briefings",

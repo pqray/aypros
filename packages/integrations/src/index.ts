@@ -1,5 +1,6 @@
 export * from "./discovery/types";
 export * from "./discovery/normalize";
+export * from "./discovery/manual";
 export * from "./discovery/google-places";
 export * from "./segments";
 export * from "./audit/types";

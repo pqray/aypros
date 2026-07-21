@@ -1,11 +1,13 @@
 "use client";
 
 import type { BusinessListQuery } from "@aypros/types";
+import type { CreateManualBusinessInput } from "@aypros/validation";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api";
 import {
   batchAuditBusinesses,
   batchFavoriteBusinesses,
+  createManualBusiness,
   createSavedFilter,
   deleteSavedFilter,
   generateBusinessBriefing,
@@ -145,6 +147,18 @@ export function useBusinessList(orgId: string | undefined, query: BusinessListQu
 
 function businessesQueryKeyPrefix(orgId: string | undefined) {
   return ["org", orgId, "businesses"] as const;
+}
+
+export function useCreateManualBusiness(orgId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateManualBusinessInput) => createManualBusiness(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: businessesQueryKeyPrefix(orgId) });
+      void queryClient.invalidateQueries({ queryKey: ["org", orgId, "searches"] });
+    },
+  });
 }
 
 export function useBatchFavorite(orgId: string | undefined) {

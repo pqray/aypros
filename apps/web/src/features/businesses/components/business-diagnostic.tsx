@@ -6,11 +6,11 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
   Progress,
   Skeleton,
   cn,
 } from "@aypros/ui";
+import { CollapsibleCard } from "@/components/collapsible-card";
 import type { BusinessReportFindingStatus } from "@aypros/types";
 import {
   PiArrowRight,
@@ -37,6 +37,60 @@ export function barToneClass(value: number): string {
   return "bg-destructive";
 }
 
+function DiagnosticOverviewSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-44" />
+          <Skeleton className="h-4 w-80 max-w-full" />
+        </div>
+        <Skeleton className="h-8 w-24" />
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+          <Skeleton className="h-5 w-44" />
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MaturitySkeleton() {
+  return (
+    <Card>
+      <CardHeader>
+        <Skeleton className="h-5 w-40" />
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-20" />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function findingKey(
+  finding: {
+    title: string;
+    status: BusinessReportFindingStatus;
+    body?: string;
+    impact?: string;
+  },
+  index: number,
+) {
+  return `${finding.status}:${finding.title}:${finding.body ?? ""}:${finding.impact ?? ""}:${index}`;
+}
+
 /**
  * Diagnóstico completo na Visão geral: mesma fonte do PDF (GET /report),
  * então baixar o PDF vira opção, não obrigação.
@@ -53,7 +107,7 @@ export function DiagnosticOverviewCard({
   const report = useBusinessReport(businessId);
 
   if (report.isLoading) {
-    return <Skeleton className="h-72" />;
+    return <DiagnosticOverviewSkeleton />;
   }
   if (!report.data) {
     return null;
@@ -65,19 +119,17 @@ export function DiagnosticOverviewCard({
   const unknownFindings = findings.filter((finding) => finding.status === "unknown");
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-        <div>
-          <CardTitle>Resumo da oportunidade</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Diagnóstico comercial no app; o PDF fica como material opcional.
-          </p>
-        </div>
+    <CollapsibleCard
+      storageKey="business-detail:diagnostic-overview"
+      title="Resumo da oportunidade"
+      description="Diagnóstico comercial no app; o PDF fica como material opcional."
+      headerActions={
         <Button variant="outline" size="sm" loading={downloading} onClick={onDownloadPdf}>
           <PiDownloadSimple aria-hidden />
           Baixar PDF
         </Button>
-      </CardHeader>
+      }
+    >
       <CardContent className="space-y-5">
         <div className="rounded-lg border bg-muted/30 p-4">
           <div className="flex items-start gap-3">
@@ -126,8 +178,8 @@ export function DiagnosticOverviewCard({
               </p>
             </div>
             <div className="grid gap-3 xl:grid-cols-3">
-              {problemFindings.map((finding) => (
-                <div key={finding.title} className="rounded-lg border border-destructive/25 bg-destructive/5 p-4">
+              {problemFindings.map((finding, index) => (
+                <div key={findingKey(finding, index)} className="rounded-lg border border-destructive/25 bg-destructive/5 p-4">
                   <div className="flex items-start gap-3">
                     <span className="grid size-9 shrink-0 place-items-center rounded-md bg-destructive/10 text-destructive">
                       <PiWarningCircle aria-hidden />
@@ -159,8 +211,8 @@ export function DiagnosticOverviewCard({
                   <p className="text-sm font-semibold">Sinais saudáveis</p>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  {okFindings.map((finding) => (
-                    <div key={finding.title} className="rounded-md bg-background/80 px-3 py-2">
+                  {okFindings.map((finding, index) => (
+                    <div key={findingKey(finding, index)} className="rounded-md bg-background/80 px-3 py-2">
                       <p className="text-sm font-medium">{finding.title}</p>
                       <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                         {finding.impact}
@@ -178,9 +230,9 @@ export function DiagnosticOverviewCard({
                   <p className="text-sm font-semibold">Não verificados</p>
                 </div>
                 <div className="space-y-2">
-                  {unknownFindings.map((finding) => (
+                  {unknownFindings.map((finding, index) => (
                     <div
-                      key={finding.title}
+                      key={findingKey(finding, index)}
                       className="flex items-center justify-between gap-3 rounded-md bg-background/80 px-3 py-2"
                     >
                       <span className="min-w-0 truncate text-sm">{finding.title}</span>
@@ -198,10 +250,10 @@ export function DiagnosticOverviewCard({
         okFindings.length === 0 &&
         unknownFindings.length === 0 ? (
           <div className="space-y-3">
-            {findings.map((finding) => {
+            {findings.map((finding, index) => {
               const badge = findingBadges[finding.status];
               return (
-                <div key={finding.title} className="rounded-lg border p-3">
+                <div key={findingKey(finding, index)} className="rounded-lg border p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p
                       className={cn(
@@ -257,7 +309,7 @@ export function DiagnosticOverviewCard({
           </div>
         ) : null}
       </CardContent>
-    </Card>
+    </CollapsibleCard>
   );
 }
 
@@ -316,7 +368,7 @@ export function MaturityCard({
   const report = useBusinessReport(businessId);
 
   if (report.isLoading) {
-    return <Skeleton className="h-56" />;
+    return <MaturitySkeleton />;
   }
   if (!report.data) {
     return null;
@@ -328,10 +380,7 @@ export function MaturityCard({
   ].filter(Boolean);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Maturidade digital</CardTitle>
-      </CardHeader>
+    <CollapsibleCard storageKey="business-detail:maturity" title="Maturidade digital">
       <CardContent className="space-y-4">
         {report.data.httpStatusNote ? (
           <Badge variant="secondary">Verificação automática limitada</Badge>
@@ -353,6 +402,6 @@ export function MaturityCard({
           </div>
         ) : null}
       </CardContent>
-    </Card>
+    </CollapsibleCard>
   );
 }

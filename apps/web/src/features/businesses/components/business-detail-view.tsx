@@ -4,10 +4,7 @@ import {
   Badge,
   BusinessLogo,
   Button,
-  Card,
   CardContent,
-  CardHeader,
-  CardTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -28,6 +25,7 @@ import {
   toast,
 } from "@aypros/ui";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import {
   PiArrowLeft,
@@ -46,6 +44,7 @@ import {
 } from "react-icons/pi";
 import { SiInstagram } from "react-icons/si";
 import { useAppContext } from "@/components/shell/use-app-context";
+import { CollapsibleCard } from "@/components/collapsible-card";
 import { AiGenerationsCard } from "@/features/ai/components/ai-generations-card";
 import { useCreateLead } from "@/features/pipeline/queries";
 import { formatRelativeTime } from "@/lib/format";
@@ -90,7 +89,40 @@ function BusinessMetaItem({
   );
 }
 
+function BusinessDetailSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="space-y-4 pb-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <Skeleton className="size-12 shrink-0 rounded-md" />
+            <div className="min-w-0 space-y-2">
+              <Skeleton className="h-7 w-56" />
+              <Skeleton className="h-4 w-72 max-w-full" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-9 w-28" />
+            <Skeleton className="h-9 w-24" />
+          </div>
+        </div>
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          <Skeleton className="h-16" />
+          <Skeleton className="h-16" />
+          <Skeleton className="h-16" />
+        </div>
+      </div>
+      <Skeleton className="h-10 w-80 max-w-full" />
+      <div className="space-y-4">
+        <Skeleton className="h-72" />
+        <Skeleton className="h-56" />
+      </div>
+    </div>
+  );
+}
+
 export function BusinessDetailView({ businessId }: { businessId: string }) {
+  const router = useRouter();
   const { data: context } = useAppContext();
   const orgId = context?.organization?.id;
   const summary = useBusinessAuditSummary(businessId);
@@ -127,6 +159,7 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
     createLead.mutate(businessId, {
       onSuccess: (response) => {
         toast.success(response.created ? "Lead adicionado ao pipeline." : "Esta empresa já está no pipeline.");
+        router.push("/pipeline");
       },
       onError: () => toast.error("Não foi possível adicionar ao pipeline."),
     });
@@ -146,12 +179,7 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
   }
 
   if (summary.isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-20" />
-        <Skeleton className="h-40" />
-      </div>
-    );
+    return <BusinessDetailSkeleton />;
   }
 
   if (!summary.data) {
@@ -341,10 +369,7 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
             downloading={reportDownloading}
           />
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Presença digital</CardTitle>
-            </CardHeader>
+          <CollapsibleCard storageKey="business-detail:presence" title="Presença digital">
             <CardContent className="space-y-3">
               {business.websiteUrl ? (
                 <a
@@ -371,15 +396,12 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
                 </p>
               )}
             </CardContent>
-          </Card>
+          </CollapsibleCard>
         </TabsContent>
 
         <TabsContent value="metrics">
           <div className="grid items-start gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Potencial da oportunidade</CardTitle>
-              </CardHeader>
+            <CollapsibleCard storageKey="business-detail:opportunity-potential" title="Potencial da oportunidade">
               <CardContent className="space-y-4">
                 {latestScore ? (
                   <>
@@ -453,7 +475,7 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
                   </p>
                 )}
               </CardContent>
-            </Card>
+            </CollapsibleCard>
 
             <MaturityCard
               businessId={businessId}

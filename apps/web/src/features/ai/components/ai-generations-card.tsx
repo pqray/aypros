@@ -28,14 +28,15 @@ import { buildWhatsappUrl } from "../outreach";
 import { useAiGenerations, useGenerateAi } from "../queries";
 
 const AI_KINDS = ["commercial_summary", "whatsapp_message", "email_message"] as const;
+type CardAiKind = (typeof AI_KINDS)[number];
 
-const kindLabels: Record<AiKind, string> = {
+const kindLabels: Record<CardAiKind, string> = {
   commercial_summary: "Resumo",
   whatsapp_message: "WhatsApp",
   email_message: "E-mail",
 };
 
-const kindEmptyHints: Record<AiKind, string> = {
+const kindEmptyHints: Record<CardAiKind, string> = {
   commercial_summary:
     "Gere um resumo comercial da oportunidade: situação digital, dores prováveis e ângulo de venda.",
   whatsapp_message: "Geré uma mensagem curta de primeira abordagem para enviar no WhatsApp.",

@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import {
   aiOutputSchemas,
   commercialSummaryOutputSchema,
   commercialSummaryV2OutputSchema,
+  costEstimateOutputSchema,
   emailMessageOutputSchema,
   whatsappMessageOutputSchema,
 } from "./schemas";
@@ -144,7 +145,9 @@ describe("whatsappMessageOutputSchema", () => {
   });
 
   it("rejects a message above the size cap", () => {
-    expect(whatsappMessageOutputSchema.safeParse({ message: "a".repeat(1201) }).success).toBe(false);
+    expect(whatsappMessageOutputSchema.safeParse({ message: "a".repeat(1201) }).success).toBe(
+      false,
+    );
   });
 });
 
@@ -158,7 +161,7 @@ describe("emailMessageOutputSchema", () => {
     "Abraços,\nRayssa\nAypros",
   ].join("\n\n");
 
-  it("accepts a structured multi-paragraph body (email-v4)", () => {
+  it("accepts a structured multi-paragraph body (email-v6)", () => {
     const result = emailMessageOutputSchema.safeParse({
       subject: "Uma ideia para a Padaria Central",
       body: richBody,
@@ -186,5 +189,29 @@ describe("emailMessageOutputSchema", () => {
 
   it("rejects a partial output with only the subject", () => {
     expect(emailMessageOutputSchema.safeParse({ subject: "Assunto" }).success).toBe(false);
+  });
+});
+
+describe("costEstimateOutputSchema", () => {
+  it("accepts a paid hosting estimate", () => {
+    const result = costEstimateOutputSchema.safeParse({
+      domainCostAnnual: 40,
+      hostingCostMonthly: 35,
+      marginTargetPercent: 30,
+      rationale: "Site institucional simples com hospedagem paga conservadora.",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects free hosting in AI suggestions", () => {
+    const result = costEstimateOutputSchema.safeParse({
+      domainCostAnnual: 40,
+      hostingCostMonthly: 0,
+      marginTargetPercent: 30,
+      rationale: "Free tier.",
+    });
+
+    expect(result.success).toBe(false);
   });
 });

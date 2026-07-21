@@ -14,7 +14,7 @@ function renderSidebar() {
     <TooltipProvider>
       <Sidebar
         user={{ email: "user@example.com", fullName: "User" }}
-        organization={{ name: "Aypros", slug: "aypros" }}
+        organization={{ name: "pqray", slug: "pqray" }}
       />
     </TooltipProvider>,
   );
@@ -31,7 +31,14 @@ describe("Sidebar", () => {
     expect(screen.getByRole("link", { name: /dashboard/i })).toHaveAttribute("aria-current", "page");
   });
 
-  it("stays collapsed by default and expands on hover", () => {
+  it("shows the Aypros brand instead of the organization name", () => {
+    renderSidebar();
+
+    expect(screen.getAllByRole("link", { name: "Aypros" }).length).toBeGreaterThan(0);
+    expect(screen.queryByText("pqray")).not.toBeInTheDocument();
+  });
+
+  it("stays compact by default and expands on hover", () => {
     renderSidebar();
 
     const sidebar = screen.getByLabelText(/navegacao lateral/i);
@@ -41,9 +48,17 @@ describe("Sidebar", () => {
     fireEvent.mouseEnter(sidebar);
 
     expect(sidebar).toHaveClass("w-64");
+    expect(screen.getByText("Aypros")).toBeInTheDocument();
 
     fireEvent.mouseLeave(sidebar);
 
     expect(sidebar).toHaveClass("w-16");
+  });
+
+  it("keeps profile and organization settings out of the sidebar", () => {
+    renderSidebar();
+
+    expect(screen.queryByRole("link", { name: "Perfil" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Organização" })).not.toBeInTheDocument();
   });
 });

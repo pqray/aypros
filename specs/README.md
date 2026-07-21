@@ -39,6 +39,7 @@ Exemplo — Fase 5 (Dashboard) lê: `00`, `phases/phase-05-dashboard.md`, `03`, 
 | [18-roadmap.md](18-roadmap.md) | Evolução pós-MVP |
 | [19-backend-api.md](19-backend-api.md) | Backend Node separado, Docker, endpoints e contratos |
 | [20-data-refresh.md](20-data-refresh.md) | Refresh automático de dados: frescor, custo, scheduler |
+| [21-ayhub.md](21-ayhub.md) | AYhub: schema próprio, estimador de custo, trigger won→cliente, SEO/publicação, API pública de conteúdo |
 
 ## Índice — fases (`/specs/phases/`)
 
@@ -63,6 +64,11 @@ Exemplo — Fase 5 (Dashboard) lê: `00`, `phases/phase-05-dashboard.md`, `03`, 
 | [17 — Insights + Pipeline UX](phases/phase-17-insights-pipeline-ux.md) | IA consultiva v2, PDF v2, métricas da empresa e UX do pipeline |
 | [18 — Briefing IA](phases/phase-18-ai-briefing.md) | Briefing consultivo salvo por empresa para interpretar score, auditoria, presença digital e pipeline |
 | [19 — Copiloto de contato](phases/phase-19-contact-copilot.md) | Chat de IA no lead para interpretar conversas, sugerir follow-up, nota e próxima ação |
+| [20 — Cadastro manual de empresas](phases/phase-20-manual-business.md) | Cadastrar empresa prospectada fora do Google Places (ex.: Instagram) no mesmo fluxo de auditoria/score/pipeline/IA |
+| [21 — AYhub](phases/phase-21-ayhub.md) | Gestão de clientes/sites pós-venda, estimador de custo com sugestão de IA, criação automática de cliente ao ganhar oportunidade, API pública de conteúdo para sites de cliente |
+| [22 — Painel de estágio](phases/phase-22-pipeline-stage-panels.md) | Painel do lead muda conforme o estágio (abordagem, acompanhamento, copiloto de contato, cliente AYhub, motivo de perda) |
+| [23 — Progresso do lead + cards colapsáveis](phases/phase-23-pipeline-detail-and-card-ux.md) | Stepper de 6 etapas vira badge + botão "Avançar"; cards de referência colapsáveis com preferência lembrada; performance do `PATCH /v1/leads/:id` |
+| [24 — Distribuição do pipeline no dashboard](phases/phase-24-dashboard-pipeline-distribution.md) | Bloco "Hoje" vira gráfico de pizza com a distribuição de leads por estágio (contatados, não contatados, ganhos, perdidos) |
 
 ## Decisões
 

@@ -25,6 +25,7 @@ import { env } from "./env";
 import { requireOrgContext } from "./org-context";
 import { buildReportModel, buildReportResponse } from "./reports";
 import { createServiceRoleClient } from "./supabase";
+import { timed } from "./timing";
 
 const businessIdParamSchema = z.object({ businessId: z.string().uuid() });
 const BRIEFING_KIND = "commercial_briefing" as const;
@@ -339,24 +340,28 @@ export function registerBusinessBriefingRoutes(
     if (!ctx) return;
 
     try {
-      if (!(await canAccessBusiness(serviceDb, ctx.orgId, params.data.businessId))) {
+      if (!(await timed(request, "business.access", () => canAccessBusiness(serviceDb, ctx.orgId, params.data.businessId)))) {
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
-      const row = await latestBriefing(serviceDb, ctx.orgId, params.data.businessId);
+      const row = await timed(request, "briefing.latest", () =>
+        latestBriefing(serviceDb, ctx.orgId, params.data.businessId),
+      );
       if (!row) {
         return reply.send({
           briefing: null,
           sourceHash: "",
         } satisfies BusinessBriefingResponse);
       }
-      const input = await buildBriefingInput({
-        db: serviceDb,
-        orgId: ctx.orgId,
-        userId: ctx.userId,
-        businessId: params.data.businessId,
-        organizationName: ctx.organizationName,
-        senderName: ctx.userName,
-      });
+      const input = await timed(request, "briefing.input", () =>
+        buildBriefingInput({
+          db: serviceDb,
+          orgId: ctx.orgId,
+          userId: ctx.userId,
+          businessId: params.data.businessId,
+          organizationName: ctx.organizationName,
+          senderName: ctx.userName,
+        }),
+      );
       if (!input) {
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
@@ -386,37 +391,41 @@ export function registerBusinessBriefingRoutes(
     if (!ctx) return;
 
     try {
-      if (!(await canAccessBusiness(serviceDb, ctx.orgId, params.data.businessId))) {
+      if (!(await timed(request, "business.access", () => canAccessBusiness(serviceDb, ctx.orgId, params.data.businessId)))) {
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
-      const input = await buildBriefingInput({
-        db: serviceDb,
-        orgId: ctx.orgId,
-        userId: ctx.userId,
-        businessId: params.data.businessId,
-        organizationName: ctx.organizationName,
-        senderName: ctx.userName,
-      });
+      const input = await timed(request, "briefing.input", () =>
+        buildBriefingInput({
+          db: serviceDb,
+          orgId: ctx.orgId,
+          userId: ctx.userId,
+          businessId: params.data.businessId,
+          organizationName: ctx.organizationName,
+          senderName: ctx.userName,
+        }),
+      );
       if (!input) {
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }
       const hash = sourceHash(input);
-      const result = await provider.generate(input);
-      const { data, error } = await serviceDb
-        .from("business_ai_briefings")
-        .insert({
-          organization_id: ctx.orgId,
-          business_id: params.data.businessId,
-          kind: BRIEFING_KIND,
-          content_json: result.output,
-          summary: summaryFromOutput(result.output),
-          model: result.model,
-          prompt_version: result.promptVersion,
-          source_hash: hash,
-          created_by: ctx.userId,
-        })
-        .select("id, business_id, kind, content_json, summary, model, prompt_version, source_hash, created_at, updated_at")
-        .single();
+      const result = await timed(request, "briefing.provider", () => provider.generate(input));
+      const { data, error } = await timed(request, "briefing.insert", () =>
+        serviceDb
+          .from("business_ai_briefings")
+          .insert({
+            organization_id: ctx.orgId,
+            business_id: params.data.businessId,
+            kind: BRIEFING_KIND,
+            content_json: result.output,
+            summary: summaryFromOutput(result.output),
+            model: result.model,
+            prompt_version: result.promptVersion,
+            source_hash: hash,
+            created_by: ctx.userId,
+          })
+          .select("id, business_id, kind, content_json, summary, model, prompt_version, source_hash, created_at, updated_at")
+          .single(),
+      );
 
       if (error || !data) {
         throw new Error(`briefing insert failed: ${error?.message ?? "missing data"}`);

@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { LoadedAppContext } from "@aypros/types";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const apiUrl = "/api/backend";
 
 export class AppContextError extends Error {
   constructor(public readonly status: number) {

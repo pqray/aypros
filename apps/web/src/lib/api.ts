@@ -1,6 +1,8 @@
 import type { ApiErrorBody } from "@aypros/types";
 
-export const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+// Caminho relativo: passa pelo rewrite do next.config.ts pra manter o cookie
+// de sessao do Supabase same-origin (web e API ficam em dominios diferentes).
+export const apiUrl = "/api/backend";
 
 export class ApiError extends Error {
   constructor(

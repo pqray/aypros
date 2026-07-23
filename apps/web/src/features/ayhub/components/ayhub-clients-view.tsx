@@ -2,6 +2,7 @@
 
 import {
   Badge,
+  BusinessLogo,
   Button,
   EmptyState,
   PageHeader,
@@ -125,7 +126,8 @@ export function AyhubClientsView() {
             {clients.data.items.map((client) => (
               <TableRow key={client.id} className="cursor-pointer">
                 <TableCell>
-                  <Link href={`/ayhub/${client.id}`} className="font-medium text-foreground hover:underline">
+                  <Link href={`/ayhub/${client.id}`} className="flex items-center gap-2 font-medium text-foreground hover:underline">
+                    <BusinessLogo name={client.name} className="size-7" />
                     {client.name}
                   </Link>
                 </TableCell>

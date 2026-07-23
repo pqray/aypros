@@ -77,6 +77,16 @@ const contactCopilotStageSchema = z
   .nullable();
 const contactCopilotStatusSchema = z.enum(["active", "won", "lost", "archived"]).nullable();
 
+/** Avaliação de uma mensagem do vendedor antes de enviar (mode: evaluate_message, fase 19 P2). */
+export const contactCopilotEvaluationOutputSchema = z.object({
+  alignment: z.enum(["aligned", "partial", "off_track"]),
+  score: z.number().int().min(1).max(5),
+  strengths: z.array(line(220)).max(5).default([]),
+  risks: z.array(line(220)).max(5).default([]),
+  suggestedRevision: optionalLine(1200),
+  rationale: line(400),
+});
+
 export const contactCopilotOutputSchema = z.object({
   summary: line(400),
   customerPosition: line(400),

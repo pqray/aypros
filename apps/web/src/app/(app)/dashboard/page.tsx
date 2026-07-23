@@ -1,4 +1,5 @@
 import { PageHeader } from "@aypros/ui";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ActivitiesBlock } from "@/features/dashboard/components/activities-block";
 import { MetricCards } from "@/features/dashboard/components/metric-cards";
@@ -10,6 +11,8 @@ import { WelcomeHero } from "@/features/dashboard/components/welcome-hero";
 import { getDashboardData } from "@/features/dashboard/queries";
 import { createClient } from "@/lib/supabase/server";
 import { loadServerAppContext } from "@/server/app-context";
+
+export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
   const supabase = await createClient();

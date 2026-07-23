@@ -1,6 +1,9 @@
 import { Skeleton } from "@aypros/ui";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { BusinessesView } from "@/features/businesses/components/businesses-view";
+
+export const metadata: Metadata = { title: "Favoritos" };
 
 export default function FavoritesPage() {
   return (

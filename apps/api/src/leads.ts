@@ -538,46 +538,62 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
     const ctx = await requireOrgContext(request, reply);
     if (!ctx) return;
 
-    const { data: leadRow, error: leadError } = await ctx.supabase
-      .from("leads")
-      .select(LEAD_FIELDS)
-      .eq("organization_id", ctx.orgId)
-      .eq("id", params.data.id)
-      .maybeSingle();
+    // notes/activities/ayhubClient/members só dependem do id vindo da URL, não
+    // do conteúdo do lead — disparam junto com o fetch do lead em vez de
+    // esperar ele resolver, cortando um round-trip sequencial inteiro desse
+    // endpoint (era o mais lento da API).
+    const [leadResult, membersList, notesResult, activitiesResult, ayhubClientResult] = await timed(
+      request,
+      "leads.detail",
+      () =>
+        Promise.all([
+          ctx.supabase
+            .from("leads")
+            .select(LEAD_FIELDS)
+            .eq("organization_id", ctx.orgId)
+            .eq("id", params.data.id)
+            .maybeSingle(),
+          fetchOrgMembers(serviceDb, ctx.orgId),
+          ctx.supabase
+            .from("notes")
+            .select("id, lead_id, author_id, content, created_at, updated_at")
+            .eq("lead_id", params.data.id)
+            .order("created_at", { ascending: false }),
+          ctx.supabase
+            .from("activities")
+            .select("id, type, payload, created_at")
+            .eq("lead_id", params.data.id)
+            .order("created_at", { ascending: false })
+            .limit(50),
+          // RLS em ayhub.clients já restringe a owner/admin (specs/22) — um membro sem
+          // acesso ao AYhub simplesmente recebe null aqui, sem erro.
+          ctx.supabase
+            .schema("ayhub")
+            .from("clients")
+            .select("id")
+            .eq("origin_lead_id", params.data.id)
+            .maybeSingle(),
+        ]),
+    );
 
-    if (leadError) {
+    if (leadResult.error) {
       return reply.code(500).send({ error: "Erro ao carregar lead" } satisfies ApiErrorBody);
     }
-    if (!leadRow || !(leadRow as unknown as LeadRow).business) {
+    if (!leadResult.data || !(leadResult.data as unknown as LeadRow).business) {
       return reply.code(404).send({ error: "Lead não encontrado" } satisfies ApiErrorBody);
     }
 
-    const row = leadRow as unknown as LeadRow;
+    const row = leadResult.data as unknown as LeadRow;
     const business = row.business!;
-
-    const [scores, membersList, notesResult, activitiesResult, ayhubClientResult] = await Promise.all([
-      fetchLatestScores(ctx.supabase, [business.id]),
-      fetchOrgMembers(serviceDb, ctx.orgId),
-      ctx.supabase
-        .from("notes")
-        .select("id, lead_id, author_id, content, created_at, updated_at")
-        .eq("lead_id", row.id)
-        .order("created_at", { ascending: false }),
-      ctx.supabase
-        .from("activities")
-        .select("id, type, payload, created_at")
-        .eq("lead_id", row.id)
-        .order("created_at", { ascending: false })
-        .limit(50),
-      // RLS em ayhub.clients já restringe a owner/admin (specs/22) — um membro sem
-      // acesso ao AYhub simplesmente recebe null aqui, sem erro.
-      ctx.supabase.schema("ayhub").from("clients").select("id").eq("origin_lead_id", row.id).maybeSingle(),
-    ]);
     const members = new Map(membersList.map((member) => [member.userId, member]));
 
     if (notesResult.error || activitiesResult.error) {
       return reply.code(500).send({ error: "Erro ao carregar lead" } satisfies ApiErrorBody);
     }
+
+    // Precisa do business.id vindo do lead, então só dá pra buscar depois do
+    // Promise.all acima — único round-trip realmente sequencial que sobra.
+    const scores = await timed(request, "leads.scores", () => fetchLatestScores(ctx.supabase, [business.id]));
 
     const noteRows = (notesResult.data ?? []) as Array<{
       id: string;
@@ -588,20 +604,13 @@ export function registerLeadRoutes(app: FastifyInstance, options: LeadRoutesOpti
       updated_at: string;
     }>;
 
-    const authorIds = [...new Set(noteRows.map((note) => note.author_id))];
-    const { data: profileRows } =
-      authorIds.length > 0
-        ? await serviceDb.from("profiles").select("id, full_name").in("id", authorIds)
-        : { data: [] as Array<{ id: string; full_name: string | null }> };
-    const authorNames = new Map(
-      (profileRows ?? []).map((profile) => [profile.id, profile.full_name] as const),
-    );
-
+    // Nomes de autor vêm do map de membros já carregado acima (mesma query),
+    // evitando outro round-trip só pra resolver full_name por author_id.
     const notes: LeadNote[] = noteRows.map((note) => ({
       id: note.id,
       leadId: note.lead_id,
       authorId: note.author_id,
-      authorName: authorNames.get(note.author_id) ?? null,
+      authorName: members.get(note.author_id)?.fullName ?? null,
       content: note.content,
       createdAt: note.created_at,
       updatedAt: note.updated_at,

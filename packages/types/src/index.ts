@@ -476,8 +476,24 @@ export type GenerateAiResponse = {
 
 export type ContactCopilotLeadStage = LeadStage;
 export type ContactCopilotLeadStatus = LeadStatus;
+export type ContactCopilotMode = "evaluate_message" | "analyze_reply";
+export type ContactCopilotTurnRole = "seller" | "client";
 
-export type ContactCopilotOutput = {
+export type ContactCopilotTurn = {
+  role: ContactCopilotTurnRole;
+  text: string;
+};
+
+export type ContactCopilotEvaluationOutput = {
+  alignment: "aligned" | "partial" | "off_track";
+  score: number;
+  strengths: string[];
+  risks: string[];
+  suggestedRevision: string | null;
+  rationale: string;
+};
+
+export type ContactCopilotReplyOutput = {
   summary: string;
   customerPosition: string;
   objections: string[];
@@ -498,18 +514,33 @@ export type ContactCopilotOutput = {
   confidenceNotes: string[];
 };
 
+/** @deprecated use {@link ContactCopilotReplyOutput} — mantido pelo nome pra não quebrar imports existentes. */
+export type ContactCopilotOutput = ContactCopilotReplyOutput;
+
 export type GenerateContactCopilotInput = {
   channel: ContactChannel;
-  transcript: string;
+  mode: ContactCopilotMode;
+  text: string;
+  history: ContactCopilotTurn[];
 };
 
-export type ContactCopilotResponse = {
-  generationId: string;
-  output: ContactCopilotOutput;
-  model: string;
-  tokensUsed: number | null;
-  promptVersion: string;
-};
+export type ContactCopilotResponse =
+  | {
+      generationId: string;
+      mode: "evaluate_message";
+      output: ContactCopilotEvaluationOutput;
+      model: string;
+      tokensUsed: number | null;
+      promptVersion: string;
+    }
+  | {
+      generationId: string;
+      mode: "analyze_reply";
+      output: ContactCopilotReplyOutput;
+      model: string;
+      tokensUsed: number | null;
+      promptVersion: string;
+    };
 
 export type BusinessBriefingKind = "commercial_briefing";
 

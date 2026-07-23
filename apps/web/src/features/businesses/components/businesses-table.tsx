@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Badge,
   BusinessLogo,
   Button,
   Checkbox,
@@ -346,6 +347,11 @@ export function BusinessesTable({
           >
             <BusinessLogo name={row.original.name} websiteUrl={row.original.websiteUrl} className="size-7" />
             <span className="truncate">{row.original.name}</span>
+            {row.original.leadId ? (
+              <Badge variant="secondary" className="shrink-0">
+                No pipeline
+              </Badge>
+            ) : null}
           </BusinessDetailLink>
         ),
       }),

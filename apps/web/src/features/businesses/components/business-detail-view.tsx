@@ -225,6 +225,19 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
               <PiMagnifyingGlass aria-hidden />
               Reanalisar
             </Button>
+            {leadId ? (
+              <Button asChild variant="outline">
+                <Link href={`/pipeline/${leadId}`}>
+                  <PiKanban aria-hidden />
+                  Ver no pipeline
+                </Link>
+              </Button>
+            ) : (
+              <Button variant="outline" loading={createLead.isPending} onClick={handleAddToPipeline}>
+                <PiKanban aria-hidden />
+                Adicionar ao pipeline
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" aria-label="Mais acoes">
@@ -233,25 +246,6 @@ export function BusinessDetailView({ businessId }: { businessId: string }) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                {leadId ? (
-                  <DropdownMenuItem asChild>
-                    <Link href={`/pipeline/${leadId}`}>
-                      <PiKanban aria-hidden />
-                      Ver no pipeline
-                    </Link>
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem
-                    disabled={createLead.isPending}
-                    onSelect={(event) => {
-                      event.preventDefault();
-                      handleAddToPipeline();
-                    }}
-                  >
-                    <PiKanban aria-hidden />
-                    Adicionar ao pipeline
-                  </DropdownMenuItem>
-                )}
                 <DropdownMenuItem
                   disabled={toggleFavorite.isPending}
                   onSelect={(event) => {

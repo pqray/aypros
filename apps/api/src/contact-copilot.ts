@@ -2,9 +2,11 @@ import { aiConfig } from "@aypros/config";
 import {
   AiError,
   createGroqContactCopilotProvider,
+  type ContactCopilotBriefing,
   type ContactCopilotInput,
   type ContactCopilotProvider,
   type ContactCopilotResult,
+  type ContactCopilotTurn,
 } from "@aypros/integrations";
 import type { ApiErrorBody, ContactCopilotResponse } from "@aypros/types";
 import { generateContactCopilotSchema } from "@aypros/validation";
@@ -18,6 +20,44 @@ import { createServiceRoleClient } from "./supabase";
 import { timed } from "./timing";
 
 const idParamSchema = z.object({ id: z.string().uuid() });
+
+const BRIEFING_KIND = "commercial_briefing" as const;
+
+type BriefingContentRow = {
+  content_json: {
+    salesAngle?: string;
+    recommendedOffer?: string;
+    opportunities?: string[];
+    risks?: string[];
+  } | null;
+};
+
+/** Último briefing de IA gerado pra essa empresa (se houver), usado como plano de abordagem do copiloto (specs/19 P2). */
+async function latestContactCopilotBriefing(
+  db: SupabaseClient,
+  orgId: string,
+  businessId: string,
+): Promise<ContactCopilotBriefing | null> {
+  const { data } = await db
+    .from("business_ai_briefings")
+    .select("content_json")
+    .eq("organization_id", orgId)
+    .eq("business_id", businessId)
+    .eq("kind", BRIEFING_KIND)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const content = (data as BriefingContentRow | null)?.content_json;
+  if (!content) return null;
+
+  return {
+    salesAngle: content.salesAngle ?? "",
+    recommendedOffer: content.recommendedOffer ?? "",
+    opportunities: content.opportunities ?? [],
+    risks: content.risks ?? [],
+  };
+}
 
 export type ContactCopilotRoutesOptions = {
   serviceDb?: SupabaseClient;
@@ -47,7 +87,7 @@ export function registerContactCopilotRoutes(app: FastifyInstance, options: Cont
     }
     const body = generateContactCopilotSchema.safeParse(request.body ?? {});
     if (!body.success) {
-      return reply.code(400).send({ error: "Descreva a conversa antes de analisar" } satisfies ApiErrorBody);
+      return reply.code(400).send({ error: "Descreva a mensagem antes de analisar" } satisfies ApiErrorBody);
     }
 
     if (!provider) {
@@ -82,32 +122,36 @@ export function registerContactCopilotRoutes(app: FastifyInstance, options: Cont
 
       await timed(request, "ai.rate", () => ensureAiRateLimit(serviceDb, ctx.orgId));
 
-      const [auditResult, scoreResult, profileResult, orgResult, notesResult] = await timed(request, "copilot.input", () =>
-        Promise.all([
-          serviceDb
-            .from("website_audits")
-            .select("status, is_https, response_time_ms, detections")
-            .eq("organization_id", ctx.orgId)
-            .eq("business_id", business.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-          serviceDb
-            .from("opportunity_scores")
-            .select("score, level, confidence, reasons, suggested_services")
-            .eq("business_id", business.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-          serviceDb.from("profiles").select("full_name").eq("id", ctx.userId).maybeSingle(),
-          serviceDb.from("organizations").select("name").eq("id", ctx.orgId).maybeSingle(),
-          ctx.supabase
-            .from("notes")
-            .select("content")
-            .eq("lead_id", params.data.id)
-            .order("created_at", { ascending: false })
-            .limit(5),
-        ]),
+      const [auditResult, scoreResult, profileResult, orgResult, notesResult, briefing] = await timed(
+        request,
+        "copilot.input",
+        () =>
+          Promise.all([
+            serviceDb
+              .from("website_audits")
+              .select("status, is_https, response_time_ms, detections")
+              .eq("organization_id", ctx.orgId)
+              .eq("business_id", business.id)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+            serviceDb
+              .from("opportunity_scores")
+              .select("score, level, confidence, reasons, suggested_services")
+              .eq("business_id", business.id)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle(),
+            serviceDb.from("profiles").select("full_name").eq("id", ctx.userId).maybeSingle(),
+            serviceDb.from("organizations").select("name").eq("id", ctx.orgId).maybeSingle(),
+            ctx.supabase
+              .from("notes")
+              .select("content")
+              .eq("lead_id", params.data.id)
+              .order("created_at", { ascending: false })
+              .limit(5),
+            latestContactCopilotBriefing(serviceDb, ctx.orgId, business.id),
+          ]),
       );
 
       const baseInput = toAiInput({
@@ -121,8 +165,11 @@ export function registerContactCopilotRoutes(app: FastifyInstance, options: Cont
       const input: ContactCopilotInput = {
         ...baseInput,
         channel: body.data.channel,
-        transcript: body.data.transcript,
+        mode: body.data.mode,
+        text: body.data.text,
+        history: body.data.history as ContactCopilotTurn[],
         recentNotes: ((notesResult.data ?? []) as Array<{ content: string }>).map((note) => note.content),
+        briefing,
       };
 
       let generationId: string;
@@ -185,10 +232,7 @@ export function registerContactCopilotRoutes(app: FastifyInstance, options: Cont
 
       return reply.code(201).send({
         generationId,
-        output: result.output,
-        model: result.model,
-        tokensUsed: result.tokensUsed,
-        promptVersion: result.promptVersion,
+        ...result,
       } satisfies ContactCopilotResponse);
     } catch (error) {
       if (error instanceof Error && error.name === "RateLimitError") {

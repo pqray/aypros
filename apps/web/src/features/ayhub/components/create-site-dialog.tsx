@@ -21,10 +21,12 @@ import { useCreateAyhubSite } from "../queries";
 
 export function CreateSiteDialog({
   clientId,
+  fromPipeline = false,
   open,
   onOpenChange,
 }: {
   clientId: string;
+  fromPipeline?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -67,6 +69,9 @@ export function CreateSiteDialog({
             <DialogTitle>Criar site</DialogTitle>
             <DialogDescription>
               Os blocos de SEO (título, descrição, imagem) são criados automaticamente.
+              {fromPipeline
+                ? " Os custos de domínio e hospedagem já estimados na oportunidade de origem entram automaticamente aqui."
+                : ""}
             </DialogDescription>
           </DialogHeader>
 

@@ -15,7 +15,10 @@ export const promptVersions: Record<AiKind, string> = {
 };
 
 export const businessBriefingPromptVersion = "business-briefing-v2";
-export const contactCopilotPromptVersion = "contact-copilot-v1";
+// v1 → v2 (fase 19 P2): troca o relato livre único por turno-a-turno (mode
+// evaluate_message/analyze_reply) com histórico e briefing da empresa como contexto.
+export const contactCopilotPromptVersion = "contact-copilot-v2";
+export const contactCopilotEvaluatePromptVersion = "contact-copilot-evaluate-v1";
 
 const FACTS_RULES = `REGRAS OBRIGATÓRIAS:
 - Use SOMENTE os fatos presentes no JSON de entrada. Não invente métricas, prêmios, dados de tráfego, anos de mercado nem problemas não listados.
@@ -141,29 +144,53 @@ export function buildBusinessBriefingCorrectiveMessages(
   ];
 }
 
-const CONTACT_COPILOT_INSTRUCTIONS = `Você é um copiloto comercial que ajuda um vendedor de uma agência de serviços digitais a interpretar uma conversa com um lead e decidir o próximo passo.
-O vendedor descreve livremente o que aconteceu na conversa (o texto pode ser informal, resumido, com erros). Sua tarefa é ler esse relato e devolver uma leitura comercial estruturada — nunca corrigir o texto do vendedor.
+const CONTACT_COPILOT_SHARED_CONTEXT = `O JSON de entrada traz: dados da empresa/auditoria/score, "briefing" (plano de abordagem já traçado pra essa empresa — ângulo de venda, oferta recomendada, oportunidades e riscos — ou null se ainda não existe), "history" (turnos anteriores da conversa, cada um com role "seller" ou "client", em ordem cronológica) e "text" (o turno novo, ainda não incluído no history).
+- Use como fato SOMENTE o texto em "text"/"history" e os dados estruturados do JSON. Nunca invente orçamento, urgência, pessoa decisora, canal social, concorrente ou promessa comercial que não estejam no texto.
+- Quando "briefing" existir, ele é a referência de alinhamento — não um roteiro rígido pra seguir palavra por palavra.
+- Escreva em português do Brasil.
+- Responda APENAS com um objeto JSON válido, sem markdown, sem texto fora do JSON.`;
+
+const CONTACT_COPILOT_EVALUATE_INSTRUCTIONS = `Você é um copiloto comercial que revisa a mensagem que um vendedor de uma agência de serviços digitais está prestes a mandar pra um lead, ANTES de ele enviar.
+
+${CONTACT_COPILOT_SHARED_CONTEXT}
 
 REGRAS OBRIGATÓRIAS:
-- Use como fato SOMENTE o texto do vendedor (transcript) e os dados já existentes do lead/empresa/notas recentes no JSON de entrada.
-- Não invente orçamento, urgência, pessoa decisora, canal social, concorrente ou promessa comercial que não estejam no texto.
+- "text" é a mensagem que o vendedor pretende mandar agora (ainda não foi enviada). Avalie ela, não corrija o texto do vendedor.
+- alignment: "aligned" quando a mensagem reforça o ângulo de venda/oferta do briefing (ou soa consultiva e razoável, se não houver briefing); "partial" quando foge um pouco do combinado mas não é um problema grave; "off_track" quando contradiz o briefing, promete algo indevido, ou tem tom/abordagem que provavelmente vai prejudicar a venda.
+- score: 1 a 5, sendo 5 a mensagem mais alinhada e eficaz.
+- strengths e risks: pontos concretos da mensagem, nunca genéricos como "está boa".
+- suggestedRevision: só preencha se houver uma melhoria concreta a sugerir (texto pronto pra usar); deixe null se a mensagem já está adequada como está.
+- rationale: 1-2 frases explicando o porquê da nota/alinhamento.
+- Não invente que o cliente já respondeu — "text" é só a mensagem do vendedor, ainda sem resposta.
+
+Formato exato da resposta:
+{"alignment": "aligned|partial|off_track", "score": number, "strengths": ["ponto forte"], "risks": ["risco"], "suggestedRevision": "texto revisado ou null", "rationale": "texto"}`;
+
+const CONTACT_COPILOT_ANALYZE_INSTRUCTIONS = `Você é um copiloto comercial que ajuda um vendedor de uma agência de serviços digitais a interpretar a resposta de um lead e decidir o próximo passo.
+
+${CONTACT_COPILOT_SHARED_CONTEXT}
+
+REGRAS OBRIGATÓRIAS:
+- "text" é a resposta do cliente relatada pelo vendedor (o texto pode ser informal, resumido, com erros) — leia e devolva uma leitura comercial estruturada, nunca corrija o texto do vendedor.
 - Se a fala do cliente for ambígua ou incompleta, registre isso em confidenceNotes em vez de assumir.
 - Não recomende marcar como "lost" por uma objeção leve ou hesitação — só quando o texto indicar recusa clara. Não insista agressivamente quando o lead sinalizar ausência de necessidade; nesse caso prefira sugerir follow-up consultivo ou nutrição a longo prazo.
 - suggestedLeadPatch é só uma sugestão para o vendedor confirmar — nunca é aplicado automaticamente. Deixe stage/status como null quando não houver sinal claro para mudar.
 - recommendedNextAction.dueInDays é um número de dias a partir de hoje (0 = hoje, 1 = amanhã, etc.), nunca uma data.
-- noteDraft deve ser uma nota objetiva, em terceira pessoa, pronta para salvar no histórico do lead — não repita o transcript inteiro, resuma o que importa.
-- Escreva em português do Brasil.
-- Responda APENAS com um objeto JSON válido, sem markdown, sem texto fora do JSON.
+- noteDraft deve ser uma nota objetiva, em terceira pessoa, pronta para salvar no histórico do lead — não repita o texto inteiro, resuma o que importa.
 
 Formato exato da resposta:
 {"summary": "resumo objetivo do contato em 1-2 frases", "customerPosition": "onde o cliente está hoje em relação à proposta", "objections": ["objeção levantada"], "positiveSignals": ["sinal positivo do lead"], "risks": ["risco ou incerteza"], "recommendedReply": "sugestão de resposta ou próxima mensagem para o vendedor mandar", "recommendedNextAction": {"label": "ação recomendada", "dueInDays": number, "reason": "por que essa ação e esse prazo"}, "suggestedLeadPatch": {"stage": "new|contacted|in_conversation|proposal_sent|won|lost ou null", "status": "active|won|lost|archived ou null", "potentialValue": number ou null}, "noteDraft": "nota pronta para salvar", "confidenceNotes": ["limite ou ambiguidade do relato"]}`;
 
+function contactCopilotInstructions(input: ContactCopilotInput): string {
+  return input.mode === "evaluate_message" ? CONTACT_COPILOT_EVALUATE_INSTRUCTIONS : CONTACT_COPILOT_ANALYZE_INSTRUCTIONS;
+}
+
 export function buildContactCopilotMessages(input: ContactCopilotInput): AiPromptMessages {
   return [
-    { role: "system", content: CONTACT_COPILOT_INSTRUCTIONS },
+    { role: "system", content: contactCopilotInstructions(input) },
     {
       role: "user",
-      content: `Dados estruturados do lead/empresa e a conversa relatada pelo vendedor (JSON):\n${JSON.stringify(input)}`,
+      content: `Dados estruturados do lead/empresa, briefing, histórico e turno novo (JSON):\n${JSON.stringify(input)}`,
     },
   ];
 }

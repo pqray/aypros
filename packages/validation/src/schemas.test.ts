@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   businessIdsSchema,
   businessListQuerySchema,
+  createAyhubContentBlockSchema,
   createManualBusinessSchema,
   createNoteSchema,
   createSearchSchema,
@@ -153,6 +154,25 @@ describe("generateAiSchema", () => {
 
   it("rejects unknown kinds", () => {
     expect(generateAiSchema.safeParse({ kind: "poema" }).success).toBe(false);
+  });
+});
+
+describe("createAyhubContentBlockSchema", () => {
+  it("accepts a plain key with underscores and no dot", () => {
+    const result = createAyhubContentBlockSchema.safeParse({ key: "horario_funcionamento", type: "text" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a dotted namespaced key", () => {
+    expect(createAyhubContentBlockSchema.safeParse({ key: "hero.titulo", type: "text" }).success).toBe(true);
+  });
+
+  it("rejects accented characters", () => {
+    expect(createAyhubContentBlockSchema.safeParse({ key: "título", type: "text" }).success).toBe(false);
+  });
+
+  it("rejects spaces", () => {
+    expect(createAyhubContentBlockSchema.safeParse({ key: "sobre nos", type: "text" }).success).toBe(false);
   });
 });
 

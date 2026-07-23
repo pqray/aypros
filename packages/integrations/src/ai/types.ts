@@ -114,15 +114,49 @@ export type BusinessBriefingOutput = {
 export type ContactCopilotChannel = "whatsapp" | "email" | "phone" | "other";
 export type ContactCopilotStage = "new" | "contacted" | "in_conversation" | "proposal_sent" | "won" | "lost";
 export type ContactCopilotStatus = "active" | "won" | "lost" | "archived";
+export type ContactCopilotMode = "evaluate_message" | "analyze_reply";
+export type ContactCopilotTurnRole = "seller" | "client";
 
-/** Input do Copiloto de contato (fase 19) — AiInput + a conversa livre do vendedor. */
-export type ContactCopilotInput = AiInput & {
-  channel: ContactCopilotChannel;
-  transcript: string;
-  recentNotes: string[];
+export type ContactCopilotTurn = {
+  role: ContactCopilotTurnRole;
+  text: string;
 };
 
-export type ContactCopilotOutput = {
+/** Recorte do briefing de IA já gerado pra empresa (specs/19 P2) — usado como plano de abordagem. */
+export type ContactCopilotBriefing = {
+  salesAngle: string;
+  recommendedOffer: string;
+  opportunities: string[];
+  risks: string[];
+};
+
+/**
+ * Input do Copiloto de contato (fase 19, revisado fase 19 P2): em vez de um
+ * relato livre único, o vendedor cola turno a turno — a própria mensagem
+ * (mode: evaluate_message) ou a resposta do cliente (mode: analyze_reply) —
+ * com o histórico anterior e o briefing da empresa (se existir) como contexto.
+ */
+export type ContactCopilotInput = AiInput & {
+  channel: ContactCopilotChannel;
+  mode: ContactCopilotMode;
+  text: string;
+  history: ContactCopilotTurn[];
+  recentNotes: string[];
+  briefing: ContactCopilotBriefing | null;
+};
+
+/** Avaliação de uma mensagem do vendedor ANTES de enviar (mode: evaluate_message). */
+export type ContactCopilotEvaluationOutput = {
+  alignment: "aligned" | "partial" | "off_track";
+  score: number;
+  strengths: string[];
+  risks: string[];
+  suggestedRevision: string | null;
+  rationale: string;
+};
+
+/** Leitura comercial da resposta do cliente (mode: analyze_reply). */
+export type ContactCopilotReplyOutput = {
   summary: string;
   customerPosition: string;
   objections: string[];
@@ -143,12 +177,24 @@ export type ContactCopilotOutput = {
   confidenceNotes: string[];
 };
 
-export type ContactCopilotResult = {
-  output: ContactCopilotOutput;
-  model: string;
-  tokensUsed: number | null;
-  promptVersion: string;
-};
+/** @deprecated use {@link ContactCopilotReplyOutput} — mantido pelo nome pra não quebrar imports existentes. */
+export type ContactCopilotOutput = ContactCopilotReplyOutput;
+
+export type ContactCopilotResult =
+  | {
+      mode: "evaluate_message";
+      output: ContactCopilotEvaluationOutput;
+      model: string;
+      tokensUsed: number | null;
+      promptVersion: string;
+    }
+  | {
+      mode: "analyze_reply";
+      output: ContactCopilotReplyOutput;
+      model: string;
+      tokensUsed: number | null;
+      promptVersion: string;
+    };
 
 export type AiOutput =
   | CommercialSummaryOutput

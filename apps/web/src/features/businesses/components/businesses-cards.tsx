@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Badge,
   BusinessCard,
   Button,
   Checkbox,
@@ -107,6 +108,7 @@ export function BusinessesCards({
               {item.score !== null && item.scoreLevel !== null ? (
                 <ScoreBadge level={item.scoreLevel} score={item.score} />
               ) : null}
+              {item.leadId ? <Badge variant="secondary">No pipeline</Badge> : null}
               <div className="ml-auto flex items-center gap-1">
                 <Tooltip>
                   <TooltipTrigger asChild>

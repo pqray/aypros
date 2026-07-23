@@ -571,7 +571,9 @@ export function registerAuditRoutes(app: FastifyInstance, options: AuditRoutesOp
       }
       const row =
         (data as AuditSummaryRpcRow | null) ??
-        (await loadBusinessAuditSummaryFallback(serviceDb, ctx.orgId, params.data.businessId));
+        (await timed(request, "audit.summary.fallback", () =>
+          loadBusinessAuditSummaryFallback(serviceDb, ctx.orgId, params.data.businessId),
+        ));
       if (!row) {
         return reply.code(404).send({ error: "Empresa não encontrada" } satisfies ApiErrorBody);
       }

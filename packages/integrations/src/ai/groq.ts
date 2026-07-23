@@ -1,5 +1,10 @@
 import Groq from "groq-sdk";
-import { aiOutputSchemas, businessBriefingOutputSchema, contactCopilotOutputSchema } from "./schemas";
+import {
+  aiOutputSchemas,
+  businessBriefingOutputSchema,
+  contactCopilotEvaluationOutputSchema,
+  contactCopilotOutputSchema,
+} from "./schemas";
 import {
   buildBusinessBriefingCorrectiveMessages,
   buildBusinessBriefingMessages,
@@ -8,6 +13,7 @@ import {
   buildCorrectiveMessages,
   buildPromptMessages,
   businessBriefingPromptVersion,
+  contactCopilotEvaluatePromptVersion,
   contactCopilotPromptVersion,
   promptVersions,
 } from "./prompts";
@@ -20,8 +26,9 @@ import {
   type BusinessBriefingInput,
   type BusinessBriefingOutput,
   type BusinessBriefingResult,
+  type ContactCopilotEvaluationOutput,
   type ContactCopilotInput,
-  type ContactCopilotOutput,
+  type ContactCopilotReplyOutput,
   type ContactCopilotResult,
 } from "./types";
 
@@ -125,7 +132,7 @@ function parseBusinessBriefingOutput(content: string): BusinessBriefingOutput | 
   return result.success ? result.data : null;
 }
 
-function parseContactCopilotOutput(content: string): ContactCopilotOutput | null {
+function parseContactCopilotReplyOutput(content: string): ContactCopilotReplyOutput | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(content);
@@ -133,7 +140,18 @@ function parseContactCopilotOutput(content: string): ContactCopilotOutput | null
     return null;
   }
   const result = contactCopilotOutputSchema.safeParse(parsed);
-  return result.success ? (result.data as ContactCopilotOutput) : null;
+  return result.success ? (result.data as ContactCopilotReplyOutput) : null;
+}
+
+function parseContactCopilotEvaluationOutput(content: string): ContactCopilotEvaluationOutput | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return null;
+  }
+  const result = contactCopilotEvaluationOutputSchema.safeParse(parsed);
+  return result.success ? (result.data as ContactCopilotEvaluationOutput) : null;
 }
 
 export function createGroqAiProvider(options: GroqAiProviderOptions): AiProvider {
@@ -300,6 +318,9 @@ export function createGroqContactCopilotProvider(
   return {
     async generate(input) {
       const messages = buildContactCopilotMessages(input);
+      const isEvaluate = input.mode === "evaluate_message";
+      const parse = isEvaluate ? parseContactCopilotEvaluationOutput : parseContactCopilotReplyOutput;
+      const promptVersion = isEvaluate ? contactCopilotEvaluatePromptVersion : contactCopilotPromptVersion;
 
       let activeModel = options.model;
       let first: ChatCompletionResult;
@@ -317,7 +338,7 @@ export function createGroqContactCopilotProvider(
       }
 
       let tokensUsed = first.tokensUsed;
-      let output = parseContactCopilotOutput(first.content);
+      let output = parse(first.content);
 
       if (!output) {
         const retry = await callModel(
@@ -328,18 +349,19 @@ export function createGroqContactCopilotProvider(
           retry.tokensUsed === null && tokensUsed === null
             ? null
             : (tokensUsed ?? 0) + (retry.tokensUsed ?? 0);
-        output = parseContactCopilotOutput(retry.content);
+        output = parse(retry.content);
         if (!output) {
           throw new AiError("INVALID_OUTPUT", "A IA não retornou o formato esperado.");
         }
       }
 
       return {
+        mode: input.mode,
         output,
         model: activeModel,
         tokensUsed,
-        promptVersion: contactCopilotPromptVersion,
-      };
+        promptVersion,
+      } as ContactCopilotResult;
     },
   };
 }

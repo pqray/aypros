@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { AuthShell } from "../auth-shell";
 import { ResetForm } from "./reset-form";
+
+export const metadata: Metadata = { title: "Recuperar senha" };
 
 export default function ResetPage() {
   return (

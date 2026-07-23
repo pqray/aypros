@@ -197,12 +197,11 @@ describe("BusinessDetailView", () => {
     );
   });
 
-  it("adds the business to the pipeline from the action menu", async () => {
+  it("adds the business to the pipeline from the dedicated button", async () => {
     const user = userEvent.setup();
     renderView("b1");
 
-    await user.click(screen.getByRole("button", { name: /mais/i }));
-    await user.click(screen.getByRole("menuitem", { name: /adicionar ao pipeline/i }));
+    await user.click(screen.getByRole("button", { name: /adicionar ao pipeline/i }));
 
     expect(createLeadMutate).toHaveBeenCalledWith("b1", expect.anything());
     const options = createLeadMutate.mock.calls[0]?.[1] as

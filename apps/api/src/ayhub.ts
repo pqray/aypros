@@ -329,58 +329,70 @@ export function registerAyhubRoutes(app: FastifyInstance, _options: AyhubRoutesO
     if (!ctx) return;
     if (!requireOwnerOrAdmin(ctx, reply)) return;
 
-    const { data: clientRow, error } = await ctx.supabase
-      .schema("ayhub")
-      .from("clients")
-      .select("id, name, contact, maintenance_value, status, origin, start_date, origin_lead_id, created_at")
-      .eq("organization_id", ctx.orgId)
-      .eq("id", params.data.id)
-      .maybeSingle();
+    // sites/costs/payments só dependem do id da URL (== client.id), não do
+    // conteúdo do cliente — disparam junto com o fetch do cliente em vez de
+    // esperar ele resolver primeiro, cortando um round-trip sequencial.
+    // Só a busca da empresa de origem precisa mesmo esperar (depende de
+    // client.origin_lead_id, que só existe depois do fetch do cliente).
+    const [clientResult, sitesResult, costsResult, paymentsResult] = await timed(
+      request,
+      "ayhub.client.detail",
+      () =>
+        Promise.all([
+          ctx.supabase
+            .schema("ayhub")
+            .from("clients")
+            .select("id, name, contact, maintenance_value, status, origin, start_date, origin_lead_id, created_at")
+            .eq("organization_id", ctx.orgId)
+            .eq("id", params.data.id)
+            .maybeSingle(),
+          ctx.supabase
+            .schema("ayhub")
+            .from("sites")
+            .select("id, client_id, slug, domain, domain_owner, delivery_date, status, created_at")
+            .eq("organization_id", ctx.orgId)
+            .eq("client_id", params.data.id)
+            .order("created_at", { ascending: false }),
+          ctx.supabase
+            .schema("ayhub")
+            .from("site_costs")
+            .select("id, site_id, type, amount, frequency, next_renewal, payment_owner, created_at")
+            .eq("organization_id", ctx.orgId),
+          ctx.supabase
+            .schema("ayhub")
+            .from("payments")
+            .select("id, client_id, amount, date, created_at")
+            .eq("organization_id", ctx.orgId)
+            .eq("client_id", params.data.id)
+            .order("date", { ascending: false })
+            .order("created_at", { ascending: false })
+            .limit(5),
+        ]),
+    );
 
-    if (error) {
+    if (clientResult.error) {
       return reply.code(500).send({ error: "Erro ao carregar cliente" } satisfies ApiErrorBody);
     }
-    if (!clientRow) {
+    if (!clientResult.data) {
       return reply.code(404).send({ error: "Cliente não encontrado" } satisfies ApiErrorBody);
     }
 
-    const client = clientRow as ClientRow;
+    const client = clientResult.data as ClientRow;
 
-    const [{ data: sites }, { data: costs }, { data: payments }, originBusiness] = await Promise.all([
-      ctx.supabase
-        .schema("ayhub")
-        .from("sites")
-        .select("id, client_id, slug, domain, domain_owner, delivery_date, status, created_at")
-        .eq("organization_id", ctx.orgId)
-        .eq("client_id", client.id)
-        .order("created_at", { ascending: false }),
-      ctx.supabase
-        .schema("ayhub")
-        .from("site_costs")
-        .select("id, site_id, type, amount, frequency, next_renewal, payment_owner, created_at")
-        .eq("organization_id", ctx.orgId),
-      ctx.supabase
-        .schema("ayhub")
-        .from("payments")
-        .select("id, client_id, amount, date, created_at")
-        .eq("organization_id", ctx.orgId)
-        .eq("client_id", client.id)
-        .order("date", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(5),
-      client.origin_lead_id
-        ? ctx.supabase
+    const originBusiness = client.origin_lead_id
+      ? await timed(request, "ayhub.client.originLead", () =>
+          ctx.supabase
             .from("leads")
             .select("business:businesses(name)")
             .eq("organization_id", ctx.orgId)
             .eq("id", client.origin_lead_id)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-    ]);
+            .maybeSingle(),
+        )
+      : { data: null };
 
-    const costRows = (costs ?? []) as CostRow[];
-    const siteRows = (sites ?? []) as SiteRow[];
-    const paymentRows = (payments ?? []) as PaymentRow[];
+    const costRows = (costsResult.data ?? []) as CostRow[];
+    const siteRows = (sitesResult.data ?? []) as SiteRow[];
+    const paymentRows = (paymentsResult.data ?? []) as PaymentRow[];
     const originData = originBusiness.data as { business: { name: string } | null } | null;
 
     return reply.send({
@@ -452,7 +464,7 @@ export function registerAyhubRoutes(app: FastifyInstance, _options: AyhubRoutesO
     const { data: client } = await ctx.supabase
       .schema("ayhub")
       .from("clients")
-      .select("id, name")
+      .select("id, name, origin_lead_id")
       .eq("organization_id", ctx.orgId)
       .eq("id", params.data.id)
       .maybeSingle();
@@ -482,21 +494,75 @@ export function registerAyhubRoutes(app: FastifyInstance, _options: AyhubRoutesO
     }
 
     const site = created as SiteRow;
-    const clientName = (client as { name: string }).name;
+    const clientTyped = client as { id: string; name: string; origin_lead_id: string | null };
 
     // Blocos de SEO obrigatórios pré-criados na criação do site (specs/21).
     await ctx.supabase
       .schema("ayhub")
       .from("content_blocks")
       .insert(
-        defaultSeoBlocks(clientName).map((block) => ({
+        defaultSeoBlocks(clientTyped.name).map((block) => ({
           organization_id: ctx.orgId,
           site_id: site.id,
           ...block,
         })),
       );
 
-    return reply.code(201).send(toSiteSummary(site, []));
+    // Primeiro site de um cliente vindo da pipeline: reaproveita os valores
+    // de domínio/hospedagem já preenchidos no estimador de custo do lead
+    // (specs/21), pra não obrigar a recadastrar do zero no AYhub.
+    let seededCosts: CostRow[] = [];
+    if (clientTyped.origin_lead_id) {
+      const { count: existingSitesCount } = await ctx.supabase
+        .schema("ayhub")
+        .from("sites")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", ctx.orgId)
+        .eq("client_id", params.data.id)
+        .neq("id", site.id);
+
+      if ((existingSitesCount ?? 0) === 0) {
+        const { data: originLead } = await ctx.supabase
+          .from("leads")
+          .select("domain_cost_annual, hosting_cost_monthly")
+          .eq("organization_id", ctx.orgId)
+          .eq("id", clientTyped.origin_lead_id)
+          .maybeSingle();
+
+        const lead = originLead as { domain_cost_annual: number | string; hosting_cost_monthly: number | string } | null;
+        if (lead) {
+          const domainCostAnnual = Number(lead.domain_cost_annual);
+          const hostingCostMonthly = Number(lead.hosting_cost_monthly);
+          const rowsToInsert: Array<{ type: "domain" | "hosting"; amount: number; frequency: "yearly" | "monthly" }> = [];
+          if (domainCostAnnual > 0) {
+            rowsToInsert.push({ type: "domain", amount: domainCostAnnual, frequency: "yearly" });
+          }
+          if (hostingCostMonthly > 0) {
+            rowsToInsert.push({ type: "hosting", amount: hostingCostMonthly, frequency: "monthly" });
+          }
+
+          if (rowsToInsert.length > 0) {
+            const { data: insertedCosts } = await ctx.supabase
+              .schema("ayhub")
+              .from("site_costs")
+              .insert(
+                rowsToInsert.map((row) => ({
+                  organization_id: ctx.orgId,
+                  site_id: site.id,
+                  type: row.type,
+                  amount: row.amount,
+                  frequency: row.frequency,
+                  payment_owner: "me",
+                })),
+              )
+              .select("id, site_id, type, amount, frequency, next_renewal, payment_owner, created_at");
+            seededCosts = (insertedCosts ?? []) as CostRow[];
+          }
+        }
+      }
+    }
+
+    return reply.code(201).send(toSiteSummary(site, seededCosts));
   });
 
   app.get("/v1/ayhub/sites/:id", async (request, reply) => {
@@ -508,24 +574,55 @@ export function registerAyhubRoutes(app: FastifyInstance, _options: AyhubRoutesO
     if (!ctx) return;
     if (!requireOwnerOrAdmin(ctx, reply)) return;
 
-    const { data: siteRow, error } = await ctx.supabase
-      .schema("ayhub")
-      .from("sites")
-      .select("id, client_id, slug, domain, domain_owner, delivery_date, status, created_at")
-      .eq("organization_id", ctx.orgId)
-      .eq("id", params.data.id)
-      .maybeSingle();
+    // costs/blocks/keys só dependem do id da URL (== site.id) — disparam
+    // junto com o fetch do site em vez de esperar ele resolver primeiro. Só
+    // o nome do cliente precisa mesmo esperar (depende de site.client_id).
+    const [siteResult, costsResult, blocksResult, keysResult] = await timed(request, "ayhub.site.detail", () =>
+      Promise.all([
+        ctx.supabase
+          .schema("ayhub")
+          .from("sites")
+          .select("id, client_id, slug, domain, domain_owner, delivery_date, status, created_at")
+          .eq("organization_id", ctx.orgId)
+          .eq("id", params.data.id)
+          .maybeSingle(),
+        ctx.supabase
+          .schema("ayhub")
+          .from("site_costs")
+          .select("id, site_id, type, amount, frequency, next_renewal, payment_owner, created_at")
+          .eq("organization_id", ctx.orgId)
+          .eq("site_id", params.data.id)
+          .order("next_renewal", { ascending: true }),
+        ctx.supabase
+          .schema("ayhub")
+          .from("content_blocks")
+          .select("id, site_id, key, type, draft_value, published_value, status, updated_at, published_at")
+          .eq("organization_id", ctx.orgId)
+          .eq("site_id", params.data.id)
+          .order("key", { ascending: true }),
+        ctx.supabase
+          .schema("ayhub")
+          .from("site_keys")
+          .select("id, site_id, created_at, revoked_at, last_used_at")
+          .eq("organization_id", ctx.orgId)
+          .eq("site_id", params.data.id)
+          .is("revoked_at", null)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]),
+    );
 
-    if (error) {
+    if (siteResult.error) {
       return reply.code(500).send({ error: "Erro ao carregar site" } satisfies ApiErrorBody);
     }
-    if (!siteRow) {
+    if (!siteResult.data) {
       return reply.code(404).send({ error: "Site não encontrado" } satisfies ApiErrorBody);
     }
 
-    const site = siteRow as SiteRow;
+    const site = siteResult.data as SiteRow;
 
-    const [{ data: client }, { data: costs }, { data: blocks }, { data: keys }] = await Promise.all([
+    const { data: client } = await timed(request, "ayhub.site.clientName", () =>
       ctx.supabase
         .schema("ayhub")
         .from("clients")
@@ -533,34 +630,10 @@ export function registerAyhubRoutes(app: FastifyInstance, _options: AyhubRoutesO
         .eq("organization_id", ctx.orgId)
         .eq("id", site.client_id)
         .maybeSingle(),
-      ctx.supabase
-        .schema("ayhub")
-        .from("site_costs")
-        .select("id, site_id, type, amount, frequency, next_renewal, payment_owner, created_at")
-        .eq("organization_id", ctx.orgId)
-        .eq("site_id", site.id)
-        .order("next_renewal", { ascending: true }),
-      ctx.supabase
-        .schema("ayhub")
-        .from("content_blocks")
-        .select("id, site_id, key, type, draft_value, published_value, status, updated_at, published_at")
-        .eq("organization_id", ctx.orgId)
-        .eq("site_id", site.id)
-        .order("key", { ascending: true }),
-      ctx.supabase
-        .schema("ayhub")
-        .from("site_keys")
-        .select("id, site_id, created_at, revoked_at, last_used_at")
-        .eq("organization_id", ctx.orgId)
-        .eq("site_id", site.id)
-        .is("revoked_at", null)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
+    );
 
-    const costRows = (costs ?? []) as CostRow[];
-    const blockRows = (blocks ?? []) as ContentBlockRow[];
+    const costRows = (costsResult.data ?? []) as CostRow[];
+    const blockRows = (blocksResult.data ?? []) as ContentBlockRow[];
     const hasUnpublishedChanges = blockRows.some(
       (block) => JSON.stringify(block.draft_value) !== JSON.stringify(block.published_value),
     );
@@ -571,7 +644,7 @@ export function registerAyhubRoutes(app: FastifyInstance, _options: AyhubRoutesO
       costs: costRows.map(toSiteCost),
       contentBlocks: blockRows.map(toContentBlock),
       hasUnpublishedChanges,
-      activeKey: keys ? toSiteKeySummary(keys as SiteKeyRow) : null,
+      activeKey: keysResult.data ? toSiteKeySummary(keysResult.data as SiteKeyRow) : null,
     } satisfies AyhubSiteDetail);
   });
 

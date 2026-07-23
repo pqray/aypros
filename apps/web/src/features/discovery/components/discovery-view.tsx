@@ -3,14 +3,15 @@
 import { PageHeader, toast } from "@aypros/ui";
 import type { CreateSearchResponse, SearchResultItem } from "@aypros/types";
 import type { CreateSearchInput } from "@aypros/validation";
+import type { SearchStatus } from "@aypros/types";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useAppContext } from "@/components/shell/use-app-context";
 import { useToggleFavorite } from "@/features/favorites/queries";
 import { DiscoveryForm } from "./discovery-form";
 import { SearchProgress } from "./search-progress";
 import { SearchResultsList } from "./search-results-list";
-import { useRetrySearch, useSearch, useSearchResults } from "../queries";
+import { isTerminalStatus, useRetrySearch, useSearch, useSearchResults } from "../queries";
 
 const pageSizes = [10, 20, 30] as const;
 const filters = ["all", "with_site", "without_site"] as const;
@@ -67,6 +68,26 @@ export function DiscoveryView() {
   });
   const retry = useRetrySearch(orgId, searchId);
   const toggleFavorite = useToggleFavorite(orgId);
+
+  // Status (poll de 1.5s) e resultados (poll de 3.5s) são independentes — o
+  // status pode virar terminal entre um poll e outro dos resultados, o que
+  // interrompe o polling de resultados numa foto desatualizada (às vezes
+  // vazia) até um refresh manual da página. Isso força um fetch final assim
+  // que o status vira terminal, garantindo a última leva de resultados.
+  const refetchResultsRef = useRef(resultsQuery.refetch);
+  refetchResultsRef.current = resultsQuery.refetch;
+  const previousStatusRef = useRef<{ searchId: string | null; status: SearchStatus | undefined }>({
+    searchId: null,
+    status: undefined,
+  });
+  useEffect(() => {
+    const previous = previousStatusRef.current;
+    const sameSearch = previous.searchId === searchId;
+    if (sameSearch && !isTerminalStatus(previous.status) && isTerminalStatus(search?.status)) {
+      void refetchResultsRef.current();
+    }
+    previousStatusRef.current = { searchId, status: search?.status };
+  }, [searchId, search?.status]);
 
   const updateUrl = useCallback(
     (next: {

@@ -1,6 +1,9 @@
 import { Skeleton } from "@aypros/ui";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AyhubClientsView } from "@/features/ayhub/components/ayhub-clients-view";
+
+export const metadata: Metadata = { title: "Clientes AYhub" };
 
 export default function AyhubClientsPage() {
   return (

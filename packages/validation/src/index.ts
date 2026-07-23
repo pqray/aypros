@@ -208,13 +208,22 @@ export const generateAiSchema = z.object({
   kind: aiKindSchema,
 });
 
+export const contactCopilotModeSchema = z.enum(["evaluate_message", "analyze_reply"]);
+
+export const contactCopilotTurnSchema = z.object({
+  role: z.enum(["seller", "client"]),
+  text: z.string().trim().min(1).max(4000),
+});
+
 export const generateContactCopilotSchema = z.object({
   channel: contactChannelSchema,
-  transcript: z
+  mode: contactCopilotModeSchema,
+  text: z
     .string()
     .trim()
-    .min(10, "Descreva a conversa com um pouco mais de detalhe")
-    .max(4000, "Resumo muito longo — encurte para os pontos principais"),
+    .min(10, "Descreva a mensagem com um pouco mais de detalhe")
+    .max(4000, "Texto muito longo — encurte para os pontos principais"),
+  history: z.array(contactCopilotTurnSchema).max(30).default([]),
 });
 
 export const onboardingSchema = z.object({
@@ -288,7 +297,7 @@ const contentBlockKeySchema = z
   .trim()
   .min(2, "Chave deve ter pelo menos 2 caracteres")
   .max(80, "Chave deve ter no maximo 80 caracteres")
-  .regex(/^[a-z0-9]+(\.[a-z0-9_]+)*$/, "Use letras minusculas, numeros, pontos e underscores (ex.: hero.titulo)");
+  .regex(/^[a-z0-9_]+(\.[a-z0-9_]+)*$/, "Use letras minusculas, numeros, pontos e underscores (ex.: hero.titulo)");
 
 export const ayhubContentBlockTypeSchema = z.enum(["text", "image", "list"]);
 

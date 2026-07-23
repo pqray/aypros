@@ -2,6 +2,7 @@
 
 import {
   Badge,
+  BusinessLogo,
   Button,
   Card,
   CardContent,
@@ -41,6 +42,7 @@ import type {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PiArrowLeft, PiKey, PiPlus, PiTrash, PiUploadSimple, PiWarningCircle } from "react-icons/pi";
+import { ApiError } from "../api";
 import {
   useAyhubSite,
   useCreateAyhubContentBlock,
@@ -80,6 +82,12 @@ const frequencyLabels: Record<AyhubFrequency, string> = {
   monthly: "Mensal",
   yearly: "Anual",
   once: "Único",
+};
+
+const frequencyShortLabels: Record<AyhubFrequency, string> = {
+  monthly: "mês",
+  yearly: "ano",
+  once: "único",
 };
 
 const seoLabels: Record<string, string> = {
@@ -233,30 +241,35 @@ function CostsSection({ siteId, costs }: { siteId: string; costs: import("@aypro
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {costs.length > 0 ? (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {costs.map((cost) => (
-            <div key={cost.id} className="flex items-center justify-between gap-3 rounded-md border p-3 text-sm">
-              <div className="min-w-0 space-y-0.5">
-                <p className="font-medium text-foreground">
-                  {costTypeLabels[cost.type]} · {formatCurrency(cost.amount)} ({frequencyLabels[cost.frequency]})
-                </p>
-                <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                  Responsável: {ownerLabels[cost.paymentOwner]}
-                  {cost.nextRenewal ? ` · renova em ${cost.nextRenewal}` : ""}
-                  {isRenewalSoon(cost.nextRenewal) ? (
-                    <Badge variant="warning">
-                      <PiWarningCircle aria-hidden /> renovação próxima
-                    </Badge>
-                  ) : null}
-                </p>
+            <div
+              key={cost.id}
+              className="flex items-center justify-between gap-2 rounded-md bg-muted/40 px-3 py-2 text-sm"
+            >
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                <Badge variant="secondary">{costTypeLabels[cost.type]}</Badge>
+                <span className="font-medium text-foreground">
+                  {formatCurrency(cost.amount)}
+                  <span className="text-muted-foreground">/{frequencyShortLabels[cost.frequency]}</span>
+                </span>
+                <span className="text-xs text-muted-foreground">{ownerLabels[cost.paymentOwner]}</span>
+                {cost.nextRenewal ? (
+                  <span className="text-xs text-muted-foreground">renova {cost.nextRenewal}</span>
+                ) : null}
+                {isRenewalSoon(cost.nextRenewal) ? (
+                  <Badge variant="warning">
+                    <PiWarningCircle aria-hidden /> renovação próxima
+                  </Badge>
+                ) : null}
               </div>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="shrink-0 text-muted-foreground hover:text-destructive"
+                className="size-7 shrink-0 text-muted-foreground hover:text-destructive"
                 aria-label="Remover custo"
                 onClick={() => deleteCost.mutate(cost.id)}
               >
@@ -269,9 +282,9 @@ function CostsSection({ siteId, costs }: { siteId: string; costs: import("@aypro
         <p className="text-sm text-muted-foreground">Nenhum custo cadastrado.</p>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="flex flex-wrap items-end gap-2 border-t pt-3">
         <Select value={type} onValueChange={(value) => setType(value as AyhubCostType)}>
-          <SelectTrigger>
+          <SelectTrigger className="w-28">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -282,9 +295,17 @@ function CostsSection({ siteId, costs }: { siteId: string; costs: import("@aypro
             ))}
           </SelectContent>
         </Select>
-        <Input type="number" min={0} step="0.01" placeholder="Valor" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <Input
+          type="number"
+          min={0}
+          step="0.01"
+          placeholder="Valor"
+          className="w-24"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+        />
         <Select value={frequency} onValueChange={(value) => setFrequency(value as AyhubFrequency)}>
-          <SelectTrigger>
+          <SelectTrigger className="w-24">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -296,7 +317,7 @@ function CostsSection({ siteId, costs }: { siteId: string; costs: import("@aypro
           </SelectContent>
         </Select>
         <Select value={paymentOwner} onValueChange={(value) => setPaymentOwner(value as AyhubOwner)}>
-          <SelectTrigger>
+          <SelectTrigger className="w-20">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -307,10 +328,9 @@ function CostsSection({ siteId, costs }: { siteId: string; costs: import("@aypro
             ))}
           </SelectContent>
         </Select>
-        <Input type="date" value={nextRenewal} onChange={(e) => setNextRenewal(e.target.value)} />
-        <Button type="button" className="sm:col-span-2" loading={createCost.isPending} onClick={handleAdd}>
+        <Input type="date" className="w-36" value={nextRenewal} onChange={(e) => setNextRenewal(e.target.value)} />
+        <Button type="button" size="icon" loading={createCost.isPending} onClick={handleAdd} aria-label="Adicionar custo">
           <PiPlus aria-hidden />
-          Adicionar
         </Button>
       </div>
     </div>
@@ -363,18 +383,33 @@ function ContentBlockField({ siteId, block }: { siteId: string; block: AyhubCont
   );
 }
 
+const CONTENT_BLOCK_KEY_PATTERN = /^[a-z0-9_]+(\.[a-z0-9_]+)*$/;
+
+function contentBlockKeyError(rawKey: string): string | null {
+  const key = rawKey.trim();
+  if (key === "") return null;
+  if (key.length < 2) return "Chave deve ter pelo menos 2 caracteres";
+  if (!CONTENT_BLOCK_KEY_PATTERN.test(key)) {
+    return "Use letras minúsculas sem acento, números, pontos e underscores (ex.: hero.titulo)";
+  }
+  return null;
+}
+
 function AddContentBlockForm({ siteId }: { siteId: string }) {
   const createBlock = useCreateAyhubContentBlock(siteId);
   const [key, setKey] = useState("");
   const [type, setType] = useState<AyhubContentBlockType>("text");
+  const keyError = contentBlockKeyError(key);
 
   function handleAdd() {
-    if (key.trim() === "") return;
+    const trimmed = key.trim();
+    if (trimmed === "" || contentBlockKeyError(trimmed)) return;
     createBlock.mutate(
-      { key: key.trim(), type },
+      { key: trimmed, type },
       {
         onSuccess: () => setKey(""),
-        onError: () => toast.error("Não foi possível criar o campo. Verifique se a chave já existe."),
+        onError: (error) =>
+          toast.error(error instanceof ApiError ? error.body.error : "Não foi possível criar o campo."),
       },
     );
   }
@@ -384,6 +419,7 @@ function AddContentBlockForm({ siteId }: { siteId: string }) {
       <div className="space-y-2">
         <Label htmlFor="ayhub-block-key">Nova chave</Label>
         <Input id="ayhub-block-key" placeholder="hero.title" value={key} onChange={(e) => setKey(e.target.value)} />
+        {keyError ? <p className="text-xs text-destructive">{keyError}</p> : null}
       </div>
       <Select value={type} onValueChange={(value) => setType(value as AyhubContentBlockType)}>
         <SelectTrigger className="w-32">
@@ -395,7 +431,13 @@ function AddContentBlockForm({ siteId }: { siteId: string }) {
           <SelectItem value="list">Lista</SelectItem>
         </SelectContent>
       </Select>
-      <Button type="button" variant="outline" loading={createBlock.isPending} onClick={handleAdd}>
+      <Button
+        type="button"
+        variant="outline"
+        loading={createBlock.isPending}
+        disabled={key.trim() === "" || Boolean(keyError)}
+        onClick={handleAdd}
+      >
         <PiPlus aria-hidden />
         Adicionar campo
       </Button>
@@ -405,15 +447,18 @@ function AddContentBlockForm({ siteId }: { siteId: string }) {
 
 function AyhubSiteDetailSkeleton() {
   return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,7fr)_minmax(20rem,3fr)]">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between xl:col-span-2">
-        <div className="space-y-2">
-          <Skeleton className="h-7 w-56" />
-          <Skeleton className="h-4 w-72 max-w-full" />
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-11 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-64 max-w-full" />
+          </div>
         </div>
         <Skeleton className="h-9 w-24" />
       </div>
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <Skeleton className="h-5 w-24" />
@@ -495,20 +540,26 @@ export function AyhubSiteDetailView({ siteId }: { siteId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="min-w-0 truncate text-2xl font-semibold tracking-tight text-foreground">{site.slug}</h1>
-            <Badge variant={siteStatusVariants[site.status]}>{siteStatusLabels[site.status]}</Badge>
+        <div className="flex min-w-0 items-center gap-3">
+          <BusinessLogo
+            name={clientName}
+            websiteUrl={site.domain ? `https://${site.domain}` : null}
+            className="size-11 shrink-0"
+          />
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="min-w-0 truncate text-xl font-semibold tracking-tight text-foreground">{site.slug}</h1>
+              <Badge variant={siteStatusVariants[site.status]}>{siteStatusLabels[site.status]}</Badge>
+            </div>
+            <p className="truncate text-sm text-muted-foreground">
+              <Link href={`/ayhub/${site.clientId}`} className="font-medium text-foreground hover:underline">
+                {clientName}
+              </Link>
+              {site.domain ? ` · ${site.domain}` : ""}
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Cliente:{" "}
-            <Link href={`/ayhub/${site.clientId}`} className="font-medium text-foreground hover:underline">
-              {clientName}
-            </Link>
-            {site.domain ? ` · ${site.domain}` : ""}
-          </p>
         </div>
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" size="sm">
           <Link href={`/ayhub/${site.clientId}`}>
             <PiArrowLeft aria-hidden />
             Cliente
@@ -516,57 +567,8 @@ export function AyhubSiteDetailView({ siteId }: { siteId: string }) {
         </Button>
       </div>
 
-      <div className="space-y-4 xl:col-start-2 xl:row-start-2">
-        <Card>
-        <CardHeader>
-          <CardTitle>Dados do site</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="ayhub-site-status">Status</Label>
-              <Select
-                value={status}
-                onValueChange={(value) => {
-                  setStatus(value as AyhubSiteStatus);
-                  updateSite.mutate({ status: value as AyhubSiteStatus });
-                }}
-              >
-                <SelectTrigger id="ayhub-site-status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(siteStatusLabels) as AyhubSiteStatus[]).map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {siteStatusLabels[option]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Domínio</Label>
-              <p className="text-sm text-muted-foreground">
-                {site.domain ?? "—"} (responsável: {ownerLabels[site.domainOwner]})
-              </p>
-            </div>
-          </div>
-
-          <SiteKeySection siteId={siteId} activeKey={activeKey} />
-        </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Custos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CostsSection siteId={siteId} costs={costs} />
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="xl:col-start-1 xl:row-start-2">
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <Card>
         <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
           <CardTitle>Conteúdo</CardTitle>
           <div className="flex items-center gap-2">
@@ -636,6 +638,57 @@ export function AyhubSiteDetailView({ siteId }: { siteId: string }) {
           </Tabs>
         </CardContent>
       </Card>
+
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Dados do site</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="ayhub-site-status">Status</Label>
+                <Select
+                  value={status}
+                  onValueChange={(value) => {
+                    setStatus(value as AyhubSiteStatus);
+                    updateSite.mutate({ status: value as AyhubSiteStatus });
+                  }}
+                >
+                  <SelectTrigger id="ayhub-site-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(siteStatusLabels) as AyhubSiteStatus[]).map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {siteStatusLabels[option]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Domínio</Label>
+                <p className="text-sm text-muted-foreground">
+                  {site.domain ?? "—"} (responsável: {ownerLabels[site.domainOwner]})
+                </p>
+              </div>
+            </div>
+
+            <SiteKeySection siteId={siteId} activeKey={activeKey} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Custos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CostsSection siteId={siteId} costs={costs} />
+          </CardContent>
+        </Card>
+      </div>
+      </div>
     </div>
   );
 }

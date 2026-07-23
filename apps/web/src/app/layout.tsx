@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Aypros",
+  title: { default: "Aypros", template: "%s · Aypros" },
   description: "Prospecção comercial para quem vende sites",
 };
 

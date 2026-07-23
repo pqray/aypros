@@ -1,4 +1,4 @@
-import type { ContactCopilotOutput } from "@aypros/integrations";
+import type { ContactCopilotReplyOutput } from "@aypros/integrations";
 import type { LoadedAppContext } from "@aypros/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "./app";
@@ -66,7 +66,7 @@ describe("POST /v1/leads/:id/contact-copilot", () => {
     vi.clearAllMocks();
   });
 
-  it("rejects a transcript that is too short", async () => {
+  it("rejects a text that is too short", async () => {
     setOwnerContext();
     ctxSupabase = tableRouter({});
     const app = buildApp({ contactCopilotProvider: { generate: vi.fn() } });
@@ -74,7 +74,7 @@ describe("POST /v1/leads/:id/contact-copilot", () => {
     const response = await app.inject({
       method: "POST",
       url: `/v1/leads/${leadId}/contact-copilot`,
-      payload: { channel: "whatsapp", transcript: "oi" },
+      payload: { channel: "whatsapp", mode: "analyze_reply", text: "oi" },
     });
 
     expect(response.statusCode).toBe(400);
@@ -89,7 +89,7 @@ describe("POST /v1/leads/:id/contact-copilot", () => {
     const response = await app.inject({
       method: "POST",
       url: `/v1/leads/${leadId}/contact-copilot`,
-      payload: { channel: "whatsapp", transcript: "Conversamos sobre o orçamento do site." },
+      payload: { channel: "whatsapp", mode: "analyze_reply", text: "Conversamos sobre o orçamento do site." },
     });
 
     expect(response.statusCode).toBe(503);
@@ -104,7 +104,7 @@ describe("POST /v1/leads/:id/contact-copilot", () => {
     const response = await app.inject({
       method: "POST",
       url: `/v1/leads/${leadId}/contact-copilot`,
-      payload: { channel: "whatsapp", transcript: "Conversamos sobre o orçamento do site." },
+      payload: { channel: "whatsapp", mode: "analyze_reply", text: "Conversamos sobre o orçamento do site." },
     });
 
     expect(response.statusCode).toBe(401);
@@ -119,14 +119,14 @@ describe("POST /v1/leads/:id/contact-copilot", () => {
     const response = await app.inject({
       method: "POST",
       url: `/v1/leads/${leadId}/contact-copilot`,
-      payload: { channel: "whatsapp", transcript: "Conversamos sobre o orçamento do site." },
+      payload: { channel: "whatsapp", mode: "analyze_reply", text: "Conversamos sobre o orçamento do site." },
     });
 
     expect(response.statusCode).toBe(404);
     await app.close();
   });
 
-  it("analyzes the conversation and persists the generation", async () => {
+  it("analyzes the client's reply and persists the generation", async () => {
     setOwnerContext();
 
     ctxSupabase = tableRouter({
@@ -151,7 +151,7 @@ describe("POST /v1/leads/:id/contact-copilot", () => {
       notes: createTableBuilder({ data: [{ content: "Cliente pediu proposta por escrito." }], error: null }),
     });
 
-    const output: ContactCopilotOutput = {
+    const output: ContactCopilotReplyOutput = {
       summary: "Cliente pediu proposta por escrito.",
       customerPosition: "Interessado, aguardando números.",
       objections: [],
@@ -165,10 +165,11 @@ describe("POST /v1/leads/:id/contact-copilot", () => {
     };
     const provider = {
       generate: vi.fn(async () => ({
+        mode: "analyze_reply" as const,
         output,
         model: "test-model",
         tokensUsed: 123,
-        promptVersion: "contact-copilot-v1",
+        promptVersion: "contact-copilot-v2",
       })),
     };
 
@@ -182,6 +183,7 @@ describe("POST /v1/leads/:id/contact-copilot", () => {
       profiles: createTableBuilder({ data: { full_name: "Rayssa" }, error: null }),
       organizations: createTableBuilder({ data: { name: "Aypros" }, error: null }),
       activities: createTableBuilder({ data: null, error: null }),
+      business_ai_briefings: createTableBuilder({ data: null, error: null }),
     });
 
     const app = buildApp({ contactCopilotProvider: provider, serviceDb: serviceDb as never });
@@ -189,23 +191,32 @@ describe("POST /v1/leads/:id/contact-copilot", () => {
     const response = await app.inject({
       method: "POST",
       url: `/v1/leads/${leadId}/contact-copilot`,
-      payload: { channel: "whatsapp", transcript: "Conversamos sobre o orçamento do site." },
+      payload: {
+        channel: "whatsapp",
+        mode: "analyze_reply",
+        text: "Conversamos sobre o orçamento do site.",
+        history: [{ role: "seller", text: "Oi, tudo bem? Vi que vocês..." }],
+      },
     });
 
     expect(response.statusCode).toBe(201);
     expect(response.json()).toEqual({
       generationId: "generation-1",
+      mode: "analyze_reply",
       output,
       model: "test-model",
       tokensUsed: 123,
-      promptVersion: "contact-copilot-v1",
+      promptVersion: "contact-copilot-v2",
     });
 
     expect(provider.generate).toHaveBeenCalledWith(
       expect.objectContaining({
         channel: "whatsapp",
-        transcript: "Conversamos sobre o orçamento do site.",
+        mode: "analyze_reply",
+        text: "Conversamos sobre o orçamento do site.",
+        history: [{ role: "seller", text: "Oi, tudo bem? Vi que vocês..." }],
         recentNotes: ["Cliente pediu proposta por escrito."],
+        briefing: null,
         business: expect.objectContaining({ name: "Padaria Central" }),
       }),
     );
